@@ -487,11 +487,11 @@ def _outcome(case_id: str, meta: dict, first_inv, failure, notify_min) -> Outcom
                 on = np.where((inflow.index >= failure) & (inflow.index < restore), 0.0, cap)
                 caps = pd.DataFrame({"duty": on, "standby": on}, index=inflow.index)
                 gal = outcome.simulate(inflow, caps, {"storage_gal": storage}).overflow_gal
-            rows.append(Sensitivity(label=f"discovery {d} min", simulated_gal=gal))
+            rows.append(Sensitivity(label=f"if staff would otherwise find out at {d} min", simulated_gal=gal))
         note = (
             "station alarm assumed to have worked: Dragonfly gains nothing"
             if alarm_worked
-            else "notified at the first minute SOURCE_OFFLINE or HIGH_LEVEL holds; pumping restored at notification + (outage - discovery delay)"
+            else "notified at the first minute SOURCE_OFFLINE or HIGH_LEVEL holds; pumping restored at notification + (outage - discovery delay). The no-warning case is the scenario's own discovery delay; the total outage is fixed, so a longer assumed discovery leaves less repair time after Dragonfly's notice"
         )
     return Outcome(no_warning_gal=no_warning, with_dragonfly_gal=rows[1].simulated_gal, sensitivity=rows,
                    assumptions=[*meta["assumptions"], note, "with_dragonfly_gal is the middle sensitivity row; none is preferred"])  # fmt: skip
@@ -529,7 +529,11 @@ def replay_case(case_id: str) -> ReplayResult:
         out = _outcome(
             case_id, meta, inv, t0, min((m for m in (offline, high) if m is not None), default=None)
         )
-        if onset and watch is not None and watch <= failure:
+        if (
+            watch is not None
+            and watch <= failure
+            and (onset or inv is None or watch < inv - pd.Timedelta(days=30))
+        ):
             out.assumptions.append(
                 f"stand-in history: the {st.station_id} stand-in carries real findings before the simulated failure "
                 f"(first WATCH {watch:%Y-%m-%d}), unrelated to this scenario; lead time is not computed"

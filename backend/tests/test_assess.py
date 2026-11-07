@@ -64,6 +64,7 @@ def test_scenario_blind(monkeypatch):
         x["queue"] = [{**f, "alert_id": f["alert_id"].replace(i, "ID")} for f in x["queue"]]
         x["safety"] = []
     assert a == b
+    assert "secret" not in str(a) and "secret" not in str(b)  # truth never reaches the assessment
     assess._case.cache_clear()
 
 
@@ -126,9 +127,9 @@ def test_replay_fishers_a_goes_offline_fast_and_flags_stand_in_history():
     r = assess.replay_case("fishers_bowline_2009_01_20:A")
     assert r.source_offline_after_min <= 15
     assert [s.label for s in r.outcome.sensitivity] == [
-        "discovery 60 min",
-        "discovery 180 min",
-        "discovery 360 min",
+        "if staff would otherwise find out at 60 min",
+        "if staff would otherwise find out at 180 min",
+        "if staff would otherwise find out at 360 min",
     ]
     assert r.outcome.with_dragonfly_gal < r.outcome.no_warning_gal
     assert any("stand-in history" in a for a in r.outcome.assumptions)
