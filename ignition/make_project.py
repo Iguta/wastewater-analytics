@@ -73,7 +73,7 @@ def panel(name, title, sub, children, dashed=False, basis="auto", grow=0):
 
 def repeater(name, view_path, transform, source):
     return {"type": "ia.display.flex-repeater", "meta": {"name": name}, "position": {"shrink": 0},
-            "props": {"path": view_path, "direction": "column", "elementPosition": {"basis": "165px", "shrink": 0, "grow": 0},
+            "props": {"path": view_path, "direction": "column", "elementPosition": {"basis": "200px", "shrink": 0, "grow": 0},
                       "style": {"gap": "10px"}, "instances": []},
             "propConfig": {"props.instances": prop(source, transform)}}
 
@@ -111,7 +111,10 @@ WARNINGS = (
     "\tout = []\n"
     "\tfor f in (value or []):\n"
     "\t\tchecks = f.get('inspection') or []\n"
-    "\t\tout.append({'status': f['status'], 'alert_id': f['alert_id'],\n"
+    "\t\tword = {'INVESTIGATE': 'Investigate', 'WATCH': 'Watch', 'SOURCE_OFFLINE': 'Source offline', 'INSUFFICIENT_EVIDENCE': 'Not enough data'}.get(f['status'], f['status'])\n"
+    "\t\tif f['type'] == 'CAPACITY_DROP':\n"
+    "\t\t\tword = {'Investigate': 'Investigate: inspect this pump', 'Watch': 'Watch: capacity is dropping'}.get(word, word)\n"
+    "\t\tout.append({'status': f['status'], 'alert_id': f['alert_id'], 'chip': word,\n"
     "\t\t\t'title': (f.get('pump_id') or 'Station') + ': ' + f['type'].replace('_', ' ').lower(),\n"
     "\t\t\t'summary': f.get('summary', ''),\n"
     "\t\t\t'opened': 'Opened %s, flagged %s days' % (f.get('opened_on'), f.get('days_open')),\n"
@@ -159,7 +162,7 @@ warning_card = view_doc(flex("root", [
     flex("Top", [
         label("Chip", "", {"color": "#FFFFFF", "fontSize": "12px", "fontWeight": "700", "padding": "2px 10px",
                            "letterSpacing": "0.04em"},
-              {"props.text": expr(WORDS.format(v="{view.params.status}")),
+              {"props.text": prop("view.params.chip"),
                "props.style.backgroundColor": expr(STATUS_BG.format(v="{view.params.status}"))}),
         label("Title", "", {"fontWeight": "600", "fontSize": "15px"}, {"props.text": prop("view.params.title")}),
     ], direction="row", alignItems="center", style={"gap": "10px"}),
@@ -167,14 +170,14 @@ warning_card = view_doc(flex("root", [
     label("Opened", "", {"fontSize": "13px", "color": MUTED}, {"props.text": prop("view.params.opened")}),
     label("Check", "", {"fontSize": "13px", "fontWeight": "600"}, {"props.text": prop("view.params.check")}),
     flex("Bottom", [
-        label("Id", "", {"fontSize": "11px", "color": MUTED, "fontFamily": "monospace"}, {"props.text": prop("view.params.alert_id")}, grow=1),
+        label("Id", "", {"fontSize": "11px", "color": MUTED, "fontFamily": "monospace", "wordBreak": "break-all"}, {"props.text": prop("view.params.alert_id")}),
         {"type": "ia.input.button", "meta": {"name": "WorkOrder"}, "position": {"basis": "170px", "shrink": 0},
          "props": {"text": "Draft work order", "style": {"backgroundColor": "#FFFFFF", "color": ADD, "border": "1px solid " + ADD,
                                                           "fontSize": "13px", "fontWeight": "600"}},
          "events": {"component": {"onActionPerformed": {"type": "script", "scope": "G", "config": {"script": WORK_ORDER}}}}},
-    ], direction="row", alignItems="center", style={"gap": "10px", "marginTop": "4px"}),
+    ], direction="column", alignItems="flex-start", style={"gap": "6px", "marginTop": "4px"}),
 ], style={"backgroundColor": "#FFFFFF", "border": "1px solid " + LINE, "padding": "12px 14px", "gap": "4px"}),
-    params={"status": "", "title": "", "summary": "", "opened": "", "check": "", "alert_id": "", "as_of": ""}, size=(165, 420))
+    params={"status": "", "chip": "", "title": "", "summary": "", "opened": "", "check": "", "alert_id": "", "as_of": ""}, size=(200, 420))
 
 # --- Main view -----------------------------------------------------------------------------------------------------
 A = "{view.custom.a"
@@ -208,7 +211,9 @@ header = flex("Header", [
     flex("Where", [
         label("Crumb", "Collection System / Lift Stations", {"fontSize": "12px", "color": "#D5DADF"}),
         label("Name", "", {"fontSize": "20px", "fontWeight": "600", "color": "#FFFFFF"},
-              {"props.text": expr("if(isNull(%s.error}), %s.display_name} + ' Lift Station', %s.error})" % (A, A, A))}),
+              {"props.text": expr("if(!isNull(%s.error}), %s.error}, if({view.custom.scenario} = '', %s.display_name} + ' Lift Station', "
+                   "if(indexOf({view.custom.scenario}, 'morningside') >= 0, 'Morningside Lift Station', 'Fishers Bowline Lift Station') "
+                   "+ ' (simulated on ' + %s.display_name} + ')'))" % (A, A, A, A))}),
         label("Data", "", {"fontSize": "12px", "color": "#D5DADF"},
               {"props.text": expr("if({view.custom.scenario} = '', 'REPLAY  ·  Wessex Water telemetry 2022-2023 (CC BY)  ·  not live data', "
                                   "'SIMULATION  ·  ' + {view.custom.scenario} + ' on stand-in station  ·  not real station data') "
@@ -236,6 +241,10 @@ d = value or {}
 pumps = d.get('pumps') or []
 queue = d.get('queue') or []
 days = dict([(f.get('pump_id'), f.get('days_open')) for f in queue if f.get('pump_id')])
+kinds = {}
+for f in queue:
+    if f.get('pump_id'):
+        kinds.setdefault(f['pump_id'], []).append(f['type'])
 def esc(t):
     return str(t).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 C = {'INVESTIGATE': '#B42318', 'WATCH': '#B54708', 'SOURCE_OFFLINE': '#3B434B', 'INSUFFICIENT_EVIDENCE': '#6B7280'}
@@ -274,6 +283,8 @@ for p, y in zip(pumps, ys):
         o.append('<rect x="622" y="%d" width="%d" height="22" fill="%s"/>' % (tag_y + 48, 34 + 8 * len(lbl), C[st]))
         o.append('<polygon points="634,%d 641,%d 627,%d" fill="#FFFFFF"/>' % (tag_y + 53, tag_y + 65, tag_y + 65))
         o.append('<text x="647" y="%d" font-size="12" font-weight="700" fill="#FFFFFF">%s</text>' % (tag_y + 64, esc(lbl)))
+        if 'PUMP_NOT_RUNNING' in kinds.get(p['pump_id'], []):
+            hint, line1 = 'Not running; sibling runs', 'No runs today'
         o.append('<text x="622" y="%d" font-size="12" font-weight="700" fill="#1B1F23">%s</text>' % (tag_y + 88, esc(hint)))
         o.append('<text x="622" y="%d" font-size="12" fill="#1B1F23">%s</text>' % (tag_y + 104, esc(line1)))
         o.append('<text x="622" y="%d" font-size="12" fill="#1B1F23">%s</text>' % (tag_y + 120, esc(line2)))
