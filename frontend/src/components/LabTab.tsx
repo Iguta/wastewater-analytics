@@ -116,7 +116,7 @@ function BenchTable({ id, title, keys, b: all }: { id: string; title: string; ke
     <section className="panel" data-testid={id}>
       <h2 className="section-title">{title}</h2>
       <div className="table-scroll" style={{ maxHeight: "none" }}>
-        <table className="data-table">
+        <table className="data-table stack">
           <thead>
             <tr>
               <th scope="col">Check</th><th scope="col">Degradations caught</th><th scope="col">Median lead (days)</th>
@@ -129,8 +129,13 @@ function BenchTable({ id, title, keys, b: all }: { id: string; title: string; ke
               const b = all[k];
               return b && (
                 <tr key={k}>
-                  <th scope="row">{NAMES[k]}</th><td>{rate(b.caught)}</td><td>{num(b.median_lead_days)}</td>
-                  <td>{rate(b.false_storm)}</td><td>{rate(b.false_duty)}</td><td>{rate(b.false_transient)}</td><td>{num(b.real_alerts_per_pump_6mo, 2)}</td>
+                  <th scope="row">{NAMES[k]}</th>
+                  <td data-label="Degradations caught">{rate(b.caught)}</td>
+                  <td data-label="Median lead (days)">{num(b.median_lead_days)}</td>
+                  <td data-label="False escalations, storm">{rate(b.false_storm)}</td>
+                  <td data-label="False escalations, duty swap">{rate(b.false_duty)}</td>
+                  <td data-label="False escalations, one bad day">{rate(b.false_transient)}</td>
+                  <td data-label="Real alerts per pump per 6 months">{num(b.real_alerts_per_pump_6mo, 2)}</td>
                 </tr>
               );
             })}

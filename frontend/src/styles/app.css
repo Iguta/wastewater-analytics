@@ -103,3 +103,13 @@ body { margin: 0; }
 .experiment { border: 1px solid var(--border); padding: var(--space-3); background: var(--bg); }
 .heat-bar { height: 8px; background: var(--hatch-a); margin-top: 4px; }
 .heat-bar span { display: block; height: 100%; background: var(--chart-line); }
+
+/* Wide tables become labelled blocks on phones so no column is hidden */
+@media (max-width: 767px) {
+  .stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .stack, .stack tbody, .stack tr, .stack th, .stack td { display: block; }
+  .stack tr { border: 1px solid var(--border); margin-bottom: var(--space-2); padding: var(--space-2); background: var(--bg); }
+  .stack th[scope=row] { border: 0; font-size: 14px; }
+  .stack td { display: flex; justify-content: space-between; gap: var(--space-3); border: 0; }
+  .stack td::before { content: attr(data-label); color: var(--text-muted); }
+}

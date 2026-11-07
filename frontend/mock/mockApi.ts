@@ -27,6 +27,13 @@ const SCENARIOS = [
       { variant: "A", scenario_id: `${MORN}:A`, name: "Progressive impeller ragging or clog", confidence: 40, reason: "Upstream blockage 4 days earlier; timing fits a storm.", detectability: "PREDICTABLE_DAYS_AHEAD", failure_at: "2024-04-11T07:00:00Z" },
       { variant: "B", scenario_id: `${MORN}:B`, name: "Sudden pump, motor or control trip under storm load", confidence: 40, reason: "Starter contacts replaced in 2023; no precursor assumed.", detectability: "DETECTABLE_AT_ONSET", failure_at: "2024-04-11T07:00:00Z" },
     ] },
+  { id: "fishers_bowline_2009_01_20", title: "Fishers, Intracoastal at Geist power-loss overflow, 2009-01-20", version: "v2", scenario_hash: "mockhash2",
+    facts: [FACT("Date", "2009-01-20", "VERIFIED", 100, "IBJ 2013-08-09"), FACT("Cause in record", "Power failure took down the controller; backup battery dead", "VERIFIED", 90, "IBJ 2013-08-09"), FACT("Weather", "Dry", "VERIFIED", 80, "IBJ 2013-08-09")],
+    outcome_facts: [FACT("Reported overflow", "25,000 gal", "VERIFIED", 90, "IBJ 2013-08-09")],
+    variants: [
+      { variant: "A", scenario_id: "fishers_bowline_2009_01_20:A", name: "Power loss took down the controller; pumps, alarm and telemetry went silent", confidence: 70, reason: "Matches the reported dead backup battery.", detectability: "DETECTABLE_AT_ONSET", failure_at: "2009-01-20T10:30:00Z" },
+      { variant: "B", scenario_id: "fishers_bowline_2009_01_20:B", name: "Controller or PLC fault with comms up: pumps stop while level rises", confidence: 20, reason: "Not in the record; assumed for contrast.", detectability: "DETECTABLE_AT_ONSET", failure_at: "2009-01-20T10:30:00Z" },
+    ] },
 ];
 const scopeOf = (alertId: string) => { const s = alertId.split(":").slice(0, -4).join(":"); return s === "REAL" ? null : s; };
 const sc = (id: string | null) => (id ? id.split(":")[0] : null);
@@ -99,6 +106,9 @@ export function mockApi(): Plugin {
         if (u.pathname === "/scenarios") return send(200, { scenarios: SCENARIOS, dev_cases: ["F2-0", "F6-0", "F5-0", "F4-3"] });
         if (u.pathname === "/replay") {
           const id = q.get("case_id")!; const A = id.endsWith(":A");
+          if (id.startsWith("fishers")) return send(200, { case_id: id, origin: "SIMULATED_INCIDENT", family: "incident", title: id, truth: { silence_start: "2009-01-20T10:30:00Z" }, timeline: [],
+            first_watch_at: null, first_investigate_at: "2009-01-20T10:40:00Z", failure_at: "2009-01-20T10:30:00Z", lead_time_h: 0,
+            outcome: { no_warning_gal: 25000, with_dragonfly_gal: 9000, sensitivity: [{ label: "discovery 60 min", simulated_gal: 3000 }, { label: "discovery 180 min", simulated_gal: 9000 }, { label: "discovery 360 min", simulated_gal: 17000 }], assumptions: ["Mock numbers, not model output"] }, benchmarks: {} });
           if (/^F\d/.test(id)) return send(200, { case_id: id, origin: "SYNTHETIC_INJECTION", family: id.split("-")[0], title: id, truth: {}, timeline: Array.from({ length: 12 }, (_, i) => ({ day: dayAdd("2022-06-01", i), station_status: id.startsWith("F5") && i === 5 ? "SOURCE_OFFLINE" : id.startsWith("F4") && i === 5 ? "WATCH" : "NORMAL", pumps: [] })),
             first_watch_at: null, first_investigate_at: null, failure_at: null, lead_time_h: null, outcome: null,
             benchmarks: { A: { first_investigate_at: id.startsWith("F2") ? "2022-06-04T00:00:00Z" : null, lead_time_h: null, incident_opens: id.startsWith("F2") ? 2 : 0 }, B: { first_investigate_at: null, lead_time_h: null, incident_opens: 0 }, C: { first_investigate_at: null, lead_time_h: null, incident_opens: 0 } },
