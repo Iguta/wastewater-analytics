@@ -32,7 +32,7 @@ The analysis scripts and their raw outputs are in `docs/evidence/`.
 | --- | --- | --- |
 | Data available | Run/stop events per pump, wet-well level and hourly site rainfall for 24 stations, 2022–2023. Timestamps carry no timezone. No failure, burst or maintenance labels anywhere. Flow and pressure exist only as 1,500-row sample files. | Wessex data audit |
 | Real outage in the data | Every station is silent from 2023-08-17 10:20 to 2023-08-20 12:21 | Audit `stn_gaps.csv` |
-| The capacity index barely moves with rain | Wet days (≥10 mm) vs dry days: capacity index ratio 0.96–1.03 on 9 of 11 pumps. Raw median run time ratio is 1.14–1.33. | `docs/evidence/ci_rain_check.txt` |
+| The capacity index barely moves with rain | Wet days (≥10 mm) vs dry days: capacity index ratio 0.96–1.03 on 8 of 9 pumps (45078 P3, a lag pump, is 1.20). Raw median run time ratio is 1.09–1.33. | `docs/evidence/ci_rain_check.txt` |
 | The capacity index is much less noisy | Day-to-day IQR/median: capacity index 0.03–0.11, raw run time 0.14–0.33 | same |
 | It catches a real precursor | 44371 pump 1: index steady at about 30.0/h for three weeks, then 28.2 on 2022-05-31, 16.3 on 06-01 (−46%), 11.8 by 06-10. The pump then sat out of service from 06-11 to 06-15. | same |
 | Whole-station shifts exist | At 45385, both pumps' index fell to 0.66× of 2022 in 2023, together. That is a station-level change (setpoints or force main), not pump wear. | same |
