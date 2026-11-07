@@ -1,4 +1,4 @@
-import type { StationAssessment, StationsResponse, TimelineDay, ToolError } from "./types";
+import type { AskResult, Evidence, StationAssessment, StationsResponse, TimelineDay, ToolError } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public toolError?: ToolError) {
@@ -7,10 +7,10 @@ export class ApiError extends Error {
 }
 
 // Every non-2xx body is a ToolError (section 8.2). A raw 422 never reaches the screen.
-async function get<T>(path: string): Promise<T> {
+async function get<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path);
+    res = await fetch(path, init);
   } catch {
     throw new ApiError(0, "Can't reach the Dragonfly server");
   }
@@ -36,4 +36,8 @@ export const api = {
       `/api/timeline?station_id=${encodeURIComponent(stationId)}&start=${start}&end=${end}` +
         (scenarioId ? `&scenario_id=${encodeURIComponent(scenarioId)}` : ""),
     ),
+  evidence: (alertId: string, asOfUtc: string) =>
+    get<Evidence>(`/api/evidence?alert_id=${encodeURIComponent(alertId)}&as_of_utc=${encodeURIComponent(asOfUtc)}`),
+  ask: (body: { question: string; station_id?: string; as_of_utc?: string; scenario_id?: string }, signal: AbortSignal) =>
+    get<AskResult>("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal }),
 };

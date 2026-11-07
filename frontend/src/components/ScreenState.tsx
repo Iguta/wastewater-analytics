@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 export function Loading({ onRetry }: { onRetry?: () => void }) {
   const [slow, setSlow] = useState(false);
   useEffect(() => { const t = setTimeout(() => setSlow(true), 10_000); return () => clearTimeout(t); }, []);
-  if (slow) return <ErrorState message="Can't reach the Dragonfly server (HTTP 504, no answer in 10 s)." onRetry={onRetry} />;
+  if (slow) return <ErrorState message="Can't reach the Dragonfly server (no response in 10 s)." onRetry={onRetry} />;
   return <div data-testid="state-loading" role="status" className="skeleton">Loading…</div>;
 }
 

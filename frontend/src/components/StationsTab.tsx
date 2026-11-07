@@ -65,7 +65,7 @@ function SafetyStrip({ items, unknownHigh }: { items: { f: Finding; v: StationVi
           ))}
           {items.map(({ f, v }) => (
             <li key={f.alert_id} className="safety-item">
-              <StatusBadge status={f.status} text={f.type === "SOURCE_SILENT" ? sourceOfflineText(f.opened_on) : `Investigate: ${f.summary}`} />
+              <StatusBadge status={f.status} text={f.type === "SOURCE_SILENT" ? sourceOfflineText(`${f.since_utc.replace("T", " ").replace(/:00Z$/, "")} UTC`) : `Investigate: ${f.summary}`} />
               <span> {v.assessment.display_name}{f.type === "HIGH_LEVEL" && " · SCADA-equivalent; real setpoints unknown."}</span>
             </li>
           ))}

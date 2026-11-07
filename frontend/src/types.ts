@@ -19,7 +19,7 @@ export interface PumpState {
 }
 export interface Finding {
   alert_id: string; type: FindingType; pump_id: string | null; status: Status;
-  priority: number; opened_on: string; days_open: number;
+  priority: number; opened_on: string; since_utc: string; days_open: number;
   observed: number | null; expected: number | null; units: string; change_pct: number | null;
   summary: string; possible_causes: string[]; inspection: string[];
 }
@@ -33,6 +33,29 @@ export interface StationAssessment {
   pumps: PumpState[]; queue: Finding[]; safety: Finding[]; rain: RainContext;
   storm: StormOutlook | null; missing_evidence: string[];
   explanation: string; recommended_action: string; provenance: Provenance;
+}
+export interface TraceRow {
+  day: string; quality: Quality; valid_cycles: number; ci: number | null; base_median: number | null;
+  base_mad: number | null; z: number | null; common: number | null; u: number | null; cusum: number; status: Status;
+}
+export interface Transition { on: string; from_status: Status; to_status: Status; reason: string }
+export interface RawEvent { ts: string; pump_id: string; state: "ON" | "OFF"; signal_id: string }
+export interface LevelPoint { ts: string; value: number; units: string }
+export interface WorkOrder {
+  title: string; station_id: string; pump_id: string | null; priority: string; requested_by: string;
+  checks: string[]; evidence_alert_id: string; caveats: string[];
+}
+export interface Evidence {
+  alert_id: string; station_id: string; pump_id: string | null; origin: Origin; as_of_utc: string;
+  finding: Finding; rain: RainContext; quality_flags: string[];
+  supporting: string[]; contradictory: string[]; unavailable: string[];
+  trace: TraceRow[]; transitions: Transition[]; raw_events: RawEvent[]; level: LevelPoint[];
+  work_order: WorkOrder; provenance: Provenance;
+}
+export interface AskResult {
+  answer_markdown: string | null; withheld: boolean; tool_calls: { tool: string; args: unknown; ok: boolean }[];
+  grounding: { passed: boolean; unmatched_numbers: string[]; forbidden_phrases: string[] };
+  model: string; fallback_dropped: boolean;
 }
 export interface StationInfo {
   station_id: string; display_name: string; pumps: string[]; origin: Origin;

@@ -7,7 +7,7 @@ import { Scrubber } from "./components/Scrubber";
 import type { Range } from "./components/Scrubber";
 import { StationsTab } from "./components/StationsTab";
 import type { QueueItem } from "./derive";
-import { dayOf } from "./dates";
+import { dayOf, toAsOf } from "./dates";
 import type { StationInfo, StationsResponse } from "./types";
 import { useStationData } from "./useStationData";
 
@@ -101,7 +101,7 @@ export default function App() {
         {tab === "incidents" && <EmptyState>Incidents tab: scenario cards and replay are built next.</EmptyState>}
         {tab === "lab" && <EmptyState testId="lab-no-report">Evaluation not run yet.</EmptyState>}
       </main>
-      {open && <Drawer item={open.item} returnTo={open.row} onClose={() => setOpen(null)} />}
+      {open && <Drawer item={open.item} asOf={toAsOf(day!)} scenarioId={scenarioId} returnTo={open.row} onClose={() => setOpen(null)} />}
     </>
   );
 }
