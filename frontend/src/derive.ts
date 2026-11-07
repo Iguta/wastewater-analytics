@@ -21,7 +21,7 @@ export function levelSensorLine(v: StationView): string {
   const a = v.assessment;
   if (a.safety.some((f) => f.type === "SOURCE_SILENT")) return "Level sensor: No data";
   const fault = a.queue.find((f) => f.type === "SENSOR_FAULT");
-  return fault ? `Level sensor: Faulty since ${fault.opened_on}` : "Level sensor: OK";
+  return fault ? `Level sensor: Faulty since ${fault.since_utc.replace("T", " ").replace(/:00Z$/, "")} UTC` : "Level sensor: OK";
 }
 
 export function stormLine(v: StationView): string {

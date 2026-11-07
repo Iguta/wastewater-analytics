@@ -1,0 +1,146 @@
+{
+  "model_version": "v1.0",
+  "code_version": "abc1234",
+  "benchmarks": {
+    "A": {
+      "caught": {
+        "k": 160,
+        "n": 200
+      },
+      "median_lead_days": 6.0,
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_duty": {
+        "k": 1,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 2,
+        "n": 30
+      },
+      "real_alerts_per_pump_6mo": 0.5
+    },
+    "B": {
+      "caught": {
+        "k": 160,
+        "n": 200
+      },
+      "median_lead_days": 6.0,
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_duty": {
+        "k": 1,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 2,
+        "n": 30
+      },
+      "real_alerts_per_pump_6mo": 0.5
+    },
+    "C": {
+      "caught": {
+        "k": 160,
+        "n": 200
+      },
+      "median_lead_days": 6.0,
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_duty": {
+        "k": 1,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 2,
+        "n": 30
+      },
+      "real_alerts_per_pump_6mo": 0.5
+    },
+    "C-persistence": {
+      "caught": {
+        "k": 160,
+        "n": 200
+      },
+      "median_lead_days": 6.0,
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_duty": {
+        "k": 1,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 2,
+        "n": 30
+      },
+      "real_alerts_per_pump_6mo": 0.5
+    },
+    "C-inhibition": {
+      "caught": {
+        "k": 160,
+        "n": 200
+      },
+      "median_lead_days": 6.0,
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_duty": {
+        "k": 1,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 2,
+        "n": 30
+      },
+      "real_alerts_per_pump_6mo": 0.5
+    },
+    "C-quality": {
+      "caught": {
+        "k": 160,
+        "n": 200
+      },
+      "median_lead_days": 6.0,
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_duty": {
+        "k": 1,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 2,
+        "n": 30
+      },
+      "real_alerts_per_pump_6mo": 0.5
+    }
+  },
+  "heatmap": [
+    {
+      "loss": 0.4,
+      "ramp": 3,
+      "k": 5,
+      "n": 10
+    }
+  ],
+  "proxy": [
+    {
+      "tier": "dev",
+      "group": "demo_3",
+      "episodes": 10,
+      "preceded": 4
+    }
+  ],
+  "test_scored": 0,
+  "gates": {
+    "G1": true
+  }
+}

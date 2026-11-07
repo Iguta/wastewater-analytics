@@ -74,8 +74,9 @@ Naming: `kebab-case`. A repeated element gets an id plus a data attribute for it
 | `incident-card` | One per scenario (`data-scenario-id`) |
 | `fact-chip` | VERIFIED / UNVERIFIED chip (`data-verified`) |
 | `variant-card` | Variant A or B (`data-variant`) |
-| `replay-variant-a` / `replay-variant-b` | Replay buttons |
+| `replay-variant-a` / `replay-variant-b` | Replay buttons. These are the A/B switch: there is no separate `replay-switch`. |
 | `replay-banner` | "Variant X: assumed mechanism..." banner |
+| `replay-output` | Container for the markers below, inside `replay-banner`. Shows "In this run it did not warn before the trip" when there was no Investigate before the failure. |
 | `failure-marker` / `trip-marker` / `investigate-marker` | Replay markers |
 | `outcome-row` | Result row per variant; gallons figures are inside `simulated-gal` |
 | `simulated-gal` | Every gallons figure, always prefixed "Simulated:" |
@@ -89,6 +90,7 @@ Naming: `kebab-case`. A repeated element gets an id plus a data attribute for it
 | `lab-ablations` | Ablations table |
 | `lab-heatmap` | Recall heatmap; `lab-heatmap-table` for the table view |
 | `lab-no-report` | "Evaluation not run yet." |
+| `lab-learned-baseline` | "We tried a trained model; the simpler one held" panel (static text from §4.16) |
 | `exp-storm-test` / `exp-break-sensor` / `exp-cut-power` / `exp-one-bad-day` | Live experiment buttons |
 | `lab-cannot-know` | "What the model cannot know" list |
 | `lab-proxy-events` | "Real pump outages preceded by a warning: a of b" |

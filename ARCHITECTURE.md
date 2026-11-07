@@ -477,7 +477,7 @@ A version cannot freeze unless every gate passes. Gates live in `backend/app/gat
 | G2 | F6: 100% pass the kind table in §5.6 |
 | G3 | `test_no_lookahead` (deleting all data after `as_of` changes nothing) and `test_determinism` (two full runs give byte-identical reports apart from the timestamp) pass |
 | G4 | `HIGH_LEVEL` appears in the safety strip on 100% of the minutes its rule holds. A unit test proves no inhibition path touches it. |
-| G5 | Dev: **0** pump `INVESTIGATE` in each of F2, F3, F4 and F7. Test: report the exact 95% upper bound (0/30 gives "under 10%"). |
+| G5 | Dev: **0 attributable** pump `INVESTIGATE` in each of F2, F3, F4 and F7, where attributable means present with the injection and absent in the same window without it (real incidents in the window are G6's job). Raw counts are always reported beside the attributable ones. Test: report the exact 95% upper bound (0/30 gives "under 10%"). G1 and F1's pre-onset count use the same attributable rule. (David's proposal, 13:12.) |
 | G6 | 2022 real replay: ≤1.0 pump `INVESTIGATE` opens per pump per 180 days |
 | G7 | Each locked Indiana scenario's no-warning simulation is consistent with the record's gallons within ±20% |
 
@@ -577,7 +577,8 @@ StormOutlook:    issued_on, forecast_rain_48h_in, max_gust_48h_mph, storm_ahead:
 StationAssessment: station_id, display_name, as_of_utc, origin, scenario_id | None, status, quality,
                  pumps: list[PumpState], queue: list[Finding], safety: list[Finding], rain: RainContext,
                  storm: StormOutlook | None, missing_evidence: list[str], explanation, recommended_action, provenance
-TraceRow:        day, quality, valid_cycles, ci, base_median, base_mad, z, common, u, cusum, status
+TraceRow:        day, quality, valid_cycles, excluded: dict[str, int] (cycles excluded, by §3.5 flag), ci, base_median, base_mad, z, common, u, cusum, status, rain_mm | None,
+                 run_median_s | None, expected_run_s | None
 Transition:      on: date, from_status, to_status, reason
 RawEvent:        ts, pump_id, state: Literal["ON", "OFF"], signal_id
 WorkOrder:       title, station_id, pump_id | None, priority, requested_by = "Dragonfly draft - needs human review",
@@ -585,7 +586,8 @@ WorkOrder:       title, station_id, pump_id | None, priority, requested_by = "Dr
 Evidence:        alert_id, station_id, pump_id | None, origin, as_of_utc, finding: Finding, rain: RainContext,
                  quality_flags: list[str], supporting: list[str], contradictory: list[str], unavailable: list[str],
                  trace: list[TraceRow] (<= 90), transitions: list[Transition], raw_events: list[RawEvent] (<= 500, trigger day),
-                 level: list[tuple[datetime, float]] (<= 1440), work_order: WorkOrder, provenance
+                 level: list[tuple[datetime, float]] (<= 1440), level_signal_id, thresholds: {h_w, h_i, min_effect} (from params.toml, so the UI never hard-codes them),
+                 work_order: WorkOrder, provenance
 TimelineDay:     day, station_status, pumps: list[{pump_id, status, ci, base_median, cusum}]
 Outcome:         no_warning_gal, with_dragonfly_gal, sensitivity: list[Sensitivity], assumptions: list[str]
 ReplayResult:    case_id, origin, family, title, truth: dict, timeline: list[TimelineDay],
@@ -595,6 +597,23 @@ StationInfo:     station_id, display_name, pumps: list[str], origin, scenario_id
                  as_of_min: datetime, as_of_max: datetime, outage_windows: list[tuple[datetime, datetime]]
                  (real data gaps to mark on the scrubber; the 2023-08-17..20 gap at least)
 StationsResponse: stations: list[StationInfo], source_hash, model_version
+Fact:            label, value, status: Literal["VERIFIED", "UNVERIFIED"], confidence: int (0–100), source, source_url | None
+VariantCard:     variant: Literal["A", "B"], scenario_id (e.g. "bloomington_morningside_2024_04_11:A"), name, confidence: int,
+                 reason, detectability: Literal["PREDICTABLE_DAYS_AHEAD", "DETECTABLE_AT_ONSET", "NOT_DETECTABLE"], failure_at: datetime
+ScenarioCard:    id, title, version, scenario_hash, facts: list[Fact], outcome_facts: list[Fact], variants: list[VariantCard]
+ScenariosResponse: scenarios: list[ScenarioCard], dev_cases: list[DevCase] (the Lab's fixed dev cases, §5.6)
+  (Shape proposed by Praneetha in frontend/src/types.ts and adopted as is.)
+BenchmarkRow:    caught: {k, n}, median_lead_days | None, false_storm: {k, n}, false_duty: {k, n}, false_transient: {k, n},
+                 real_alerts_per_pump_6mo
+HeatCell:        loss, ramp, k, n
+ProxyRow:        tier: Literal["dev", "test"], group: Literal["demo_3", "untouched_21"], episodes, preceded
+EvaluationReport: model_version, code_version, benchmarks: dict[Literal["A","B","C","C-persistence","C-inhibition","C-quality"], BenchmarkRow],
+                 heatmap: list[HeatCell], proxy: list[ProxyRow], test_scored: int, gates: dict[str, bool]
+  (Shape proposed by Praneetha in frontend/src/types.ts and adopted. The Lab's proxy panel shows ONLY ProxyRow data from
+   backend/scripts/proxy_events.py; scratch-run numbers such as "16 of 117" never appear in the UI.)
+DevCase:         case_id, experiment: Literal["storm_test", "break_sensor", "cut_power", "one_bad_day"] | None
+  (ScenariosResponse.dev_cases is list[DevCase].)
+ReplayResult additions: source_offline_after_min | None, sensor_fault_flagged: bool
 ToolError:       code: ErrorCode, message, allowed: list[str]
 ```
 
@@ -950,7 +969,7 @@ At 15:15, Dhruv commits `.verify-strict`; from then on, a skip is a failure. Thi
    - a 500 from the API (route interception) shows the error state and banner;
    - at 390×844, `scrollWidth ≤ innerWidth` and the drawer is full-screen;
    - the "Moved up: storm ahead" row appears;
-   - a DOM regex checks that every gallons figure is preceded by "Simulated:";
+   - a DOM regex checks that every gallons figure is either preceded by "Simulated:" or is a record figure followed by "(record)" next to a VERIFIED chip. The record's own 14,310 and 25,000 gal are real and must not be labeled simulated.
    - a DOM scan finds no banned word (§10.7);
    - the A/B switch changes the replay;
    - Copy puts the work order on the clipboard;

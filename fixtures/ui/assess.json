@@ -1,0 +1,105 @@
+{
+  "station_id": "44371",
+  "display_name": "Station 44371",
+  "as_of_utc": "2022-09-14T12:00:00Z",
+  "origin": "REAL_REPLAY",
+  "scenario_id": null,
+  "status": "INVESTIGATE",
+  "quality": "SUFFICIENT",
+  "pumps": [
+    {
+      "pump_id": "P1",
+      "status": "NORMAL",
+      "quality": "SUFFICIENT",
+      "ci_today": 29.8,
+      "ci_baseline": 30.1,
+      "capacity_change_pct": -1.0,
+      "cusum": 0.4,
+      "valid_cycles": 41,
+      "runs": 44,
+      "run_median_s": 118.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "pump_id": "P2",
+      "status": "INVESTIGATE",
+      "quality": "SUFFICIENT",
+      "ci_today": 16.2,
+      "ci_baseline": 30.0,
+      "capacity_change_pct": -46.0,
+      "cusum": 9.7,
+      "valid_cycles": 38,
+      "runs": 40,
+      "run_median_s": 221.0,
+      "expected_run_s": 120.0
+    }
+  ],
+  "queue": [
+    {
+      "alert_id": "REAL:44371:P2:CAPACITY_DROP:2022-09-02",
+      "type": "CAPACITY_DROP",
+      "pump_id": "P2",
+      "status": "INVESTIGATE",
+      "priority": 1,
+      "opened_on": "2022-09-02",
+      "since_utc": "2022-09-02T00:00:00Z",
+      "days_open": 12,
+      "observed": 16.2,
+      "expected": 30.0,
+      "units": "capacity index per hour",
+      "change_pct": -46.0,
+      "summary": "P2 capacity index is 16.2/h against a baseline of 30.0/h (-46%).",
+      "possible_causes": [
+        "Impeller wear or partial blockage",
+        "Suction-side restriction"
+      ],
+      "inspection": [
+        "Check P2 amps and discharge pressure",
+        "Pull and inspect P2 impeller if the drop persists"
+      ]
+    },
+    {
+      "alert_id": "REAL:44371:STATION:SENSOR_FAULT:2022-09-14",
+      "type": "SENSOR_FAULT",
+      "pump_id": null,
+      "status": "WATCH",
+      "priority": 2,
+      "opened_on": "2022-09-14",
+      "since_utc": "2022-09-14T06:00:00Z",
+      "days_open": 0,
+      "observed": 0.0,
+      "expected": null,
+      "units": "m",
+      "change_pct": null,
+      "summary": "Wet-well level has been flat for 6 hours; the high-level check is unknown.",
+      "possible_causes": [
+        "Level transmitter stuck or disconnected"
+      ],
+      "inspection": [
+        "Check the level transmitter"
+      ]
+    }
+  ],
+  "safety": [],
+  "rain": {
+    "today_mm": 0.0,
+    "last_72h_mm": 1.2,
+    "source": "Wessex local rain gauge"
+  },
+  "storm": null,
+  "missing_evidence": [
+    "High-level check: unknown while the level sensor is flat"
+  ],
+  "explanation": "P2 has delivered 46% less than its baseline for 12 days.",
+  "recommended_action": "Inspect P2 this shift.",
+  "provenance": {
+    "source_hash": "9f87789c1c5544df539b3e322ab5825e6731332ddabbf40a180012cf41ecb935",
+    "scenario_hash": null,
+    "model_version": "v1.0",
+    "code_version": "abc1234",
+    "signal_ids": [
+      "44371-P2-RUNSTOP",
+      "44371-LEVEL"
+    ]
+  }
+}
