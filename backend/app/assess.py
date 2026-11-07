@@ -323,7 +323,7 @@ def _storm(scenario_id: str | None, as_of: datetime) -> tuple[StormOutlook, date
     if f is None:
         return None
     t0 = features.to_naive_utc(as_of)
-    h = ((f["time"] - t0) / pd.Timedelta(hours=1)).astype(int)
+    h = np.ceil((f["time"] - t0) / pd.Timedelta(hours=1)).astype(int)
     w = f[(h >= 0) & (h < 48)]
     day1 = (h[w.index] < 24).to_numpy()
     rain = np.where(day1, w["precipitation_previous_day1"], w["precipitation_previous_day2"])
@@ -342,19 +342,19 @@ def _promote(queue: list[Finding], when: date) -> None:
     """Move each WATCH/INVESTIGATE finding up one place within its own status, never above a safety finding."""
     moved = set()
     for i in range(1, len(queue)):
-        f = queue[i]
-        above = queue[i - 1]
+        f, above = queue[i], queue[i - 1]
         if (
             f.status in ("WATCH", "INVESTIGATE")
-            and above.status == f.status
+            and f.status == above.status
             and above.type not in SAFETY
             and above.alert_id not in moved
         ):
-            queue[i - 1], queue[i] = f, queue[i - 1]
+            queue[i - 1], queue[i] = f, above
             moved.add(f.alert_id)
-            f.inspection = [*f.inspection, f"Inspect before {when:%Y-%m-%d} (storm ahead)"]
     for i, f in enumerate(queue, 1):
         f.priority = i
+        if f.status in ("WATCH", "INVESTIGATE") and f.type not in SAFETY:
+            f.inspection = [*f.inspection, f"Inspect before {when:%Y-%m-%d} (storm ahead)"]
 
 
 def _rain(b: _Bundle, as_of: datetime) -> RainContext:
@@ -375,9 +375,9 @@ def assess_station(station_id: str, as_of_utc: datetime, scenario_id: str | None
     check(station_id, scenario_id, as_of)
     b = _bundle(station_id, as_of, scenario_id)
     queue = _findings(b, station_id, as_of)
-    storm = _storm(scenario_id, as_of)
-    if storm and storm[0].storm_ahead:
-        _promote(queue, storm[1])
+    outlook, when = _storm(scenario_id, as_of) or (None, None)
+    if outlook and outlook.storm_ahead:
+        _promote(queue, when)
     pumps = _pumps(b)
     d = b.daily
     rows = d[d["day"] == d["day"].max()] if len(d) else d
@@ -395,7 +395,7 @@ def assess_station(station_id: str, as_of_utc: datetime, scenario_id: str | None
     missing += [f"{p.pump_id}: evidence {p.quality}" for p in pumps if p.quality != "SUFFICIENT"]
     if not scenario_id:
         missing += ["storm outlook: not available for real replay stations"]
-    elif not storm:
+    elif not outlook:
         missing += ["storm outlook: no archived forecast before 2016"]
     top = queue[0] if queue else None
     pump = next((p for p in pumps if top and p.pump_id == top.pump_id), None)
@@ -403,7 +403,7 @@ def assess_station(station_id: str, as_of_utc: datetime, scenario_id: str | None
     return StationAssessment(
         station_id=station_id, display_name=f"Wessex {station_id}", as_of_utc=as_of, origin=b.meta["origin"],
         scenario_id=scenario_id, status=status, quality=quality, pumps=pumps, queue=queue,
-        safety=[f for f in queue if f.type in SAFETY], rain=_rain(b, as_of), storm=storm and storm[0], missing_evidence=missing,
+        safety=[f for f in queue if f.type in SAFETY], rain=_rain(b, as_of), storm=outlook, missing_evidence=missing,
         explanation=explain.explanation(station_id, status, top, pump, missing),
         recommended_action=f"{order.title}. First check: {order.checks[0]}." if order else "No action from the detector.",
         provenance=Provenance(

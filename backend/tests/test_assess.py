@@ -146,6 +146,29 @@ def test_scenario_assessment_and_evidence_use_the_case_stream():
     assert assess.get_evidence(a.queue[0].alert_id, t).origin == "SIMULATED_INCIDENT"
 
 
+def test_promote_moves_one_place_below_safety_and_tags_every_watch():
+    def mk(kind, pump, status):
+        return Finding(
+            alert_id=f"S:44371:{pump}:{kind}:2024-04-01", type=kind, pump_id=pump, status=status, priority=0,
+            opened_on="2024-04-01", since_utc="2024-04-01T00:00:00Z", days_open=1, observed=None, expected=None,
+            units="per hour", change_pct=None, summary="s", possible_causes=[], inspection=["x"],
+        )  # fmt: skip
+
+    def queue():
+        return [
+            mk("SOURCE_SILENT", None, "SOURCE_OFFLINE"),
+            mk("CAPACITY_DROP", "P1", "WATCH"),
+            mk("CAPACITY_DROP", "P2", "WATCH"),
+        ]
+
+    q = queue()
+    assess._promote(q, datetime(2024, 4, 11).date())
+    assert [f.pump_id for f in q] == [None, "P2", "P1"] and [f.priority for f in q] == [1, 2, 3]
+    assert [f.status for f in q] == ["SOURCE_OFFLINE", "WATCH", "WATCH"]
+    assert [len(f.inspection) for f in q] == [1, 2, 2] and "2024-04-11" in q[1].inspection[-1]
+    assert [f.pump_id for f in queue()] == [None, "P1", "P2"]  # storm_ahead False never calls _promote
+
+
 def _statuses(a):
     return (
         a.status,
