@@ -64,3 +64,37 @@ def test_ask_is_offline_and_rejects_empty_question():
     assert client.post("/api/ask", json={"question": "why?"}).status_code == 503
     r = client.post("/api/ask", json={"question": ""})
     assert r.status_code == 422 and r.json()["code"] == "BAD_QUESTION"
+
+
+def test_feedback_is_logged_read_back_and_never_changes_assess(monkeypatch, tmp_path):
+    monkeypatch.setattr(api, "ROOT", tmp_path)
+    params = {"station_id": "44371", "as_of_utc": AS_OF}
+    before = client.get("/api/assess", params=params).json()
+    alert_id = before["queue"][0]["alert_id"]
+    fb = {
+        "alert_id": alert_id,
+        "verdict": "found_issue",
+        "by": "op1",
+        "note": "ragged impeller",
+        "at_utc": AS_OF,
+    }
+    assert client.post("/api/feedback", json=fb).status_code == 200
+    assert len((tmp_path / "logs" / "feedback.jsonl").read_text().splitlines()) == 1
+    assert client.get("/api/feedback", params={"alert_id": alert_id}).json() == [fb]
+    assert client.get("/api/assess", params=params).json() == before
+    assert before["queue"][0]["priority_reason"].startswith("Rank 1 of ")
+
+
+@pytest.mark.parametrize("bad", [{"verdict": "maybe"}, {"note": "x" * 501}, {"alert_id": "nope"}])
+def test_feedback_rejects_bad_input(monkeypatch, tmp_path, bad):
+    monkeypatch.setattr(api, "ROOT", tmp_path)
+    fb = {
+        "alert_id": "REAL:44371:P2:CAPACITY_DROP:2022-09-02",
+        "verdict": "checked_ok",
+        "by": "op1",
+        "note": "",
+        "at_utc": AS_OF,
+    }
+    r = client.post("/api/feedback", json={**fb, **bad})
+    assert r.status_code == 422 and r.json()["code"] in ("BAD_FEEDBACK", "UNKNOWN_ALERT")
+    assert not (tmp_path / "logs").exists()

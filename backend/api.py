@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -14,9 +14,11 @@ from pydantic import BaseModel, Field
 
 from backend.app import assess, data, evaluate, params, scenarios
 from backend.app.contracts import (
+    ALERT_ID_PATTERN,
     DevCase,
     EvaluationReport,
     Fact,
+    Feedback,
     ScenarioCard,
     ScenariosResponse,
     StationInfo,
@@ -35,6 +37,9 @@ PARAM_CODE = {
     "alert_id": "UNKNOWN_ALERT",
     "case_id": "UNKNOWN_CASE",
     "question": "BAD_QUESTION",
+    "verdict": "BAD_FEEDBACK",
+    "by": "BAD_FEEDBACK",
+    "note": "BAD_FEEDBACK",
 }
 
 app = FastAPI(title="Dragonfly")
@@ -175,6 +180,22 @@ class AskRequest(BaseModel):
 @app.post("/api/ask")
 def ask(_: AskRequest):
     return JSONResponse({"error": "agent_offline"}, 503)
+
+
+@app.post("/api/feedback")
+def post_feedback(fb: Feedback) -> Feedback:
+    path = ROOT / "logs" / "feedback.jsonl"
+    path.parent.mkdir(exist_ok=True)
+    with path.open("a") as f:
+        f.write(fb.model_dump_json() + "\n")
+    return fb
+
+
+@app.get("/api/feedback")
+def get_feedback(alert_id: str = Query(pattern=ALERT_ID_PATTERN)) -> list[Feedback]:
+    path = ROOT / "logs" / "feedback.jsonl"
+    rows = [Feedback.model_validate_json(x) for x in path.read_text().splitlines()] if path.exists() else []
+    return [r for r in rows if r.alert_id == alert_id]
 
 
 if (ROOT / "frontend" / "dist").is_dir():  # last, so it never shadows /api
