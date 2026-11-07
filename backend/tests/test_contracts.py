@@ -18,6 +18,7 @@ SAMPLES = {
     "timeline": list[c.TimelineDay],
     "replay": c.ReplayResult,
     "ask": c.AskResult,
+    "evaluation": c.EvaluationReport,  # also covers BenchmarkRow, HeatCell, ProxyRow
 }
 
 
@@ -26,11 +27,6 @@ def test_sample_round_trips(name):
     adapter = TypeAdapter(SAMPLES[name])
     raw = json.loads((UI / f"{name}.json").read_text())
     assert json.loads(adapter.dump_json(adapter.validate_python(raw))) == raw
-
-
-def test_evaluation_sample():
-    # No section 7 model exists for evaluation.json, so check only what the UI relies on.
-    assert "model_version" in json.loads((UI / "evaluation.json").read_text())
 
 
 @pytest.mark.parametrize("case_id", ["bloomington_morningside_2024_04_11:A", "F1-1003"])

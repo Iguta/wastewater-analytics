@@ -22,6 +22,7 @@ ErrorCode = Literal[
     "AS_OF_OUT_OF_RANGE",
     "NO_REPORT",
     "BAD_QUESTION",
+    "NOT_AVAILABLE",  # the piece of the model that would answer is not built yet (not in section 7)
 ]
 
 # One pattern for scenario_id and case_id (section 5.6).
@@ -229,6 +230,8 @@ class ReplayResult(Contract):
     lead_time_h: float | None
     outcome: Outcome | None
     benchmarks: dict[str, BenchmarkRun]
+    source_offline_after_min: float | None
+    sensor_fault_flagged: bool
 
 
 class StationInfo(Contract):
@@ -277,9 +280,52 @@ class ScenarioCard(Contract):
     variants: list[VariantCard]
 
 
+class DevCase(Contract):
+    case_id: str
+    experiment: Literal["storm_test", "break_sensor", "cut_power", "one_bad_day"] | None
+
+
 class ScenariosResponse(Contract):
     scenarios: list[ScenarioCard]
-    dev_cases: list[str]  # the Lab's fixed dev case ids (section 5.6)
+    dev_cases: list[DevCase]  # the Lab's fixed dev cases (section 5.6)
+
+
+class Count(Contract):
+    k: int
+    n: int
+
+
+class BenchmarkRow(Contract):
+    caught: Count
+    median_lead_days: float | None
+    false_storm: Count
+    false_duty: Count
+    false_transient: Count
+    real_alerts_per_pump_6mo: float
+
+
+class HeatCell(Contract):
+    loss: float
+    ramp: float
+    k: int
+    n: int
+
+
+class ProxyRow(Contract):
+    tier: Literal["dev", "test"]
+    group: Literal["demo_3", "untouched_21"]
+    episodes: int
+    preceded: int
+
+
+class EvaluationReport(Contract):
+    model_version: str
+    code_version: str
+    benchmarks: dict[Literal["A", "B", "C", "C-persistence", "C-inhibition", "C-quality"], BenchmarkRow]
+    heatmap: list[HeatCell]
+    proxy: list[ProxyRow]
+    test_scored: int
+    gates: dict[str, bool]
 
 
 class ToolCall(Contract):

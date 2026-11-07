@@ -48,9 +48,21 @@
     }
   ],
   "dev_cases": [
-    "F2-0",
-    "F5-0",
-    "F6-0",
-    "F4-0"
+    {
+      "case_id": "F2-0",
+      "experiment": "storm_test"
+    },
+    {
+      "case_id": "F5-0",
+      "experiment": "cut_power"
+    },
+    {
+      "case_id": "F6-0",
+      "experiment": "break_sensor"
+    },
+    {
+      "case_id": "F4-0",
+      "experiment": "one_bad_day"
+    }
   ]
 }
