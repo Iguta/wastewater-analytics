@@ -320,7 +320,7 @@ def assess_station(station_id: str, as_of_utc: datetime, scenario_id: str | None
     pump = next((p for p in pumps if top and p.pump_id == top.pump_id), None)
     order = explain.work_order(top, station_id) if top else None
     return StationAssessment(
-        station_id=station_id, display_name=f"Station {station_id}", as_of_utc=as_of, origin="REAL_REPLAY",
+        station_id=station_id, display_name=f"Wessex {station_id}", as_of_utc=as_of, origin="REAL_REPLAY",
         scenario_id=None, status=status, quality=quality, pumps=pumps, queue=queue,
         safety=[f for f in queue if f.type in SAFETY], rain=_rain(b, as_of), storm=None, missing_evidence=missing,
         explanation=explain.explanation(station_id, status, top, pump, missing),
