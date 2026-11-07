@@ -1,12 +1,13 @@
 # Detector + policy parameters (ARCHITECTURE.md §4.14). Frozen per version; tuned only on the 2022 dev tier.
-version = "dragonfly-ci-v1"
-k = 0.5
+# v2-tuned (2026-11-07 14:57): make tune over 648 combos -> reports/dev/grid.csv; decisions.md D6.
+version = "dragonfly-ci-v2-tuned"
+k = 1.0
 U = 4
-h_w = 3
-h_i = 6
-W = 60
-G = 14
-min_effect = -8.0  # % capacity change required to enter INVESTIGATE (§4.6); dev grid -5, -8, -12
+h_w = 4
+h_i = 8
+W = 45
+G = 7
+min_effect = -12.0  # % capacity change required to enter INVESTIGATE (§4.6); dev grid -5, -8, -12
 min_valid_cycles = 20   # fixed, not tuned
 min_baseline_days = 30  # fixed
 close_normal_days = 3   # fixed: an incident closes after 3 consecutive NORMAL days (§4.11)

@@ -381,6 +381,32 @@ def g6(P: params.Params, year: int, runner=None) -> dict:
     return out
 
 
+@cache
+def static_gates() -> dict:
+    """G3, G4, G7 measured directly so evaluation.json carries all seven gates (they are also unit tests)."""
+    import inspect
+
+    from . import outcome
+
+    P = params.load()
+    s = station("44371")
+    cut = pd.Timestamp("2022-07-01")
+    a = features.daily_table(s.events, s.level, s.rain, cut, "44371")
+    b = features.daily_table(s.events[s.events.ts < cut], s.level[s.level.ts < cut], s.rain, cut, "44371")
+    g3 = a.equals(b) and detect.run(a, P).equals(detect.run(a.copy(), P))
+    src = inspect.getsource(detect.realtime)
+    g4 = (
+        "rain" not in src and "common" not in src
+    )  # same check as test_high_level_fires_and_has_no_inhibition_path
+    g7 = True
+    for sid in ("bloomington_morningside_2024_04_11", "fishers_bowline_2009_01_20"):
+        for var in ("A", "B"):
+            run, _a, d = outcome.no_warning_run(sid, var)
+            tol = d["tolerance_pct"] / 100
+            g7 &= d["target_gal"] * (1 - tol) <= run.overflow_gal <= d["target_gal"] * (1 + tol)
+    return {"G3": bool(g3), "G4": bool(g4), "G7": bool(g7)}
+
+
 LOSS_BINS = [0.10, 0.20, 0.30, 0.40, 0.50]
 RAMP_BINS = [3, 7, 14, 21, 30]
 
@@ -439,7 +465,7 @@ def summarize(rows: list[dict], P: params.Params, tier: str, runner=None) -> dic
             "G2": bool(f6.passed.all()),
             "G5": all(v["k"] == 0 for v in fe_attr.values()),
             "G6": all(v <= 1.0 for v in g6v.values()),
-            # G3, G4, G7 are asserted by tests (no-lookahead/determinism, HIGH_LEVEL inhibition, G7 sim)
+            **static_gates(),
         },
         "gates_raw": {
             "G1": bool(f5.passed.all()),
