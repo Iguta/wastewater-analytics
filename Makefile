@@ -32,10 +32,10 @@ mcp-http:
 agent-eval:
 	$(UV) python -m backend.agent_eval
 
-# Lists the tools, then calls assess_station and checks 44371 on 2022-06-03 reports INVESTIGATE (the known precursor).
+# Lists the tools, then calls assess_station and checks 44371 on 2022-06-05 reports INVESTIGATE (the known precursor).
 mcp-smoke:
 	npx --yes @modelcontextprotocol/inspector@2.12.0 --cli $(UV) python -m backend.mcp_server --method tools/list | grep -q assess_station
-	npx --yes @modelcontextprotocol/inspector@2.12.0 --cli $(UV) python -m backend.mcp_server --method tools/call --tool-name assess_station --tool-arg 'station_id="44371"' --tool-arg as_of_utc=2022-06-03T00:00:00Z | grep -q INVESTIGATE
+	npx --yes @modelcontextprotocol/inspector@2.12.0 --cli $(UV) python -m backend.mcp_server --method tools/call --tool-name assess_station --tool-arg 'station_id="44371"' --tool-arg as_of_utc=2022-06-05T00:00:00Z | grep -q INVESTIGATE
 
 # David's evaluation harness (ARCHITECTURE.md §6). Dev only, except eval-test (once per frozen version).
 eval-smoke:

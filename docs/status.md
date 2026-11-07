@@ -1,6 +1,6 @@
 # Build status map
 
-Kept by Dhruv's agent. Updated at every merge or finding. Last update: 12:42 ET. Every claim here has a source: a merged PR, a test, or a measured run.
+Kept by Dhruv's agent. Updated at every merge or finding. Last update: frozen v2 (D6). Every claim here has a source: a merged PR, a test, or a measured run.
 
 ## Built and on main
 
@@ -34,8 +34,8 @@ Kept by Dhruv's agent. Updated at every merge or finding. Last update: 12:42 ET.
 
 ## Needs further validation
 
-1. **G6 on 2023 fails at one station:** 45385 averages 1.48 pump INVESTIGATE opens per pump per 180 days (limit 1.0). Found by our verification run, which looked at 2023 (test tier) data. **Disclosure:** the test tier has been seen once; no parameter may be changed because of it, and the headline claim must say so.
-2. **The minimum effect size (−8%)** was added after two 2023 cases reached INVESTIGATE on a −4.3% change. It must be validated on 2022 dev data, not 2023.
+1. **G5 fails on the frozen v2 test run:** station shift 10/30 attributable false escalations (D6: no combination of the 648 passed on dev). G6 passes on test (0.00 / 0.16 / 0.74). **Disclosure:** the test tier was scored 1 time; no parameter may be changed because of it, and the headline claim must say so.
+2. **The minimum effect size** was −8% in v1 (added after two 2023 cases reached INVESTIGATE on a −4.3% change) and is −12% in frozen v2, chosen on 2022 dev. It sits on the grid edge, so a wider grid is next.
 3. **Morningside A measured lead depends on the 3,600 s run cap**, which the spec now defines. The ramp sweep is the honest answer, not the single number.
 4. **The pump clock drifts up to ~2 days behind real time** in long injections. The storm-ahead story on screen must be checked in the actual replay.
 5. **Fishers gallons saved** depend entirely on the assumed 180-minute discovery delay.
@@ -56,8 +56,8 @@ Labels = a busy pump with 0 runs for 2+ days while a sibling keeps running ("tak
 
 | Tempting claim | The truth | Say instead |
 | --- | --- | --- |
-| "Caught a real pump failure 10 days early" | 44371 P1 went out of service for 4 days; cause unknown; may have been planned after operators saw the same thing | "A real pump's capacity fell 46% and stayed down; 10 days later it was taken out of service." |
-| "Would have prevented the Morningside spill" | Mechanism unknown (clog vs sudden trip, tied at 40%); telemetry is a UK stand-in | "If it was a clog like the one reported upstream that week, a warning ~3 days ahead was possible in our rebuild." |
+| "Caught a real pump failure days early" | 44371 P1 went out of service for 4 days; cause unknown; may have been planned after operators saw the same thing | "A real pump's capacity fell 46% and stayed down; INVESTIGATE opened on 2022-06-04, about a week before it was taken out of service on 06-11." |
+| "Would have prevented the Morningside spill" | Mechanism unknown (clog vs sudden trip, tied at 40%); telemetry is a UK stand-in | "If it was a clog like the one reported upstream that week, a warning about 31 h ahead (first INVESTIGATE before the simulated trip) was possible in our rebuild." |
 | "60% capacity loss detected" | On screen the measured change is about −31% (cap) | Show the measured number only |
 | "Detects failures days ahead" | Only gradual mechanical loss; power, controller and vandalism failures are detected at onset at best | "Days ahead for gradual wear; minutes for silence; never for sudden faults." |
 | "Rain-proof" | Rain-invariant on 8 of 9 pumps measured | "Barely moves with rain on the pumps we measured." |

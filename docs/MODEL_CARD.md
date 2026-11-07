@@ -1,8 +1,8 @@
 # Model card: Dragonfly capacity-loss detector
 
-Version `dragonfly-ci-v1` (`backend/app/params.toml`). Sources: `ARCHITECTURE.md` (A§), `docs/status.md`, `docs/evidence/`, `reports/`, and the measured runs named per line.
+Version `dragonfly-ci-v2-tuned` (`backend/app/params.toml`). Sources: `ARCHITECTURE.md` (A§), `docs/status.md`, `docs/evidence/`, `reports/`, and the measured runs named per line.
 
-**Dev-tier caveat.** Numbers marked *dev tier* are pending the harness fixes in PR #30. Final numbers come from the frozen test run (A§6.5), not from this page.
+**Headline (A§6.7).** Test tier, scored 1 time: on 125 held-out synthetic capacity-loss injections into real 2023 Wessex telemetry (≥20% loss over ≥7 days), Dragonfly raised INVESTIGATE before the pump trip in 125/125 (Wilson 95% 97.0–100%; 125 cases from 3 stations, 1 year), a median 4.8 days ahead. The test tier was scored 1 time. Numbers marked *dev tier* are 2022, where tuning was allowed; v1 rows are labeled v1.
 
 ## 1. What it is
 
@@ -25,7 +25,7 @@ No neural network, no gradient boosting, no pretrained weights, and no failure l
 Fitted from data:
 - Per-pump trailing baseline: median and MAD of `log(ci)` over days `[d-G-W, d-G-1]`, from that pump's own past only (A§4.4).
 - Per-station silence and high-level thresholds from the trailing 60 days (A§4.8).
-- Six global hyperparameters (`k, U, h_w, h_i, W, G`) plus `min_effect`, about 7 tuned settings, grid-searched on 2022 dev only (A§4.14, `params.toml`, `reports/decisions.md` D4).
+- Six global hyperparameters (`k, U, h_w, h_i, W, G`) plus `min_effect`, about 7 tuned settings, grid-searched on 2022 dev only: 648 combinations (324 × `min_effect` {−8, −12}%) (A§4.14, `params.toml`, `reports/decisions.md` D6). `W`, `G` and `min_effect` sit on the grid edge; a wider grid is next.
 
 Data roles (A§3.1):
 
@@ -43,7 +43,7 @@ Data roles (A§3.1):
 Tiers: dev = 2022 (tuning allowed), test = 2023 (score only) (A§3.3, A§6.1). Demo stations: 44371, 45385, 45078 (A§3.2).
 
 Versions and hashes:
-- Model version `dragonfly-ci-v1`; frozen parameters: `k=0.5, U=4, h_w=3, h_i=6, W=60, G=14, min_effect=-8.0` (`params.toml`).
+- Model version `dragonfly-ci-v2-tuned`; frozen parameters: `k=1.0, U=4, h_w=4, h_i=8, W=45, G=7, min_effect=-12` (`params.toml`). v1 was `k=0.5, h_w=3, h_i=6, W=60, G=14, min_effect=-8`.
 - `source_hash` in every response is the sha256 of `fixtures/wessex/manifest.json` (A§3.4).
 - Source file sha256 (A§3.4): `sps-run-stop-data.csv` `a630f8948e86acd9efacc378b260bd970de371fad40bc2ad871df38f40054f58`; `sps-wet-well-level-data.zip` `3f19794fb26909e95ac6c59f027b76279fd2eb69f8c56f011db6c23614a4c50e`; `sps-local-rainfall-data.csv` `775df41d5b2bee4468b2c3c2de2b72f31f6d22604dc1f97c31907c559a2c26b8`; `rising-main-diameter-and-key-to-telemetry-signals.csv` `9f87789c1c5544df539b3e322ab5825e6731332ddabbf40a180012cf41ecb935`.
 
@@ -56,15 +56,15 @@ Each rung has a "does not prove" line. Read it.
 - Proves: the index barely moves with rain and is much less noisy than run time.
 - Does not prove: that it detects anything. 45078 P3 (a lag pump) has a wet/dry ratio of 1.20 (`docs/status.md`).
 
-**2. Planted faults** (synthetic injections into real streams; PR #30, David's harness, 2022 dev tier, 3 stations; dev tier, pending the harness fixes in PR #30; final numbers come from the frozen test run)
-- F1 capacity loss (cases with loss ≥20% and ramp ≥7 days, per A§6.2): recall 122/123, Wilson 95% [0.955, 0.999]; median lead 8.3 days, P10 1.8 days.
-- F5 power cut: detected in median 9 min. F6 sensor faults: 30/30 flagged.
-- Attributable false escalations: F2 storm 0/30, F3 duty swap 6/30, F4 transient 3/30, F7 station-wide shift 21/30.
+**2. Planted faults** (synthetic injections into real streams; David's harness, 3 stations)
+- **Test 2023, scored 1 time:** F1 capacity loss (loss ≥20%, ramp ≥7 days, per A§6.2): caught 125/125, Wilson 95% 97.0–100%; median lead 4.8 days. False escalations storm / duty swap / transient / station shift: 0 / 0 / 0 / 10 of 30. G1–G4, G6 and G7 pass; G5 fails (station shift 10/30) and is published as failing (D6).
+- **Dev 2022, v1 → v2:** caught 112/114 → 112/114 (Wilson 95% 93.8–99.5% on v2); median lead 8.4 → 6.3 days; false escalations storm / duty / transient / station shift 0/10/3/19 → 0/1/0/3 of 30; G6 max 0.99 → 0.49. v2 cut false alarms at the cost of about a day of warning.
+- F5 power cut (dev, v2): `SOURCE_OFFLINE` within 9 min at most.
 - Proves: the detector finds the faults we know how to plant and mostly ignores rain.
-- Does not prove: performance on real failures. We wrote the injector, so these are the faults we thought of. F7 is the known open flaw (section 5).
+- Does not prove: performance on real failures. We wrote the injector, so these are the faults we thought of. Station shift (F7) is the known open flaw (section 5).
 
 **3. Real precursor** (one event; dev data, seen during design; `docs/evidence/ci_rain_check.txt`, `reports/decisions.md` D3)
-- 44371 P1 capacity fell 46% and stayed down; INVESTIGATE on 2022-06-02 (the live API shows -42% on 2022-06-03). The pump was out of service 2022-06-11 to 06-15, cause unknown.
+- 44371 P1 capacity fell 46% and stayed down; on v2, INVESTIGATE opens on 2022-06-04, about a week before the pump was taken out of service on 06-11 (out of service 06-11 to 06-15, cause unknown). On v1 it was 06-02.
 - Proves: a real, unplanted capacity drop is visible and flagged.
 - Does not prove: a rate. n = 1, we saw it while designing, and the removal may have been planned after operators saw the same thing.
 
@@ -74,27 +74,27 @@ Each rung has a "does not prove" line. Read it.
 - Does not prove: precision or "X of Y failures caught". Labels mean taken out of service, not failed; they mix planned work and rotation (44372 alone has 56). Descriptive only. The split of these counts into the 21 untouched stations vs the 3 demo stations is not reported in any file on main.
 
 **5. Indiana what-ifs** (rebuilds on real Wessex telemetry; no Indiana telemetry exists; the Morningside runs use 2023 test-tier data, seen once and disclosed)
-- Morningside A (independent run with David's detector, 44371 stand-in, 10 onsets in 2023): median lead 2.8 days, 10/10 caught. Ramp sweep 3/6/10/14 d gives 1.3/2.8/5.3/7.8 d median lead. Locked replay 3.3 days. The 2023 data was seen by this verification run (disclosed).
-- Fishers silent-station (power failure, dead backup battery; A§2): scored against a 5-minute `SOURCE_SILENT` target, reported not gated (A§6.3 G1). No measured Fishers result is on main.
+- Morningside A (v2 locked replay, 44371 stand-in): first INVESTIGATE raised 2024-04-10 00:00Z, about 31 h before the simulated trip at 04-11 07:00Z. Simulated overflow: no warning 14,532 gal (record 14,310); with a 24 h response 0; with 48 h or 96 h 14,532. Morningside B: no INVESTIGATE; `HIGH_LEVEL` 18 min after failure. The v1 ramp sweep (3/6/10/14 d) was not re-run on v2.
+- Fishers silent-station (power failure, dead backup battery; A§2): A, `SOURCE_OFFLINE` at 9 min against a 5-minute target (reported, not gated). Simulated gallons at discovery 60/180/360 min: 22,912 / 17,049 / 8,068. B: `HIGH_LEVEL` at 34 min.
 - Proves: the detector behaves sensibly on the shape of two documented Indiana events.
 - Does not prove: that it would have caught them. Morningside's mechanism is unknown (clog vs sudden trip, tied at 40%), the lead assumes a gradual ramp, and telemetry is a UK stand-in (`docs/status.md`).
 
-**6. Stress tests and gates** (A§6.3; dev tier numbers as in rung 2)
-- Gates G1-G7 must pass before a version freezes. G6 real-data alert rate per pump per 180 days, limit 1.0: 0.49 / 0.99 / 0.00 (44371 / 45385 / 45078), dev tier. G3 (`test_no_lookahead`, `test_determinism`) and G4 are tests.
+**6. Stress tests and gates** (A§6.3; test tier numbers as in rung 2)
+- Gates G1-G7 must pass before a version freezes. G6 real INVESTIGATE opens per pump per 180 days, limit 1.0 (44371 / 45385 / 45078): test 0.00 / 0.16 / 0.74; dev max 0.49. G3 (`test_no_lookahead`, `test_determinism`) and G4 are tests.
 - Learned baselines tested and not adopted: LightGBM with own lags 16/40 vs 23/40 for the rolling median (A§4.16); exogenous-only spread 0.67x, false opens 3 vs 1, and cycle-weighted z with no effect (board RESULT posts, 13:20, dev tier, scratch harness).
-- Proves: storms (F2) and sensor faults (F6) are handled, and the simple baseline beat the learned ones. **Not yet met:** G5 requires 0 attributable false escalations; duty swap (6/30), single bad day (3/30) and station-wide shift (21/30) still fail it.
-- Does not prove: the test-tier result. On the 2023 replay 45385 averaged 1.48 INVESTIGATE opens per pump per 180 days against the limit of 1.0; the test tier has been seen once and nothing may be tuned on it (`docs/status.md`).
+- Proves: storms (F2) and sensor faults (F6) are handled, and the simple baseline beat the learned ones. **Not met:** G5 requires 0 attributable false escalations; on test, station shift is 10/30. No combination of the 648 passed G5 on dev, so D6 froze the best and G5 is published as failing.
+- Does not prove: real-world precision. The test tier was scored 1 time and nothing may be tuned on it. (v1 on the 2023 replay had 1.48 opens at 45385 against the limit of 1.0; v2 has 0.16.)
 
 ## 5. Known limitations
 
-- **F7, station-wide shift leakage:** 21/30 attributable false escalations (dev tier). Open.
+- **Station-shift leakage:** 10/30 false escalations on test (dev 3/30; v1 dev 19/30). G5 fails. Open.
 - **Most removals give no warning:** 101 of 117 (86%) show no precursor (A§6.8, `docs/status.md`).
 - **Check-valve failure is hidden:** it is not visible in on/off timing. This is a design limit; no file on main measures it.
 - **Dual-pump wear looks station-wide:** both pumps wearing together look like a setpoint change, escalated on size alone at -30% for 3 days (A§4.7).
 - **VFD stations are out of scope** (A§4.1).
 - **UK telemetry stands in for Indiana** (A§2, `docs/status.md`).
 - **Expected run time is not yet computed**: A§4.13 specifies it, and the explanation says "expected run time not yet computed" (`backend/app/explain.py`).
-- **Test tier seen once** by our verification run; disclosed with every headline (`docs/status.md`).
+- **Test tier scored 1 time**; disclosed with every headline (`docs/status.md`).
 - **A loss lasting longer than W+G = 74 days is absorbed into the baseline** and clears (A§4.4).
 - **Real-world precision is unmeasured.** The 5-19% proxy figure uses removals, not failures (A§6.8, `docs/status.md`).
 
