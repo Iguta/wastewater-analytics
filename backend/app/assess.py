@@ -517,17 +517,17 @@ def replay_case(case_id: str) -> ReplayResult:
     t0 = meta.get("failure_at", spec.get("failure", spec.get("start")))
     failure = _utc(t0)
     history = _first_day(tl, lambda d: d.station_status in ("WATCH", "INVESTIGATE"))
-    # §7: a scenario is scored from failure - 30 d; earlier findings are the stand-in's own history
-    # §7: a scenario is scored from failure - 30 d, and only findings that open inside it count;
-    # a status already held at window start is the stand-in's own history
-    start = (failure - timedelta(days=30)).date() if ":" in case_id else tl[0].day
-    pairs = [(a, b) for a, b in zip(tl, tl[1:]) if b.day >= start]
+    if ":" in case_id:
+        # §7: score a scenario from failure - 30 d, counting only findings that open inside it;
+        # a status already held at window start is the stand-in's own history
+        start = (failure - timedelta(days=30)).date()
+        scored = [b for a, b in zip(tl, tl[1:]) if b.day >= start]
+        before = {b.day: a.station_status for a, b in zip(tl, tl[1:])}
+    else:
+        scored, before = tl, {}
 
     def opened(levels):
-        return _first_day(
-            [b for a, b in pairs if b.station_status in levels and a.station_status not in levels],
-            lambda d: True,
-        )
+        return _first_day(scored, lambda d: d.station_status in levels and before.get(d.day) not in levels)
 
     watch, inv = opened(("WATCH", "INVESTIGATE")), opened(("INVESTIGATE",))
     offline, high, fault = _minute_scan(st, t0, p) if t0 is not None else (None, None, False)
