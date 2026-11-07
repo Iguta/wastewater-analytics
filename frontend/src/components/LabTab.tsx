@@ -192,9 +192,9 @@ function ladder(r: EvaluationReport | null): Rung[] {
   const dev = r?.proxy?.filter((p) => p.tier === "dev") ?? [];
   const pending = "Not in the evaluation report yet.";
   return [
-    { title: "1. Physics check", tier: "Real data, 11 pumps, 2022 to 2023",
-      result: "Pumping capacity changed by a ratio of 0.96 to 1.03 between wet and dry days on 9 of 11 pumps, against 1.14 to 1.33 for raw run time. Day to day spread: 0.03 to 0.11, against 0.14 to 0.33.",
-      shows: "The capacity measure barely moves with rain and is much less noisy than run time.", notShow: "That it detects anything. One lag pump (45078 P3) moves with rain more than the others." },
+    { title: "1. Physics check", tier: "Real data, 9 pumps, 2022 to 2023",
+      result: "Pumping capacity changed by a ratio of 0.96 to 1.03 between wet and dry days on 8 of 9 pumps, against 1.09 to 1.33 for raw run time. Day to day spread: 0.03 to 0.11, against 0.14 to 0.33.",
+      shows: "The capacity measure barely moves with rain and is much less noisy than run time.", notShow: "That it detects anything. The ninth pump, a lag pump (45078 P3), has a ratio of 1.20." },
     { title: "2. Planted faults", tier: "Synthetic faults in real streams, 2022 development data",
       result: c ? `Caught ${c.caught.k} of ${c.caught.n} planted capacity losses${c.median_lead_days != null ? `, median lead ${c.median_lead_days.toFixed(1)} days` : ""}. False escalations in storm cases: ${c.false_storm.k} of ${c.false_storm.n}.` : pending,
       shows: "The detector finds the faults we know how to plant and mostly ignores rain.", notShow: "Performance on real failures. We wrote the fault injector, so these are the faults we thought of." },

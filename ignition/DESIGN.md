@@ -8,7 +8,7 @@ One read-only Perspective view in Ignition 8.3 with the station tiles, the safet
 
 ## Read-only rules
 
-- The gateway script only **reads** from `http://host.docker.internal:8000/api/assess` and writes **memory tags** under `[default]Dragonfly/`.
+- The gateway script only **reads** from `<api_base>/api/assess` (a gateway parameter: `http://127.0.0.1:8000` native, `http://host.docker.internal:8000` Docker) and writes **memory tags** under `[default]Dragonfly/`.
 - It never writes to a device, an OPC tag, or any tag that controls equipment. No button in the view writes anything.
 - No acknowledge, reset or override controls (section 1, section 16).
 
@@ -16,7 +16,7 @@ One read-only Perspective view in Ignition 8.3 with the station tiles, the safet
 
 ```text
 Gateway timer script (every 60 s)
-   -> system.net.httpGet("http://host.docker.internal:8000/api/assess?station_id=<id>&as_of_utc=<as_of>")  x 3 stations
+   -> system.net.httpGet("<api_base>/api/assess?station_id=<id>&as_of_utc=<as_of>")  x 3 stations
    -> parse JSON -> write memory tags [default]Dragonfly/<station>/...
 Perspective view -> bindings on those tags
 ```
@@ -134,9 +134,13 @@ Colours come from `frontend/src/styles/tokens.css`, copied into the Perspective 
 
 Validation is manual only (section 10.8), and it sits outside `make verify`.
 
-## Decisions (Dhruv, board 2026-11-07)
+## Decisions (board 2026-11-07)
 
-- `GET /api/assess` needs no auth, header or token, and CORS does not apply (server to server).
-- The API binds to `127.0.0.1`, so the gateway must run on the **same machine** as `make serve`. The demo runs on **Dhruv's laptop** with the Docker image `inductiveautomation/ignition:8.3`, which reaches the API at `http://host.docker.internal:8000`. David's native gateway cannot reach it.
-- Still open for David: confirm he is fine running the demo on Dhruv's laptop.
-- Still to check at build time: that `host.docker.internal` resolves from the container on that laptop, and that the API accepts the `Host: host.docker.internal:8000` header (it should, since only the MCP HTTP server limits Host, section 8.3).
+- **Owner and machine (David 13:48, section 10.8):** Praneetha runs the Ignition demo on **her own laptop**, with both the gateway and the API there (`make setup`, then `make serve`, from the public repo and its committed fixtures). The main demo (React UI plus MCP) runs on Dhruv's laptop.
+- `GET /api/assess` needs no auth, header or token, and CORS does not apply (server to server) (Dhruv).
+- The API binds to `127.0.0.1`, so the gateway must be on the same machine. A native gateway calls `http://127.0.0.1:8000`. The Docker image `inductiveautomation/ignition:8.3` calls `http://host.docker.internal:8000`. Use whichever install is on the demo laptop; the timer script takes the base URL from one gateway parameter so the choice is one line.
+- To check at build time: that `host.docker.internal` resolves from the container (Docker only), and that the API accepts the `Host` header it sends (only the MCP HTTP server limits Host, section 8.3, so it should).
+
+## Build checklist addendum
+
+Before building on the laptop, run `make setup` then `make serve`, and confirm `curl http://127.0.0.1:8000/api/health` returns `ok`. Ignition cannot be installed or tested from the cloud session this design was written in, so nothing in this folder has been run against a gateway yet.
