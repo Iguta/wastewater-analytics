@@ -1,87 +1,190 @@
-"""Grounded agent (ARCHITECTURE.md 8.4): Claude calls our MCP tools over stdio; the answer is shown only if it passes the grounding check."""
+"""Grounded agent (ARCHITECTURE.md 8.4): the Claude Agent SDK calls our three MCP tools; an answer is shown only if every field passes the grounding check."""
 
 from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sys
+from datetime import UTC, datetime
+from pathlib import Path
 
-from anthropic import AsyncAnthropic, BadRequestError
-from anthropic.lib.tools.mcp import async_mcp_tool
-from mcp import ClientSession
-from mcp.client.stdio import StdioServerParameters, stdio_client
+from claude_agent_sdk import (
+    AssistantMessage,
+    ClaudeAgentOptions,
+    ResultMessage,
+    ToolResultBlock,
+    ToolUseBlock,
+    UserMessage,
+    query,
+)
 
 from backend.app import grounding
-from backend.app.contracts import AskResult, Grounding, ToolCall
+from backend.app.contracts import Answer, AskResult, Grounding, ToolCall
 
-MODEL = "claude-sonnet-5-5"
+ROOT = Path(__file__).resolve().parent.parent
+MODEL = "claude-sonnet-5-5"  # the one model setting; Haiku 5.5 is swapped here after `make agent-eval`
 MAX_TOOL_CALLS = 6
+MAX_TURNS = 6
+MAX_SESSIONS = 200
 TIMEOUT_S = 60
+SANDBOX = ROOT / "logs" / "agent_cwd"
+PREFIX = "mcp__dragonfly__"
+TOOLS = ["assess_station", "get_evidence", "replay_case"]
 SYSTEM = (
     "You explain read-only lift-station assessments to utility operators. Call the tools to get facts; never answer "
-    "from memory. Quote statuses, numbers, units and alert ids exactly as the tools return them, and only those. "
-    "Never estimate a missing reading, a failure probability, a failure date or a confirmed cause; say what is "
-    "missing instead. Never suggest operating, overriding or resetting equipment or alarms. When results are "
-    "SIMULATED or SYNTHETIC, say so. Keep answers under 150 words: what changed, what supports it, what "
-    "contradicts it, what to inspect, citing alert ids."
+    "from memory. On every turn, including follow-ups, call the tools again: earlier turns are never a source of "
+    "numbers. Quote statuses, numbers, units and alert ids exactly as the tools return them, and only those. "
+    "Never estimate a missing reading, a failure date or a cause; say what is missing instead. Write a status only as the exact capitalised status the tools give for the thing you name, and never use "
+    "the words normal, watch or investigate in any other sense. Do not quote a window length such as the 72 in a rain "
+    "field name; say recent rain. Never write the "
+    "words probability, confirmed, guarantee, definitely or prevent, or the phrase will fail. Never suggest operating, overriding or resetting equipment or alarms. When results are "
+    "SIMULATED or SYNTHETIC, say so. You cannot run new analyses, and you never add, subtract, compare or convert "
+    "numbers. If a question is not about the tool results, say you only explain Dragonfly assessments. Work orders are "
+    "drafted by the system, not by you. You may describe the drafted work order returned by get_evidence (its checks "
+    "and caveats) and answer questions about it. Never say you filed, sent, assigned or changed one; a human reviews "
+    "and files it. Keep answers under 150 words, as the structured "
+    "fields: summary, what changed, what supports it, what contradicts it, what is missing, what to inspect, and "
+    "the alert ids cited."
 )
-SERVER = StdioServerParameters(command=sys.executable, args=["-m", "backend.mcp_server"])
+WHAT_IF = re.compile(
+    r"\bwhat(?:'s| is| would| will)?\s+(?:happens?\s+)?if\b|\brecalculat|\bre-?run\b|\bsimulate\b", re.I
+)
+# A past-tense claim of acting on a work order, in either word order. shortcut: also withholds a negated "I did not file"; fine for a safety rule.
+ACTED = r"(?:filed|sent|assigned|submitted|created|closed|opened|dispatched|scheduled)"
+WORK_ORDER_CLAIM = re.compile(
+    rf"\b{ACTED}\b[^.\n]{{0,60}}work order|work order[^.\n]{{0,60}}\b{ACTED}\b", re.I
+)
+DASHES = {c: "-" for c in (*range(0x2010, 0x2016), 0x2212)}  # hyphens, dashes and the minus sign
+REFUSAL = "I can't run new analyses; I've logged this for the reliability team."
+# Sessions live in process memory, newest last; the oldest is evicted past MAX_SESSIONS, so a restart or eviction just starts a fresh conversation.
+SESSIONS: dict[tuple[str, str | None], tuple[str, int]] = {}  # (session_id, alert_id) -> (sdk session, turns)
 
 
-async def ask(question: str, context: dict) -> AskResult:
+def render(a: Answer) -> str:
+    lines = [a.summary]
+    for title, items in (
+        ("What changed", a.what_changed), ("Supports", a.supports), ("Contradicts", a.contradicts),
+        ("Missing", a.missing), ("Inspect", a.inspect),
+    ):  # fmt: skip
+        lines += [f"**{title}:** {i}" for i in items]
+    return "\n\n".join(lines + ([f"Alerts: {', '.join(a.alert_ids)}"] if a.alert_ids else []))
+
+
+def check_answer(a: Answer, results: list[str]) -> Grounding:
+    """Grounding per field; a cited alert id must appear verbatim in a tool result."""
+    raw = "\n".join(results)
+    # Some models write dates and minus signs with Unicode dashes; the checker reads ASCII "-".
+    texts = [
+        t.translate(DASHES)
+        for t in (a.summary, *a.what_changed, *a.supports, *a.contradicts, *a.missing, *a.inspect)
+    ]
+    parts = [grounding.check(t, results) for t in texts]
+    return Grounding(
+        passed=all(p.passed for p in parts) and all(i in raw for i in a.alert_ids) and not any(WORK_ORDER_CLAIM.search(t) for t in texts),
+        unmatched_numbers=[n for p in parts for n in p.unmatched_numbers] + [i for i in a.alert_ids if i not in raw],
+        forbidden_phrases=[f for p in parts for f in p.forbidden_phrases]
+        + [m.group() for t in texts for m in WORK_ORDER_CLAIM.finditer(t)],
+    )  # fmt: skip
+
+
+def asked(question: str, context: dict) -> str:
+    """The user's own words and numbers may be echoed ("station 99999", "2020-01-01"); the model still may not compute."""
+    text = f"{question} {json.dumps(context)}"
+    return json.dumps({"asked": text, "numbers": [float(n) for n in re.findall(r"\d+(?:\.\d+)?", text)]})
+
+
+def log_question(question: str, alert_id: str | None) -> None:
+    path = ROOT / "logs" / "questions.jsonl"
+    path.parent.mkdir(exist_ok=True)
+    row = {
+        "question": question,
+        "alert_id": alert_id,
+        "at_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    with path.open("a") as f:
+        f.write(json.dumps(row) + "\n")
+
+
+async def ask(question: str, context: dict, session_id: str | None = None) -> AskResult:
     """Raises TimeoutError after 60 s; the caller maps it to 504."""
-    async with (
-        asyncio.timeout(TIMEOUT_S),
-        stdio_client(SERVER) as (read, write),
-        ClientSession(read, write) as mcp,
-    ):
-        await mcp.initialize()
-        tools = [async_mcp_tool(t, mcp) for t in (await mcp.list_tools()).tools]
-        content = f"{question}\nContext: {json.dumps({k: v for k, v in context.items() if v})}"
-        fallback_dropped = False
-        for extra in ({"fallbacks": "default", "betas": ["server-side-fallback-2026-07-01"]}, {}):
-            calls: list[ToolCall] = []
-            results: list[str] = []
-            text, refused = "", False
-            try:
-                runner = AsyncAnthropic().beta.messages.tool_runner(
-                    model=MODEL, max_tokens=16000, output_config={"effort": "low"}, system=SYSTEM, tools=tools,
-                    messages=[{"role": "user", "content": content}], **extra,
-                )  # fmt: skip
-                async for message in runner:
-                    uses = [b for b in message.content if b.type == "tool_use"]
-                    if (
-                        len(calls) + len(uses) > MAX_TOOL_CALLS
-                    ):  # tools run only after this yield, so none of these ran
-                        refused = True
-                        break
-                    if uses:
-                        reply = await runner.generate_tool_call_response()  # cached: the runner reuses it
-                        for u, r in zip(uses, reply["content"]):
-                            calls.append(ToolCall(tool=u.name, args=u.input, ok=not r.get("is_error")))
-                            c = r["content"]  # raw MCP blocks; grounding needs the decoded tool text
-                            results.append(c if isinstance(c, str) else "".join(b.get("text", "") for b in c))
-                    refused = refused or message.stop_reason == "refusal"
-                    text = "".join(b.text for b in message.content if b.type == "text")
-                break
-            except BadRequestError:
-                if not extra:
-                    raise
-                fallback_dropped = True
-        reason = (
-            "refused or over the tool-call cap"
-            if refused
-            else "no tool call"
-            if not calls
-            else ""
-            if text
-            else "empty answer"
-        )
-        if reason:
-            g = Grounding(passed=False, unmatched_numbers=[reason], forbidden_phrases=[])
-        else:
-            g = grounding.check(text, results)
-        return AskResult(
-            answer_markdown=text if g.passed else None, withheld=not g.passed, tool_calls=calls,
-            grounding=g, model=MODEL, fallback_dropped=fallback_dropped,
-        )  # fmt: skip
+    if WHAT_IF.search(question):
+        log_question(question, context.get("alert_id"))
+        g = Grounding(passed=True, unmatched_numbers=[], forbidden_phrases=[])
+        return AskResult(answer_markdown=REFUSAL, withheld=False, tool_calls=[], grounding=g, model=MODEL)
+    key = (session_id, context.get("alert_id"))
+    sdk_session, turns = SESSIONS.get(key, (None, 0))
+    if turns >= MAX_TURNS:  # the 7th question starts a fresh conversation
+        sdk_session, turns = None, 0
+    SANDBOX.mkdir(
+        parents=True, exist_ok=True
+    )  # a stable empty cwd: the agent sees no repo files, and sessions can resume
+    options = ClaudeAgentOptions(
+        model=MODEL, effort="low", system_prompt=SYSTEM, cwd=SANDBOX, max_turns=MAX_TOOL_CALLS + 1,
+        mcp_servers={"dragonfly": {"command": sys.executable, "args": ["-m", "backend.mcp_server"], "env": {"PYTHONPATH": str(ROOT)}}},
+        tools=[],  # no built-in tool (shell, files, web) exists for the model
+        allowed_tools=[PREFIX + t for t in TOOLS],
+        permission_mode="dontAsk",  # anything not allowed is denied, never prompted
+        setting_sources=[],
+        env={"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"},  # no dev memory in an operator-facing context
+        output_format={"type": "json_schema", "schema": Answer.model_json_schema()},
+        resume=sdk_session,
+    )  # fmt: skip
+    content = f"{question}\nContext: {json.dumps({k: v for k, v in context.items() if v})}"
+    calls: list[ToolCall] = []
+    results: list[str] = []
+    uses: dict[str, ToolUseBlock] = {}
+    final: ResultMessage | None = None
+    async with asyncio.timeout(TIMEOUT_S):
+        async for m in query(prompt=content, options=options):
+            blocks = (
+                m.content
+                if isinstance(m, (AssistantMessage, UserMessage)) and not isinstance(m.content, str)
+                else []
+            )
+            for b in blocks:
+                if isinstance(b, ToolUseBlock) and b.name.startswith(
+                    PREFIX
+                ):  # not StructuredOutput, not a denied built-in
+                    uses[b.id] = b
+                elif isinstance(b, ToolResultBlock) and b.tool_use_id in uses:
+                    u = uses[b.tool_use_id]
+                    calls.append(ToolCall(tool=u.name.removeprefix(PREFIX), args=u.input, ok=not b.is_error))
+                    c = b.content or ""
+                    text = c if isinstance(c, str) else "".join(x.get("text", "") for x in c)
+                    body = text[text.find("{") :] if b.is_error else text  # "Error executing tool X: {json}"
+                    try:  # an oversize or other plain-text notice is not JSON and not a fact
+                        json.loads(body)
+                    except ValueError:
+                        calls[-1].ok = False
+                    else:  # a tool error's own JSON (valid ids, allowed range) is the server's word too
+                        results.append(body)
+            if isinstance(m, ResultMessage):
+                final = m
+    answer = None
+    if final is None or final.subtype != "success" or final.stop_reason == "refusal":
+        reason = "refused or errored"
+    elif len(calls) > MAX_TOOL_CALLS:
+        reason = "over the tool-call cap"
+    elif not calls:
+        reason = "no tool call"  # a follow-up answered from history is withheld
+    else:
+        try:
+            answer = Answer.model_validate(final.structured_output)
+            reason = ""
+        except Exception:
+            reason = "no structured answer"
+    g = (
+        Grounding(passed=False, unmatched_numbers=[reason], forbidden_phrases=[])
+        if reason
+        else check_answer(answer, [*results, asked(question, context)])
+    )
+    if g.passed and session_id and final:
+        SESSIONS.pop(key, None)  # re-insert last: the dict stays oldest-first
+        SESSIONS[key] = (final.session_id, turns + 1)
+        while len(SESSIONS) > MAX_SESSIONS:
+            del SESSIONS[next(iter(SESSIONS))]
+    return AskResult(
+        answer_markdown=render(answer) if g.passed else None, answer=answer if g.passed else None,
+        withheld=not g.passed, tool_calls=calls, grounding=g, model=MODEL,
+    )  # fmt: skip

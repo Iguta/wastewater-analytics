@@ -44,6 +44,7 @@ PARAM_CODE = {
     "alert_id": "UNKNOWN_ALERT",
     "case_id": "UNKNOWN_CASE",
     "question": "BAD_QUESTION",
+    "session_id": "BAD_QUESTION",
     "verdict": "BAD_FEEDBACK",
     "by": "BAD_FEEDBACK",
     "note": "BAD_FEEDBACK",
@@ -188,6 +189,8 @@ class AskRequest(BaseModel):
     station_id: str | None = None
     as_of_utc: str | None = None
     scenario_id: str | None = None
+    alert_id: str | None = Field(default=None, pattern=ALERT_ID_PATTERN)
+    session_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,64}$")
 
 
 @app.post("/api/ask")
@@ -205,7 +208,9 @@ async def ask(req: AskRequest) -> AskResult:
     if req.as_of_utc:
         assess.parse_time(req.as_of_utc)
     try:
-        return await agent.ask(req.question, req.model_dump(exclude={"question"}))
+        return await agent.ask(
+            req.question, req.model_dump(exclude={"question", "session_id"}), req.session_id
+        )
     except (
         Exception
     ) as e:  # anyio wraps task-group failures, so a timeout can arrive inside an ExceptionGroup
