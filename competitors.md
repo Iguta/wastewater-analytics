@@ -61,16 +61,3 @@ When a pump is off, the rise in wet well level gives the inflow rate. When the p
 ## Scope and Validation
 
 This analysis draws on public vendor materials, press coverage and published research. Vendor performance figures are self-reported and have not been independently verified. Initial evaluation of the concept uses simulated station data with injected faults. The next step is validation on a historian export from a real utility, along with interviews with operators and planners to confirm which alerts they would act on.
-
-## Sources
-
-- Smart Water Magazine, StormHarvester at Southern Water: https://smartwatermagazine.com/news/stormharvester/turning-alarm-flood-actionable-alerts-southern-waters-ai-pump-monitoring
-- Irish News, StormHarvester and Northumbrian Water: https://ie.irishnews.com/news/business/belfast-tech-firm-stormharvester-wins-long-term-northumbrian-water-contract-FXFB5SBOCBHJJAJGXVISDEXK5Q
-- CB Insights, StormHarvester profile: https://www.cbinsights.com/company/stormharvester
-- iFactory, lift station and pump station monitoring: https://ifactoryapp.com/industries/infrastructure-management/lift-station-pump-station-maintenance-ai-wet-well-monitoring
-- iFactory, pump station analytics: https://ifactoryapp.com/industries/government/pump-station-analytics-water-wastewater
-- OxMaint, lift station predictive maintenance: https://oxmaint.com/industries/government/wastewater-lift-station-predictive-maintenance-system
-- Xylem, Fairwood Lift Station case study: https://www.xylem.com/en-kw/making-waves/water-utilities-news/lift-station-overflows-solved-with-xylem-solution/
-- PHM Society, Health Assessment of Pump Stations using Time Series Anomaly Detection (Schneider Electric): https://papers.phmsociety.org/index.php/phmconf/article/view/3870
-- CB Insights, SUEZ AQUADVANCED mention: https://www.cbinsights.com/company/sewerai
-- arXiv, Modeling and Physics-Enhanced Fault Detection in Wastewater Pump Stations: https://arxiv.org/pdf/2511.11304.pdf
