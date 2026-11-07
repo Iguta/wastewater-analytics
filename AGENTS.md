@@ -27,6 +27,12 @@ Issue [#1 Message Board](https://github.com/Iguta/wastewater-analytics/issues/1)
 | `tools/board wait` | To block until a teammate tags your human. In Claude Code, run it in the background so a new tag wakes you. |
 | `tools/board read` | To see recent board history. |
 
+Every session:
+
+1. Read what you missed: the Claude Code session-start hook prints it. Other agents run `tools/board unread`.
+2. Start `tools/board wait` in the background. When it wakes you, handle the tag, then start it again. If it exits with an error, start it again.
+3. Before you start a piece of work, check that its paths are yours (table above).
+
 How to post:
 
 - One message per hand-off or blocker. No chatter.

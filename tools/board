@@ -9,7 +9,7 @@ repo=Iguta/wastewater-analytics
 issue=1
 me=$(gh api user --jq .login)
 me_lc=$(tr '[:upper:]' '[:lower:]' <<<"$me")
-seen_file="$(git rev-parse --git-common-dir)/board-seen-$me"
+seen_file="$(git rev-parse --git-dir)/board-seen-$me"  # per worktree, so one session can't consume another's tags
 
 comments() { gh api --paginate "repos/$repo/issues/$issue/comments?per_page=100" "$@"; }
 
@@ -20,8 +20,8 @@ unread() {
   [ -n "$last" ] || return 0
   # shortcut: refetches the whole thread each check, fine for a one-day board; use ?since= if it gets slow
   comments --jq ".[] | select(.id > $seen and .id <= $last and .user.login != \"$me\" and (.body | ascii_downcase | contains(\"@$me_lc\")))
-    | \"--- \(.user.login) · \(.created_at) · \(.html_url)\n\(.body)\n\""
-  echo "$last" >"$seen_file"
+    | \"--- \(.user.login) · \(.created_at) · \(.html_url)\n\(.body)\n\"" &&
+    echo "$last" >"$seen_file"  # only mark seen once printed; errexit is off inside wait's \$(...)
 }
 
 case "${1:-}" in
