@@ -1,0 +1,69 @@
+{
+  "f1_false_escalation_before_onset": 7,
+  "f1_false_escalation_before_onset_attributable": 0,
+  "f1_recall": {
+    "k": 122,
+    "n": 123,
+    "scope": "loss >= 20% and ramp >= 7 d",
+    "stations": 3,
+    "value": 0.9919,
+    "wilson95": [
+      0.9554,
+      0.9986
+    ],
+    "years": 1
+  },
+  "f5_minutes_to_offline": {
+    "max": 9.0,
+    "median": 9.0
+  },
+  "f6_pass": "30/30",
+  "false_escalations": {
+    "F2": "7/30",
+    "F3": "7/30",
+    "F4": "6/30",
+    "F7": "21/30"
+  },
+  "false_escalations_attributable": {
+    "F2": "0/30",
+    "F3": "6/30",
+    "F4": "3/30",
+    "F7": "21/30"
+  },
+  "g6_investigate_opens_per_pump_per_180d": {
+    "44371": 0.493,
+    "45078": 0.0,
+    "45385": 0.986
+  },
+  "gates": {
+    "G1": false,
+    "G2": true,
+    "G3": null,
+    "G4": null,
+    "G5": false,
+    "G5_attributable": false,
+    "G6": true,
+    "G7": null
+  },
+  "lead_days": {
+    "median": 8.33,
+    "misses_as_zero": true,
+    "n": 200,
+    "p10": 1.83
+  },
+  "model_version": "dragonfly-ci-v1",
+  "morningside_a_dev_lead_median_d": null,
+  "params": {
+    "G": 14,
+    "U": 4,
+    "W": 60,
+    "h_i": 6,
+    "h_w": 3,
+    "k": 0.5,
+    "min_effect": -8.0
+  },
+  "runtime_s": 112.3,
+  "watch_lead_days": {
+    "median": 10.65
+  }
+}

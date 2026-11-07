@@ -81,12 +81,13 @@ def run(daily: pd.DataFrame, params: Params, scope: str = "REAL") -> pd.DataFram
     # sibling inhibition (§4.5, decision D2/D3): compare the capacity CHANGE (log CI minus own baseline) with
     # the other sufficient pumps' changes, subtract only a shared drop, then scale by this pump's own spread.
     d["dev"] = (d["logci"] - d["base_median"]).where(d["z"].notna())
-    ds = d.dropna(subset=["dev"])
-    others = []
-    for r in d[["pump_id", "day"]].itertuples(index=False):
-        o = ds[(ds["day"] == r.day) & (ds["pump_id"] != r.pump_id)]["dev"]
-        others.append(float(o.median()) if len(o) else np.nan)
-    oth = np.array(others, dtype=float)
+    wide = d.pivot_table(index="day", columns="pump_id", values="dev", aggfunc="first")
+    med = {}
+    for pump in wide.columns:  # median of the OTHER pumps' change that day (NaN when none qualify)
+        rest = wide.drop(columns=pump)
+        med[pump] = rest.median(axis=1, skipna=True).where(rest.notna().any(axis=1))
+    med = pd.DataFrame(med).stack(future_stack=True).rename("oth")
+    oth = d.set_index(["day", "pump_id"]).index.map(med.to_dict()).to_numpy(dtype=float)
     d["sibling_available"] = ~np.isnan(oth)
     oth = np.nan_to_num(oth, nan=0.0)
     if p.sibling_mode == "shared_drop":  # only explain a drop the siblings share; never manufacture one
@@ -239,7 +240,10 @@ def realtime(events: pd.DataFrame, level: pd.DataFrame, as_of, params: Params) -
 
     # --- SOURCE_SILENT: level missed SILENT_SAMPLES (10) samples AND no pump event since it went silent,
     #     or no pump event for T while level is also silent. Clears when either stream resumes.
-    no_event_since_level = last_ev is None or (last_lv is not None and last_ev <= last_lv)
+    # "since the level went silent" = after the first missed sample (last level + one cadence)
+    no_event_since_level = last_ev is None or (
+        last_lv is not None and last_ev < last_lv + pd.Timedelta(seconds=1.5 * cadence)
+    )
     if level_silent and (no_event_since_level or ev_silent_s >= T):
         since = max([t for t in (last_ev, last_lv) if t is not None], default=None)
         out.append(
