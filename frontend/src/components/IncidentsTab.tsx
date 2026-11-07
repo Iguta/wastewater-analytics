@@ -9,7 +9,7 @@ const DETECT_LINE: Record<ScenarioVariant["detectability"], string> = {
   NOT_DETECTABLE: "Not detectable from this data",
 };
 const fmtTs = (ts: string | null) => (ts ? ts.replace("T", " ").replace(/:00Z$/, "") + " UTC" : "none");
-const gal = (n: number) => `Simulated: ${n.toLocaleString("en-US")} gal`;
+const gal = (n: number) => `Simulated: ${n.toLocaleString("en-US", { maximumFractionDigits: 0 })} gal`;
 // Section 10.5 captions: the response policy assumed for each scenario.
 const CAPTION: Record<string, string> = {
   bloomington_morningside_2024_04_11: "Assumes the repair finishes R h after the first Investigate; every other step as recorded.",
