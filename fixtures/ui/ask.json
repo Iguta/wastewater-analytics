@@ -1,0 +1,21 @@
+{
+  "answer_markdown": "P2 at station 44371 has an INVESTIGATE finding (REAL:44371:P2:CAPACITY_DROP:2022-09-02): capacity index 16.2 against a baseline of 30.0, -46%.",
+  "withheld": false,
+  "tool_calls": [
+    {
+      "tool": "assess_station",
+      "args": {
+        "station_id": "44371",
+        "as_of_utc": "2022-09-14T12:00:00Z"
+      },
+      "ok": true
+    }
+  ],
+  "grounding": {
+    "passed": true,
+    "unmatched_numbers": [],
+    "forbidden_phrases": []
+  },
+  "model": "claude-sonnet-5-5",
+  "fallback_dropped": false
+}

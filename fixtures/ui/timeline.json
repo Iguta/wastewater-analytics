@@ -1,0 +1,142 @@
+[
+  {
+    "day": "2024-04-05",
+    "station_status": "NORMAL",
+    "pumps": [
+      {
+        "pump_id": "P1",
+        "status": "NORMAL",
+        "ci": 30.0,
+        "base_median": 30.0,
+        "cusum": 0.0
+      },
+      {
+        "pump_id": "P2",
+        "status": "NORMAL",
+        "ci": 30.0,
+        "base_median": 30.0,
+        "cusum": 0.0
+      }
+    ]
+  },
+  {
+    "day": "2024-04-06",
+    "station_status": "NORMAL",
+    "pumps": [
+      {
+        "pump_id": "P1",
+        "status": "NORMAL",
+        "ci": 30.0,
+        "base_median": 30.0,
+        "cusum": 0.0
+      },
+      {
+        "pump_id": "P2",
+        "status": "NORMAL",
+        "ci": 25.5,
+        "base_median": 30.0,
+        "cusum": 2.4
+      }
+    ]
+  },
+  {
+    "day": "2024-04-07",
+    "station_status": "WATCH",
+    "pumps": [
+      {
+        "pump_id": "P1",
+        "status": "NORMAL",
+        "ci": 30.0,
+        "base_median": 30.0,
+        "cusum": 0.0
+      },
+      {
+        "pump_id": "P2",
+        "status": "WATCH",
+        "ci": 21.0,
+        "base_median": 30.0,
+        "cusum": 4.8
+      }
+    ]
+  },
+  {
+    "day": "2024-04-08",
+    "station_status": "INVESTIGATE",
+    "pumps": [
+      {
+        "pump_id": "P1",
+        "status": "NORMAL",
+        "ci": 30.0,
+        "base_median": 30.0,
+        "cusum": 0.0
+      },
+      {
+        "pump_id": "P2",
+        "status": "INVESTIGATE",
+        "ci": 16.5,
+        "base_median": 30.0,
+        "cusum": 7.2
+      }
+    ]
+  },
+  {
+    "day": "2024-04-09",
+    "station_status": "INVESTIGATE",
+    "pumps": [
+      {
+        "pump_id": "P1",
+        "status": "NORMAL",
+        "ci": 30.0,
+        "base_median": 30.0,
+        "cusum": 0.0
+      },
+      {
+        "pump_id": "P2",
+        "status": "INVESTIGATE",
+        "ci": 12.0,
+        "base_median": 30.0,
+        "cusum": 9.6
+      }
+    ]
+  },
+  {
+    "day": "2024-04-10",
+    "station_status": "INVESTIGATE",
+    "pumps": [
+      {
+        "pump_id": "P1",
+        "status": "NORMAL",
+        "ci": 30.0,
+        "base_median": 30.0,
+        "cusum": 0.0
+      },
+      {
+        "pump_id": "P2",
+        "status": "INVESTIGATE",
+        "ci": 7.5,
+        "base_median": 30.0,
+        "cusum": 12.0
+      }
+    ]
+  },
+  {
+    "day": "2024-04-11",
+    "station_status": "INVESTIGATE",
+    "pumps": [
+      {
+        "pump_id": "P1",
+        "status": "NORMAL",
+        "ci": 30.0,
+        "base_median": 30.0,
+        "cusum": 0.0
+      },
+      {
+        "pump_id": "P2",
+        "status": "INVESTIGATE",
+        "ci": 3.0,
+        "base_median": 30.0,
+        "cusum": 14.4
+      }
+    ]
+  }
+]

@@ -1,0 +1,37 @@
+[project]
+name = "dragonfly-backend"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "pandas",
+  "numpy",
+  "pyarrow",
+  "pydantic>=2,<3",
+  "fastapi",
+  "uvicorn",
+  "httpx",
+  "mcp==2.3.0",
+  "anthropic[mcp]==2.6.0",
+  "anyio",
+]
+
+[dependency-groups]
+dev = ["pytest", "pytest-timeout", "ruff"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+# T20: no print in app code, because stdout carries the MCP protocol.
+select = ["E", "F", "I", "T20"]
+ignore = ["E501"]  # the formatter owns line length
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["T20"]
+"scripts/*" = ["T20"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["backend"]
