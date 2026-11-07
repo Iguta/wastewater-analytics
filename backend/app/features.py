@@ -9,7 +9,8 @@ import pandas as pd
 
 from . import quality
 
-SILENCE = pd.Timedelta(minutes=5)  # default: 5 missed 1-min level samples
+SILENT_SAMPLES = 10  # §4.8: SOURCE_SILENT after 10 missed level samples
+SILENCE = pd.Timedelta(minutes=10)  # default at 1-min cadence
 COLUMNS = [
     "station_id",
     "pump_id",
@@ -100,7 +101,7 @@ def daily_table(events, level, rain, end_utc, station_id: str | None = None, cou
     t[["overlap_share", "invalid_share"]] = t[["overlap_share", "invalid_share"]].fillna(0.0)
 
     cadence = lv["ts"].diff().median() if len(lv) >= 2 else pd.Timedelta(minutes=1)
-    off = offline_hours_by_day(pd.concat([ev["ts"], lv["ts"]]), first_day, last_day, 5 * cadence)
+    off = offline_hours_by_day(pd.concat([ev["ts"], lv["ts"]]), first_day, last_day, SILENT_SAMPLES * cadence)
     t["offline_hours"] = t["day"].map(off).fillna(0.0)
 
     rn = rain[rain["ts_hour"] < last_day].assign(day=lambda x: x["ts_hour"].dt.floor("D"))

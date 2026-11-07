@@ -10,17 +10,17 @@
       "level_units": [
         "%"
       ],
-      "offline_hours_total": 116.36,
+      "offline_hours_total": 3.23,
       "pump_day_quality": {
         "P1": {
           "INSUFFICIENT": 46,
-          "PARTIAL": 53,
-          "SUFFICIENT": 631
+          "PARTIAL": 12,
+          "SUFFICIENT": 672
         },
         "P2": {
           "INSUFFICIENT": 35,
-          "PARTIAL": 64,
-          "SUFFICIENT": 631
+          "PARTIAL": 23,
+          "SUFFICIENT": 672
         }
       },
       "pumps": [
@@ -54,25 +54,22 @@
       "level_units": [
         "mm"
       ],
-      "offline_hours_total": 30.77,
+      "offline_hours_total": 10.47,
       "pump_day_quality": {
         "P1": {
           "INSUFFICIENT": 22,
-          "PARTIAL": 63,
-          "SOURCE_OFFLINE": 1,
-          "SUFFICIENT": 644
+          "PARTIAL": 61,
+          "SUFFICIENT": 647
         },
         "P2": {
           "INSUFFICIENT": 31,
-          "PARTIAL": 59,
-          "SOURCE_OFFLINE": 1,
-          "SUFFICIENT": 639
+          "PARTIAL": 57,
+          "SUFFICIENT": 642
         },
         "P3": {
           "INSUFFICIENT": 28,
-          "PARTIAL": 58,
-          "SOURCE_OFFLINE": 1,
-          "SUFFICIENT": 643
+          "PARTIAL": 56,
+          "SUFFICIENT": 646
         }
       },
       "pumps": [
@@ -108,17 +105,17 @@
       "level_units": [
         "%"
       ],
-      "offline_hours_total": 13.54,
+      "offline_hours_total": 5.33,
       "pump_day_quality": {
         "P1": {
           "INSUFFICIENT": 84,
-          "PARTIAL": 28,
-          "SUFFICIENT": 618
+          "PARTIAL": 27,
+          "SUFFICIENT": 619
         },
         "P2": {
           "INSUFFICIENT": 11,
-          "PARTIAL": 12,
-          "SUFFICIENT": 707
+          "PARTIAL": 11,
+          "SUFFICIENT": 708
         }
       },
       "pumps": [

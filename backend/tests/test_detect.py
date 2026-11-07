@@ -122,11 +122,11 @@ def _stream(minutes: int, end_gap_min: int, level_value=None):
     return ev, lv, as_of
 
 
-def test_source_silent_within_5_minutes_via_level_heartbeat():
-    ev, lv, as_of = _stream(3000, 5)
+def test_source_silent_within_10_minutes_via_level_heartbeat():
+    ev, lv, as_of = _stream(3000, 10)
     out = detect.realtime(ev, lv, as_of, P)
     assert any(f["type"] == "SOURCE_SILENT" for f in out)
-    ev, lv, as_of = _stream(3000, 2)
+    ev, lv, as_of = _stream(3000, 6)  # a 6-min dropout is common on real data and must not alarm
     assert not any(f["type"] == "SOURCE_SILENT" for f in detect.realtime(ev, lv, as_of, P))
 
 
@@ -164,5 +164,5 @@ def test_offline_hours_count_only_silent_time():
     off = features.offline_hours_by_day(
         ts, pd.Timestamp("2022-01-01"), pd.Timestamp("2022-01-01 02:00"), pd.Timedelta(minutes=5)
     )
-    # 00:05-01:00 silent (55 min) + 01:06-02:00 (54 min)
+    # 00:05-01:00 silent (55 min) + 01:06-02:00 (54 min), at a 5-min silence threshold
     assert abs(off[pd.Timestamp("2022-01-01")] - (55 + 54) / 60) < 1e-9

@@ -12,7 +12,7 @@ import math
 import numpy as np
 import pandas as pd
 
-from .features import to_naive_utc
+from .features import SILENT_SAMPLES, to_naive_utc
 from .params import Params
 
 MAD_SCALE = 1.4826
@@ -210,7 +210,7 @@ def realtime(events: pd.DataFrame, level: pd.DataFrame, as_of, params: Params) -
     last_lv = lv["ts"].max() if len(lv) else None
     cadence = float(lv["ts"].diff().dt.total_seconds().median()) if len(lv) >= 2 else 60.0
     level_silent_s = (end - last_lv).total_seconds() if last_lv is not None else float("inf")
-    level_silent = level_silent_s >= 5 * cadence
+    level_silent = level_silent_s >= SILENT_SAMPLES * cadence
     starts = ev[ev["state"] == 1]["ts"].sort_values()
     stops = ev[ev["state"] == 0]["ts"].sort_values()
     fills = _fills(starts, stops)
