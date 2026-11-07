@@ -30,7 +30,7 @@ function assess(station: string, day: string) {
   });
   const queue = pumps.filter((p) => p.status !== "NORMAL").map((p, i) => ({
     alert_id: `REAL:${station}:${p.pump_id}:CAPACITY_DROP:2022-06-01`, type: "CAPACITY_DROP", pump_id: p.pump_id, status: p.status,
-    priority: i + 1, opened_on: "2022-06-01", days_open: Math.max(1, Math.round((Date.parse(day) - Date.parse("2022-06-01")) / 864e5) + 1),
+    priority: i + 1, opened_on: "2022-06-01", since_utc: "2022-06-01T00:00:00Z", days_open: Math.max(1, Math.round((Date.parse(day) - Date.parse("2022-06-01")) / 864e5) + 1),
     observed: p.ci_today, expected: p.ci_baseline, units: "/h", change_pct: p.capacity_change_pct,
     summary: p.status === "INVESTIGATE" ? "Investigate: inspect this pump" : "Watch: capacity is dropping",
     possible_causes: [], inspection: [],
@@ -51,6 +51,7 @@ export function mockApi(): Plugin {
         const u = new URL(req.url ?? "", "http://x");
         const q = u.searchParams;
         const send = (code: number, body: unknown) => { res.statusCode = code; res.setHeader("content-type", "application/json"); res.end(JSON.stringify(body)); };
+        if (u.pathname === "/ask") return send(503, { code: "agent_offline", message: "agent offline", allowed: [] });
         if (u.pathname === "/health") return send(200, { status: "ok", model_version: "dragonfly-ci-v1", source_hash: hash, code_version: "mock" });
         if (u.pathname === "/stations") return send(200, { source_hash: hash, model_version: "dragonfly-ci-v1",
           stations: STATIONS.map((s) => ({ ...s, origin: "REAL_REPLAY", scenario_id: null, as_of_min: "2022-03-16T00:00:00Z", as_of_max: "2024-01-01T00:00:00Z",
@@ -61,6 +62,25 @@ export function mockApi(): Plugin {
             const a = assess(q.get("station_id")!, d);
             out.push({ day: d, station_status: a.status, pumps: a.pumps.map((p) => ({ pump_id: p.pump_id, status: p.status, ci: p.ci_today, base_median: p.ci_baseline, cusum: p.cusum })) });
           } return send(200, out);
+        }
+        if (u.pathname === "/evidence") {
+          const [, station, pump] = q.get("alert_id")!.split(":");
+          const day = q.get("as_of_utc")!.slice(0, 10);
+          const a = assess(station, day);
+          const finding = a.queue.find((f) => f.pump_id === pump) ?? a.queue[0];
+          const trace = []; for (let i = 89; i >= 0; i--) {
+            const d = dayAdd(day, -i); const s = pumpStatus(station, pump, d);
+            const ci = s === "NORMAL" ? 30 + Math.sin(i) : 30 - Math.min(14, (89 - i - 80) * 2.5);
+            trace.push({ day: d, quality: "SUFFICIENT", valid_cycles: 38, ci, base_median: 30, base_mad: 0.04, z: 0, common: 0, u: 0, cusum: s === "NORMAL" ? 0.3 : s === "WATCH" ? 3.5 : 7.5, status: s });
+          }
+          const raw_events = []; for (let h = 0; h < 24; h++) { raw_events.push({ ts: `${finding.opened_on}T${String(h).padStart(2, "0")}:10:00Z`, pump_id: pump, state: "ON", signal_id: "mock-sig" }, { ts: `${finding.opened_on}T${String(h).padStart(2, "0")}:14:00Z`, pump_id: pump, state: "OFF", signal_id: "mock-sig" }); }
+          const level = Array.from({ length: 96 }, (_, i) => ({ ts: `${finding.opened_on}T${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}:00Z`, value: 20 + 10 * Math.abs(Math.sin(i / 5)), units: "%" }));
+          return send(200, { alert_id: finding.alert_id, station_id: station, pump_id: pump, origin: "REAL_REPLAY", as_of_utc: q.get("as_of_utc"), finding,
+            rain: { today_mm: 0, last_72h_mm: 2.4, source: "mock" }, quality_flags: ["LONG_RUN: 2 runs capped at 3,600 s"],
+            supporting: ["Capacity below normal on 3 of the last 3 days"], contradictory: ["The other pump is normal"], unavailable: ["Motor current"],
+            trace, transitions: [], raw_events, level,
+            work_order: { title: "Inspect pump (draft)", station_id: station, pump_id: pump, priority: "High", requested_by: "Dragonfly draft - needs human review", checks: ["Impeller clog or ragging"], evidence_alert_id: finding.alert_id, caveats: ["Not a diagnosis"] },
+            provenance: prov });
         }
         send(404, { code: "UNKNOWN_STATION", message: "mock: not implemented", allowed: [] });
       });
