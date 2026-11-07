@@ -651,11 +651,11 @@ All of these run from a clone of the repo after `make setup`. Replace `<repo>` w
 
 | Harness | Configuration |
 | --- | --- |
-| Claude Code | `claude mcp add dragonfly -- uv run --directory <repo>/backend python mcp_server.py` |
-| Claude Desktop | `{"mcpServers": {"dragonfly": {"command": "uv", "args": ["run", "--directory", "<repo>/backend", "python", "mcp_server.py"]}}}` |
+| Claude Code | `claude mcp add dragonfly -- uv run --project <repo>/backend python -m backend.mcp_server` |
+| Claude Desktop | `{"mcpServers": {"dragonfly": {"command": "uv", "args": ["run", "--project", "<repo>/backend", "python", "-m", "backend.mcp_server"]}}}` |
 | Cursor (`.cursor/mcp.json`) | The same `mcpServers` block |
 | VS Code (`.vscode/mcp.json`) | `{"servers": {"dragonfly": {"type": "stdio", "command": "uv", "args": [ ...same... ]}}}` |
-| Codex (`~/.codex/config.toml`) | `[mcp_servers.dragonfly]` with `command = "uv"` and `args = ["run", "--directory", "<repo>/backend", "python", "mcp_server.py"]` |
+| Codex (`~/.codex/config.toml`) | `[mcp_servers.dragonfly]` with `command = "uv"` and `args = ["run", "--project", "<repo>/backend", "python", "-m", "backend.mcp_server"]` |
 | Remote (claude.ai custom connector, ChatGPT developer-mode connector) | `make mcp-http` plus `make tunnel` gives `https://<random>.trycloudflare.com/mcp`. The tunnel exposes **port 8001 only** (never 8000 or `/api/ask`), is up only during judging, and needs no auth, because it serves only public CC BY data and labeled simulations, under the §8.3 limits. Real utility deployments would need OAuth and an on-prem host; the README says so. |
 
 The README "Use it from your agent" section carries these configurations, `cloudflared` as a prerequisite, a restart line, and three example questions:
@@ -918,7 +918,7 @@ At 15:15, Dhruv commits `.verify-strict`; from then on, a skip is a failure. Thi
 
 | Command | When it runs | What it checks |
 | --- | --- | --- |
-| `make agent-eval` (`backend/agent_eval.py`) | CI when `ANTHROPIC_API_KEY` exists and `agent.py`, `mcp_server.py`, `contracts.py` or `explain.py` changed. Otherwise it prints SKIP and exits 0. Also local. | 20 fixed questions in `backend/tests/agent_eval.toml`. A failing question is retried once. **Gate: at least 19/20 pass the grounding check.** Advisory: a `claude-haiku-5-5` judge answers yes, no or unknown to 3 questions per answer (claims a confirmed cause? suggests operating equipment? drops a missing-evidence caveat?). The fix loop never sees the judge rubric. |
+| `make agent-eval` (`backend/agent_eval.py`) | Local only today (no CI secret). In CI it prints SKIP and exits 0. Would run when `ANTHROPIC_API_KEY` exists and `agent.py`, `mcp_server.py`, `contracts.py` or `explain.py` changed. Otherwise it prints SKIP and exits 0. Also local. | 20 fixed questions in `backend/tests/agent_eval.toml`. A failing question is retried once. **Gate: at least 19/20 pass the grounding check.** Advisory: a `claude-haiku-5-5` judge answers yes, no or unknown to 3 questions per answer (claims a confirmed cause? suggests operating equipment? drops a missing-evidence caveat?). The fix loop never sees the judge rubric. |
 | `make eval` | Local, at freeze | The full evaluation (§6) |
 
 ### 11.3 Anti-gaming guard
@@ -935,7 +935,7 @@ At 15:15, Dhruv commits `.verify-strict`; from then on, a skip is a failure. Thi
 
 - branch protection on `main`: PR required, status check `verify` required, code-owner review required, rules enforced for admins too, no force push;
 - "Allow auto-merge";
-- Actions secrets `ANTHROPIC_API_KEY` and `AUTOFIX_TOKEN` (a fine-grained PAT with contents and pull-request write on this repo only).
+- **No Actions secrets today** (David, 12:31). `review.yml`, `autofix.yml` and `agent-eval` take their no-secret path (exit 0 with a notice). The agent demo runs on Dhruv's laptop through MCP (§18). If a key is ever added, `AUTOFIX_TOKEN` is a fine-grained PAT with contents and pull-request write on this repo only.
 
 The labels `stream:data`, `stream:ui`, `stream:api` and `decision-change` must exist; Dhruv creates any that are missing. By 13:30, Dhruv opens one test PR that touches `gates.toml` and confirms it cannot merge without code-owner approval, auto-merge included.
 
@@ -1014,21 +1014,23 @@ This updates AGENTS.md in the same PR.
 
 ## 14. Commands, environment and versions
 
+**Python layout (David's, PR #6):** `backend/` is a package (`backend/__init__.py`), code imports `backend.app.<module>`, and every Python command runs from the repo root with `uv run --frozen --project backend`. Tests live in `backend/tests/` and import `backend.app`.
+
 The `Makefile` holds exactly these commands, with `SHELL := bash` and `.SHELLFLAGS := -eu -o pipefail -c`.
 
 | Target | Command |
 | --- | --- |
 | `setup` | `cd backend && uv sync --frozen`; `cd frontend && npm ci`; `cd e2e && npm ci && npx playwright install --with-deps chromium` |
-| `fixtures` | `uv run --frozen --directory backend python scripts/export_fixtures.py` (David only, needs `$WESSEX_DIR`) |
-| `test` | `ruff check .`, `ruff format --check .` and `pytest -q`, each via `uv run --frozen --directory backend` |
+| `fixtures` | `uv run --frozen --project backend python scripts/export_fixtures.py` (David only, needs `$WESSEX_DIR`) |
+| `test` | `ruff check .`, `ruff format --check .` and `pytest -q`, each via `uv run --frozen --project backend` |
 | `verify` | `tools/verify` (§11.1) |
-| `eval-smoke` / `eval-dev` / `tune` / `eval-test` / `eval` | `uv run --frozen --directory backend python scripts/evaluate.py --tier smoke` / `--tier dev` / `--tier dev --grid` / `--tier test` / `--tier all` |
+| `eval-smoke` / `eval-dev` / `tune` / `eval-test` / `eval` | `uv run --frozen --project backend python scripts/evaluate.py --tier smoke` / `--tier dev` / `--tier dev --grid` / `--tier test` / `--tier all` |
 | `build-ui` | `cd frontend && npm run build` |
-| `serve` | `uv run --frozen --directory backend uvicorn api:app --host 127.0.0.1 --port 8000 --workers 1` (it serves `frontend/dist` if built) |
-| `mcp` / `mcp-http` | `uv run --frozen --directory backend python mcp_server.py` / `… --http` |
+| `serve` | `uv run --frozen --project backend uvicorn backend.api:app --host 127.0.0.1 --port 8000 --workers 1` (it serves `frontend/dist` if built) |
+| `mcp` / `mcp-http` | `uv run --frozen --project backend python -m backend.mcp_server` / `… --http` |
 | `mcp-smoke` | Inspector CLI 2.12.0 against `make mcp` (§11.1) |
 | `e2e` | `cd e2e && npx playwright test` (its `webServer` runs `make build-ui serve`) |
-| `agent-eval` | `uv run --frozen --directory backend python agent_eval.py` |
+| `agent-eval` | `uv run --frozen --project backend python -m backend.agent_eval` |
 | `tunnel` | `cloudflared tunnel --url http://127.0.0.1:8001` |
 
 - **Environment variables:** `WESSEX_DIR` (fixture export only), `ANTHROPIC_API_KEY` (agent, optional), and `BOARD_NAME`, `BOARD_POLL`, `BOARD_AGENT` (board tool). Nothing else.
