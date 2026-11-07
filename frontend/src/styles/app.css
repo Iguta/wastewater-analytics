@@ -113,3 +113,6 @@ body { margin: 0; }
   .stack td { display: flex; justify-content: space-between; gap: var(--space-3); border: 0; }
   .stack td::before { content: attr(data-label); color: var(--text-muted); }
 }
+.rungs { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-3); }
+.rung { border: 1px solid var(--border); padding: var(--space-3); background: var(--bg); }
+.rung p { margin: var(--space-1) 0; }
