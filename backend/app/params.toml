@@ -1,0 +1,16 @@
+# Detector + policy parameters (ARCHITECTURE.md §4.14). Frozen per version; tuned only on the 2022 dev tier.
+version = "dragonfly-ci-v1"
+k = 0.5
+U = 4
+h_w = 3
+h_i = 6
+W = 60
+G = 14
+min_valid_cycles = 20   # fixed, not tuned
+min_baseline_days = 30  # fixed
+reopen_days = 7         # fixed: recurrence within 7 days of closing reopens the incident
+
+# Ablation switches (§4.15). The shipped model has all three on.
+persistence = true
+inhibition = true
+quality_gate = true
