@@ -6,6 +6,7 @@ h_w = 3
 h_i = 6
 W = 60
 G = 14
+min_effect = -8.0  # % capacity change required to enter INVESTIGATE (§4.6); dev grid -5, -8, -12
 min_valid_cycles = 20   # fixed, not tuned
 min_baseline_days = 30  # fixed
 reopen_days = 7         # fixed: recurrence within 7 days of closing reopens the incident

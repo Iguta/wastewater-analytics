@@ -22,6 +22,7 @@ class Params:
     min_baseline_days: int = 30
     reopen_days: int = 7
     S_max: float = 12.0
+    min_effect: float = -8.0
     sibling_mode: str = "shared_drop"
     persistence: bool = True
     inhibition: bool = True

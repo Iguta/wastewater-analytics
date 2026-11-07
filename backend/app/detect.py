@@ -160,7 +160,10 @@ def _pump_states(g: pd.DataFrame, pump: str, p: Params, scope: str) -> pd.DataFr
                 S = min(p.S_max, max(0.0, S + float(np.clip(-r.u, -p.U, p.U)) - p.k))
                 recent = (recent + [r.u])[-3:]
                 persist = sum(x < -p.k for x in recent) >= 2
-                if S >= p.h_i and persist:
+                big_enough = (
+                    r.capacity_change_pct <= p.min_effect
+                )  # §4.6: no INVESTIGATE on a tiny, precise drop
+                if S >= p.h_i and persist and big_enough:
                     new = "INVESTIGATE"
                 elif prev == "INVESTIGATE":
                     new = "INVESTIGATE" if S >= p.h_w else "WATCH"
@@ -194,7 +197,10 @@ def _reason(prev: str, new: str, S: float, r, p: Params) -> str:
     if new == "INSUFFICIENT_EVIDENCE":
         return f"warming up: {r.baseline_days} baseline days < {p.min_baseline_days}"
     if new == "INVESTIGATE":
-        return f"CUSUM {S:.1f} >= {p.h_i} with 2 of last 3 sufficient days below -k"
+        return (
+            f"CUSUM {S:.1f} >= {p.h_i} with 2 of last 3 sufficient days below -k, "
+            f"capacity {r.capacity_change_pct:.0f}% <= {p.min_effect:.0f}%"
+        )
     if new == "WATCH" and prev == "INVESTIGATE":
         return f"CUSUM {S:.1f} fell below {p.h_w}"
     if new == "WATCH":
