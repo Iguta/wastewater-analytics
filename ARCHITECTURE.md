@@ -569,7 +569,7 @@ ErrorCode = Literal["UNKNOWN_STATION", "UNKNOWN_SCENARIO", "UNKNOWN_ALERT", "UNK
 Provenance:      source_hash, scenario_hash | None, model_version, code_version, signal_ids: list[str]
 PumpState:       pump_id, status, quality, ci_today | None, ci_baseline | None, capacity_change_pct | None,
                  cusum, valid_cycles, runs, run_median_s | None, expected_run_s | None
-Finding:         alert_id, type, pump_id | None, status, priority: int (1 = highest), opened_on: date,
+Finding:         alert_id, type, pump_id | None, status, priority: int (1 = highest), opened_on: date, since_utc: datetime (first minute or day the condition held),
                  days_open, observed | None, expected | None, units, change_pct | None, summary,
                  possible_causes: list[str], inspection: list[str]
 RainContext:     today_mm | None, last_72h_mm | None, source
@@ -746,7 +746,7 @@ The README "Use it from your agent" section carries these configurations, `cloud
 
 | State | What it shows |
 | --- | --- |
-| Loading | A skeleton plus "Loading…". After 10 s, it becomes an error. |
+| Loading | A skeleton plus "Loading…". After 10 s it becomes an error reading "Can't reach the Dragonfly server (no response in 10 s). Retry." |
 | Error | "Can't reach the Dragonfly server (HTTP {code}). Retry." While the API is down, a persistent top banner reads "Server not reachable". A screen is never blank. |
 | Empty queue | "No pumps need attention as of {date}." When evidence is below `SUFFICIENT`: "Nothing flagged, but evidence is {Partial / Not enough data}." Never "All clear". |
 | Empty safety strip | "No safety findings. SCADA-equivalent checks; real setpoints unknown." |
