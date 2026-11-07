@@ -99,6 +99,8 @@ def run(daily: pd.DataFrame, params: Params, scope: str = "REAL") -> pd.DataFram
     # station-wide signal c_d = max z over sufficient pumps (>= 2), negative only if every pump drops
     zc = zs.groupby("day")["z"]
     common = zc.max().where(zc.count() >= 2)
+    # shared capacity change = the least-dropped pump's change (§4.7 size rule)
+    shared_pct = (100 * (np.exp(zs.groupby("day")["dev"].max()) - 1)).where(zc.count() >= 2)
 
     # per-pump CUSUM + status (§4.6) and incidents (§4.11)
     parts = []
@@ -108,16 +110,24 @@ def run(daily: pd.DataFrame, params: Params, scope: str = "REAL") -> pd.DataFram
 
     # station-wide change (§4.7): same CUSUM on -c_d, WATCH at most
     st = common.dropna().sort_index()
-    s, on, scus, son = 0.0, False, {}, {}
+    s, state, big, scus, sstat = 0.0, "NORMAL", [], {}, {}
     for day, c in st.items():
         s = min(p.S_max, max(0.0, s + float(np.clip(-c, -p.U, p.U)) - p.k))
-        on = s >= p.h_w or (on and s >= 1.0)  # opens at h_w, closes below 1.0 (same hysteresis as WATCH)
-        scus[day], son[day] = s, on
+        big = (big + [shared_pct.get(day, np.nan) <= -30])[-3:]
+        if len(big) == 3 and all(big):  # every pump >= 30% down on 3 sufficient days: INVESTIGATE on size
+            state = "INVESTIGATE"
+        elif s >= p.h_w or (state != "NORMAL" and s >= 1.0):  # opens at h_w, closes below 1.0
+            state = "WATCH" if state == "NORMAL" else state
+        else:
+            state = "NORMAL"
+        scus[day], sstat[day] = s, state
     days = pd.Series(sorted(d["day"].unique()))
     scs = pd.Series(scus, dtype=float).reindex(days).ffill().fillna(0.0)  # held on days without siblings
-    sow = pd.Series(son, dtype=object).reindex(days).ffill().fillna(False).astype(bool)
+    sst = pd.Series(sstat, dtype=object).reindex(days).ffill().fillna("NORMAL")
     d["station_cusum"] = d["day"].map(scs)
-    d["station_wide_change"] = d["day"].map(sow).astype(bool)
+    d["station_wide_status"] = d["day"].map(sst)
+    d["station_wide_change"] = d["station_wide_status"] != "NORMAL"
+    d["station_shared_change_pct"] = d["day"].map(shared_pct)
 
     # PUMP_NOT_RUNNING (§4.8): baseline runs/day median >= 10, today 0, a sibling >= 10 today
     sib_max = d.groupby("day")["runs"].transform("max")
@@ -125,7 +135,7 @@ def run(daily: pd.DataFrame, params: Params, scope: str = "REAL") -> pd.DataFram
         (d["base_runs_median"] >= NOT_RUNNING_MIN_RUNS) & (d["runs"] == 0) & (sib_max >= NOT_RUNNING_MIN_RUNS)
     )
 
-    keep = [c for c in d.columns if c not in ("day_idx", "logci", "sufficient", "dev")]
+    keep = [c for c in d.columns if c not in ("day_idx", "logci", "sufficient", "dev")]  # dev is internal
     return d[keep].sort_values(["day", "pump_id"]).reset_index(drop=True)
 
 

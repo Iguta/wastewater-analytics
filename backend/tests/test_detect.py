@@ -166,3 +166,16 @@ def test_offline_hours_count_only_silent_time():
     )
     # 00:05-01:00 silent (55 min) + 01:06-02:00 (54 min), at a 5-min silence threshold
     assert abs(off[pd.Timestamp("2022-01-01")] - (55 + 54) / 60) < 1e-9
+
+
+def test_large_shared_drop_escalates_station_on_size():
+    rng = np.random.default_rng(2)
+    n = 160
+    base = 30 * np.exp(rng.normal(0, 0.02, (2, n)))
+    base[:, 120:] *= 0.65  # both pumps restricted 35%: serious whatever the cause
+    r = detect.run(_daily({"P1": base[0], "P2": base[1]}), P)
+    st = r[r.pump_id == "P1"].set_index("day").station_wide_status
+    assert st["2022-05-02"] != "INVESTIGATE" and st["2022-05-03"] == "INVESTIGATE"
+    # per-pump status stays inhibited until the baseline starts absorbing the shift (G = 14 days, §4.4 known limit)
+    early = r[r.day.between("2022-05-01", "2022-05-14")]
+    assert not (early.status == "INVESTIGATE").any()
