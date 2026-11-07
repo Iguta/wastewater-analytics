@@ -16,7 +16,7 @@ Rain makes this hard. Storms also make pumps run longer, so simple thresholds ei
 
 ## Why it matters for Hoosiers
 
-- **Fishers:** the sewer system the city now owns had repeated pump, power and controller failures from 2009 to 2012, with overflows toward Geist Reservoir and a state fine from IDEM.
+- **Fishers:** in the sewer system the city now owns (then run by Hamilton Southeastern Utilities), a 2009 power failure took down a lift-station controller whose backup battery was dead, spilling 25,000 gallons toward Geist Reservoir. The same manhole overflowed again in 2012, and IDEM fined the utility $5,250.
 - **Bloomington:** in 30 years of public overflow records (1,101 events), about **83%** were weather-driven and about **7%** came from equipment or power failures, the preventable kind. Overflow risk rises from about 1% on dry days to about 28% on days with 1 to 2 inches of rain.
 
 ## What it does

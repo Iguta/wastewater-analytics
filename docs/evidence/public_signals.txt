@@ -1,0 +1,5 @@
+base days 7913 {'gust>=45mph': '2.0%', 'rain>=1in': '2.4%', 'rain>=0.5in': '8.2%', 'tmin<=-7C(20F)': '6.8%', 'tmax>=32C(90F)': '5.1%', 'holiday Nov20-Jan5': '12.5%'}
+power     n_days= 13 {'gust>=45mph': '8% (x3.8)', 'rain>=1in': '31% (x12.8)', 'rain>=0.5in': '46% (x5.6)', 'tmin<=-7C(20F)': '0% (x0.0)', 'tmax>=32C(90F)': '15% (x3.0)', 'holiday Nov20-Jan5': '15% (x1.2)'}
+blockage  n_days= 60 {'gust>=45mph': '2% (x0.8)', 'rain>=1in': '3% (x1.4)', 'rain>=0.5in': '13% (x1.6)', 'tmin<=-7C(20F)': '7% (x1.0)', 'tmax>=32C(90F)': '5% (x1.0)', 'holiday Nov20-Jan5': '20% (x1.6)'}
+equipment n_days= 18 {'gust>=45mph': '6% (x2.7)', 'rain>=1in': '11% (x4.6)', 'rain>=0.5in': '39% (x4.7)', 'tmin<=-7C(20F)': '11% (x1.6)', 'tmax>=32C(90F)': '0% (x0.0)', 'holiday Nov20-Jan5': '11% (x0.9)'}
+weather   n_days=123 {'gust>=45mph': '15% (x7.6)', 'rain>=1in': '41% (x17.3)', 'rain>=0.5in': '70% (x8.5)', 'tmin<=-7C(20F)': '0% (x0.0)', 'tmax>=32C(90F)': '0% (x0.0)', 'holiday Nov20-Jan5': '12% (x1.0)'}

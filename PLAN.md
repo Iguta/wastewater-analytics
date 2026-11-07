@@ -1,5 +1,7 @@
 # Build Plan: Indy Init 2026
 
+> Where this plan and [ARCHITECTURE.md](ARCHITECTURE.md) disagree, ARCHITECTURE.md wins (locked 12:30).
+
 Build window: **9:00 AM to 5:00 PM**. Devpost submission closes at **5:00 PM sharp**. Judges visit our table from 5:00 PM, about 5 minutes each.
 
 ## Goal
@@ -87,4 +89,7 @@ A **live, working** lift station early warning tool, built for **Community Impac
 | Before the day | Pump runs must be paired within each pump | Pairing across rows matched one pump's start with another's stop |
 | 10:05 | Web dashboard in ISA-101 style is the core; Ignition screen is a time-boxed stretch | Ignition is new to us and would take hours from the model; judges visit the table, so a local Ignition demo is possible if time allows |
 | 10:05 | Risk model: gradient boosting predicts expected run time; alerts come from drift in actual vs expected | Handles rain and duty context; works with data utilities already log |
+| 12:30 | Risk model replaced: per-pump capacity index (3600/run + 3600/fill) with a trailing baseline and CUSUM, not gradient boosting | Measured on Wessex 2022: the index barely moves with rain (wet/dry 0.96-1.03 vs 1.14-1.33 for run time) and is 3-7x less noisy; no failure labels exist to fit or check a learned model. See docs/evidence/ |
+| 12:30 | Stations changed to 44371, 45385 and 45078; Ignition dropped; LLM explanations replaced by deterministic templates plus a grounded agent | Cleaner data (1-minute level); time goes to tests and evidence; numbers in the UI must come from code, not from a model |
+| 12:30 | AI correction: the README's Fishers line ('repeated pump, power and controller failures 2009-2012') was not supported as written | Sources show one 2009 power plus dead-battery controller failure and a 2012 overflow with a fine |
 | | | |
