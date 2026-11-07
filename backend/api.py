@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,8 +12,10 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from backend import agent
 from backend.app import assess, data, params, scenarios
 from backend.app.contracts import (
+    AskResult,
     DevCase,
     EvaluationReport,
     Fact,
@@ -161,8 +164,13 @@ class AskRequest(BaseModel):
 
 
 @app.post("/api/ask")
-def ask(_: AskRequest):
-    return JSONResponse({"error": "agent_offline"}, 503)
+async def ask(req: AskRequest) -> AskResult:
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return JSONResponse({"error": "agent_offline"}, 503)
+    try:
+        return await agent.ask(req.question, req.model_dump(exclude={"question"}))
+    except TimeoutError:
+        return JSONResponse({"error": "timeout"}, 504)
 
 
 if (ROOT / "frontend" / "dist").is_dir():  # last, so it never shadows /api
