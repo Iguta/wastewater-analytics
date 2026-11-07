@@ -1,4 +1,4 @@
-import type { AskResult, Evidence, StationAssessment, StationsResponse, TimelineDay, ToolError } from "./types";
+import type { AskResult, Evidence, ReplayResult, ScenariosResponse, StationAssessment, StationsResponse, TimelineDay, ToolError } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public toolError?: ToolError) {
@@ -40,4 +40,6 @@ export const api = {
     get<Evidence>(`/api/evidence?alert_id=${encodeURIComponent(alertId)}&as_of_utc=${encodeURIComponent(asOfUtc)}`),
   ask: (body: { question: string; station_id?: string; as_of_utc?: string; scenario_id?: string }, signal: AbortSignal) =>
     get<AskResult>("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal }),
+  scenarios: () => get<ScenariosResponse>("/api/scenarios"),
+  replay: (caseId: string) => get<ReplayResult>(`/api/replay?case_id=${encodeURIComponent(caseId)}`),
 };

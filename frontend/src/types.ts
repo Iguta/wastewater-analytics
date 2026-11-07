@@ -57,6 +57,28 @@ export interface AskResult {
   grounding: { passed: boolean; unmatched_numbers: string[]; forbidden_phrases: string[] };
   model: string; fallback_dropped: boolean;
 }
+// PROPOSED shape for GET /api/scenarios (not in section 7 yet; asked on the board). Mirrors the scenario TOML fields.
+export interface ScenarioFact {
+  label: string; value: string; status: "VERIFIED" | "UNVERIFIED"; confidence: number; source: string | null; source_url: string | null;
+}
+export type Detectability = "PREDICTABLE_DAYS_AHEAD" | "DETECTABLE_AT_ONSET";
+export interface ScenarioVariant {
+  variant: "A" | "B"; scenario_id: string; name: string; confidence: number; reason: string;
+  detectability: Detectability; failure_at: string;
+}
+export interface ScenarioCard {
+  id: string; title: string; version: string; scenario_hash: string;
+  facts: ScenarioFact[]; outcome_facts: ScenarioFact[]; variants: ScenarioVariant[];
+}
+export interface ScenariosResponse { scenarios: ScenarioCard[]; dev_cases: { case_id: string; family: string; title: string }[] }
+export interface Sensitivity { label: string; simulated_gal: number }
+export interface Outcome { no_warning_gal: number; with_dragonfly_gal: number; sensitivity: Sensitivity[]; assumptions: string[] }
+export interface BenchmarkRun { first_investigate_at: string | null; lead_time_h: number | null; incident_opens: number }
+export interface ReplayResult {
+  case_id: string; origin: Origin; family: string; title: string; truth: Record<string, unknown>;
+  timeline: TimelineDay[]; first_watch_at: string | null; first_investigate_at: string | null;
+  failure_at: string | null; lead_time_h: number | null; outcome: Outcome | null; benchmarks: Record<string, BenchmarkRun>;
+}
 export interface StationInfo {
   station_id: string; display_name: string; pumps: string[]; origin: Origin;
   scenario_id: string | null; as_of_min: string; as_of_max: string;

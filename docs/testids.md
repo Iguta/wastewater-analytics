@@ -74,8 +74,9 @@ Naming: `kebab-case`. A repeated element gets an id plus a data attribute for it
 | `incident-card` | One per scenario (`data-scenario-id`) |
 | `fact-chip` | VERIFIED / UNVERIFIED chip (`data-verified`) |
 | `variant-card` | Variant A or B (`data-variant`) |
-| `replay-variant-a` / `replay-variant-b` | Replay buttons |
+| `replay-variant-a` / `replay-variant-b` | Replay buttons. These are the A/B switch: there is no separate `replay-switch`. |
 | `replay-banner` | "Variant X: assumed mechanism..." banner |
+| `replay-output` | Container for the markers below, inside `replay-banner`. Shows "In this run it did not warn before the trip" when there was no Investigate before the failure. |
 | `failure-marker` / `trip-marker` / `investigate-marker` | Replay markers |
 | `outcome-row` | Result row per variant; gallons figures are inside `simulated-gal` |
 | `simulated-gal` | Every gallons figure, always prefixed "Simulated:" |
