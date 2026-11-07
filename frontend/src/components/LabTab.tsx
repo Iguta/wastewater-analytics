@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, ApiError, errorText } from "../api";
 import type { BenchmarkKey, DevCase, EvaluationReport, Experiment, HeatCell, ProxyRow, Rate, ReplayResult } from "../types";
+import { STATUS_WORD } from "../derive";
+import learned from "../../../docs/evidence/learned_models.json";
 import { EmptyState, ErrorState, Loading } from "./ScreenState";
 
 const rate = (r: Rate) => `${r.k} of ${r.n}`;
@@ -61,7 +63,7 @@ export function LabTab() {
       {load.s === "error" && <ErrorState message={load.message} onRetry={retry} />}
       {load.s === "none" && <EmptyState testId="lab-no-report">Evaluation not run yet.</EmptyState>}
       {load.s === "ok" && <Report r={load.r} />}
-      <LearnedBaseline />
+      <LearnedModels />
       <Experiments />
       <section className="panel" data-testid="lab-cannot-know">
         <h2 className="section-title">What the model cannot know</h2>
@@ -133,7 +135,10 @@ function BenchTable({ id, title, keys, b: all }: { id: string; title: string; ke
 // Section 6.2: bins are shown only where n >= 20. Greyscale bar, never color alone.
 function Heatmap({ cells }: { cells: HeatCell[] }) {
   const [table, setTable] = useState(false);
-  const lossBins = [...new Set(cells.map((c) => c.loss))], rampBins = [...new Set(cells.map((c) => c.ramp))];
+  const order = (a: string, b: string) => (Number.isNaN(+a) || Number.isNaN(+b) ? 0 : +a - +b);
+  const lossBins = [...new Set(cells.map((c) => c.loss))].sort(order), rampBins = [...new Set(cells.map((c) => c.ramp))].sort(order);
+  const lossLabel = (l: string) => (Number.isNaN(+l) ? l : `${Math.round(+l * 100)}% loss`);
+  const rampLabel = (r: string) => (Number.isNaN(+r) ? r : `${r} d ramp`);
   const cell = (l: string, m: string) => cells.find((c) => c.loss === l && c.ramp === m);
   return (
     <section className="panel">
@@ -143,11 +148,11 @@ function Heatmap({ cells }: { cells: HeatCell[] }) {
       </div>
       <div data-testid={table ? "lab-heatmap-table" : "lab-heatmap"}>
         <table className="data-table heat">
-          <thead><tr><th scope="col">Loss \ ramp</th>{rampBins.map((m) => <th key={m} scope="col">{m}</th>)}</tr></thead>
+          <thead><tr><th scope="col">Loss \ ramp</th>{rampBins.map((m) => <th key={m} scope="col">{rampLabel(m)}</th>)}</tr></thead>
           <tbody>
             {lossBins.map((l) => (
               <tr key={l}>
-                <th scope="row">{l}</th>
+                <th scope="row">{lossLabel(l)}</th>
                 {rampBins.map((m) => {
                   const c = cell(l, m);
                   if (!c || c.n < 20) return <td key={m}>{c ? `n/a (only ${c.n} cases)` : "n/a"}</td>;
@@ -235,16 +240,50 @@ function Ladder({ r }: { r: EvaluationReport | null }) {
   );
 }
 
-// shortcut: the numbers are copied from ARCHITECTURE section 4.16 (dev data, 13:10 run); read them from the report once it carries them.
-function LearnedBaseline() {
+// "We tried trained models; the simpler one held": every number comes from docs/evidence/learned_models.json (imported at build time).
+type Pair = [number, number];
+interface Arm {
+  what?: string; finding?: string; lead_median_d?: number;
+  f1_headline?: { k: number; n: number; note?: string }; false_attributable?: Record<string, Pair>;
+}
+const L = learned as unknown as {
+  _about: string; verdict: string; current_detector: Arm;
+  seq_unguarded: Arm; seq_guarded: Arm; lightgbm_with_own_lags: { k?: number; f1: { k: number; n: number }; baseline_f1: { k: number; n: number }; finding: string };
+};
+function LearnedModels() {
+  const arms: [string, Arm][] = [["Our detector (rolling median)", L.current_detector], ["Neural net, full history", L.seq_unguarded], ["Neural net, 14-day guard", L.seq_guarded]];
+  const fam = (a: Arm, f: string) => { const v = a.false_attributable?.[f]; return v ? `${v[0]} of ${v[1]}` : "n/a"; };
   return (
     <section className="panel" data-testid="lab-learned-baseline">
-      <h2 className="section-title">We tried a trained model; the simpler one held</h2>
-      <p>
-        A model trained on normal days from 21 other stations caught 16 of 40 planted faults. The rolling median we use caught 23 of 40,
-        with a longer median lead (5.5 days against 1.9). The trained model also tracked 45078 much less closely. We kept the rolling median.
-      </p>
-      <p className="meta">Development data only (2022). Planted faults, not real failures.</p>
+      <h2 className="section-title">We tried trained models; the simpler one held</h2>
+      <div className="table-scroll" style={{ maxHeight: "none" }}>
+        <table className="data-table stack">
+          <thead>
+            <tr><th scope="col">Detector</th><th scope="col">Planted faults caught</th><th scope="col">Median lead (days)</th>
+              <th scope="col">False escalations: storm</th><th scope="col">duty swap</th><th scope="col">one bad day</th><th scope="col">station-wide shift</th></tr>
+          </thead>
+          <tbody>
+            {arms.map(([name, a]) => (
+              <tr key={name}>
+                <th scope="row">{name}</th>
+                <td data-label="Planted faults caught">{a.f1_headline ? `${a.f1_headline.k} of ${a.f1_headline.n}` : "n/a"}</td>
+                <td data-label="Median lead (days)">{a.lead_median_d != null ? a.lead_median_d.toFixed(1) : "n/a"}</td>
+                <td data-label="False escalations, storm">{fam(a, "F2")}</td>
+                <td data-label="False escalations, duty swap">{fam(a, "F3")}</td>
+                <td data-label="False escalations, one bad day">{fam(a, "F4")}</td>
+                <td data-label="False escalations, station-wide shift">{fam(a, "F7")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li>Neural net, full history: {L.seq_unguarded.finding}.</li>
+        <li>Neural net, 14-day guard: {L.seq_guarded.finding}. {L.seq_guarded.f1_headline?.note ? `(${L.seq_guarded.f1_headline.note}.)` : ""}</li>
+        <li>Gradient-boosted trees with the pump's own recent values: caught {L.lightgbm_with_own_lags.f1.k} of {L.lightgbm_with_own_lags.f1.n}, against {L.lightgbm_with_own_lags.baseline_f1.k} of {L.lightgbm_with_own_lags.baseline_f1.n} for the rolling median ({L.lightgbm_with_own_lags.finding}).</li>
+      </ul>
+      <p>{L.verdict}</p>
+      <p className="meta">Development data only (2022), 3 stations, the same 320 planted-fault cases for every detector. Planted faults, not real failures; a scratch run that nothing was tuned on. Source: docs/evidence/learned_models.json.</p>
     </section>
   );
 }
@@ -287,7 +326,8 @@ function Experiment({ e, dev, loaded }: { e: (typeof EXPERIMENTS)[number]; dev: 
 function Result({ id, r }: { id: Experiment; r: ReplayResult }) {
   const b = r.benchmarks;
   const line = (k: string, name: string) => b[k] && <li>{name}: {b[k].incident_opens === 0 ? "stayed quiet" : `raised ${b[k].incident_opens} Investigate ${b[k].incident_opens === 1 ? "alert" : "alerts"}`}</li>;
-  const states = [...new Set(r.timeline.map((d) => d.station_status))];
+  const seq: string[] = [];
+  for (const d of r.timeline) { const w = STATUS_WORD[d.station_status].toLowerCase(); if (seq[seq.length - 1] !== w) seq.push(w); }
   const offlineDay = r.timeline.find((d) => d.station_status === "SOURCE_OFFLINE")?.day;
   return (
     <div className="result">
@@ -305,7 +345,7 @@ function Result({ id, r }: { id: Experiment; r: ReplayResult }) {
             : offlineDay ? `Station status reached Source offline on ${offlineDay}. The minutes after silence are not in the replay response yet.` : "Source offline was not raised in this run."}
         </p>
       )}
-      {id === "one_bad_day" && <p>Station status across the window: {states.join(", ").toLowerCase().replace(/_/g, " ")}.</p>}
+      {id === "one_bad_day" && <p>Station status across the window: {seq.join(", then ")}.</p>}
       <details>
         <summary>View days as table</summary>
         <div className="table-scroll"><table className="data-table"><tbody>{r.timeline.map((d) => <tr key={d.day}><td>{d.day}</td><td>{d.station_status}</td></tr>)}</tbody></table></div>

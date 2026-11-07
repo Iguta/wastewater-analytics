@@ -20,6 +20,8 @@ ErrorCode = Literal[
     "UNKNOWN_CASE",
     "BAD_TIMESTAMP",
     "AS_OF_OUT_OF_RANGE",
+    "AGENT_ERROR",
+    "AGENT_TIMEOUT",
     "NO_REPORT",
     "BAD_QUESTION",
     "BAD_FEEDBACK",

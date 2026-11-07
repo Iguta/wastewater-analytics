@@ -5,7 +5,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend import api
-from backend.app.contracts import ScenariosResponse, StationAssessment, StationsResponse, ToolError
+from backend.app.contracts import (
+    AskResult,
+    Grounding,
+    ScenariosResponse,
+    StationAssessment,
+    StationsResponse,
+    ToolError,
+)
 
 UI = Path(__file__).resolve().parents[2] / "fixtures" / "ui"
 client = TestClient(api.app)
@@ -60,10 +67,61 @@ def test_evaluation_report_or_no_report(monkeypatch, tmp_path):
     assert client.get("/api/evaluation").json()["model_version"] == "v1.0"
 
 
-def test_ask_is_offline_and_rejects_empty_question():
+def test_ask_offline_without_key_and_rejects_bad_questions(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     assert client.post("/api/ask", json={"question": "why?"}).status_code == 503
-    r = client.post("/api/ask", json={"question": ""})
-    assert r.status_code == 422 and r.json()["code"] == "BAD_QUESTION"
+    for q in ("", "x" * 2001):
+        r = client.post("/api/ask", json={"question": q})
+        assert r.status_code == 422 and r.json()["code"] == "BAD_QUESTION"
+
+
+def test_ask_returns_agent_result_and_504_on_timeout(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    seen = {}
+
+    async def fake(question, context):
+        seen.update(question=question, context=context)
+        return AskResult(
+            answer_markdown="ok", withheld=False, tool_calls=[], grounding=Grounding(passed=True, unmatched_numbers=[], forbidden_phrases=[]),
+            model="m", fallback_dropped=False,
+        )  # fmt: skip
+
+    monkeypatch.setattr(api.agent, "ask", fake)
+    r = client.post("/api/ask", json={"question": "why?", "station_id": "44371"})
+    assert (
+        AskResult.model_validate(r.json()).answer_markdown == "ok"
+        and seen["context"]["station_id"] == "44371"
+    )
+
+    async def slow(question, context):
+        raise TimeoutError
+
+    monkeypatch.setattr(api.agent, "ask", slow)
+    assert client.post("/api/ask", json={"question": "why?"}).status_code == 504
+
+
+def test_ask_validates_inputs_and_maps_agent_failures(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    for body, code in (
+        ({"station_id": "x"}, "UNKNOWN_STATION"),
+        ({"scenario_id": "x"}, "UNKNOWN_SCENARIO"),
+        ({"as_of_utc": "2022-06-03"}, "BAD_TIMESTAMP"),
+    ):
+        r = client.post("/api/ask", json={"question": "why?", **body})
+        assert r.status_code == 422 and r.json()["code"] == code
+
+    async def boom(question, context):
+        raise ExceptionGroup("tg", [RuntimeError("x")])
+
+    async def wrapped(question, context):
+        raise ExceptionGroup("tg", [TimeoutError()])
+
+    monkeypatch.setattr(api.agent, "ask", boom)
+    r = client.post("/api/ask", json={"question": "why?"})
+    assert r.status_code == 502 and r.json()["code"] == "AGENT_ERROR"
+    monkeypatch.setattr(api.agent, "ask", wrapped)
+    r = client.post("/api/ask", json={"question": "why?"})
+    assert r.status_code == 504 and r.json()["code"] == "AGENT_TIMEOUT"
 
 
 def test_feedback_is_logged_read_back_and_never_changes_assess(monkeypatch, tmp_path):
