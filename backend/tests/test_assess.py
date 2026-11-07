@@ -1,3 +1,4 @@
+import dataclasses
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -241,3 +242,63 @@ def test_priority_reason_says_largest_only_for_an_investigate_row():
         explain.priority_reason(watch, 1, 1, None)
         == f"Rank 1 of 1: capacity loss (−{abs(f.change_pct):.0f}%), 1 day open"
     )
+
+
+def _with_forecast(monkeypatch, day, **cols):
+    """Assess Morningside A on `day` with archived-forecast columns overridden; observed rain is untouched."""
+    real = assess._forecast(MORNINGSIDE_A)
+    monkeypatch.setattr(assess, "_forecast", lambda _id: real.assign(**cols))
+    assess.assess_station.cache_clear()
+    try:
+        return assess.assess_station("44371", datetime(2024, 4, day, tzinfo=timezone.utc), MORNINGSIDE_A)
+    finally:
+        monkeypatch.undo()
+        assess.assess_station.cache_clear()
+
+
+NO_STORM = dict(
+    precipitation_previous_day1=0.0, precipitation_previous_day2=0.0,
+    wind_gusts_10m_previous_day1=0.0, wind_gusts_10m_previous_day2=0.0,
+)  # fmt: skip
+
+
+@pytest.mark.parametrize(
+    "day, cols, storm, observed",
+    [
+        # forecast said nothing, 25 mm fell that day: no promotion, rain context still shows what fell
+        (11, NO_STORM, False, lambda r: r.today_mm > 20),
+        # forecast cried storm, under 10 mm fell in 72 h: promotion is tagged, nothing else moves
+        (
+            8,
+            dict(precipitation_previous_day1=0.1, precipitation_previous_day2=0.1),
+            True,
+            lambda r: r.last_72h_mm < 10,
+        ),
+    ],
+)
+def test_wrong_forecast_changes_priority_text_only(monkeypatch, day, cols, storm, observed):
+    real = assess.assess_station("44371", datetime(2024, 4, day, tzinfo=timezone.utc), MORNINGSIDE_A)
+    a = _with_forecast(monkeypatch, day, **cols)
+    assert a.storm.storm_ahead is storm and observed(a.rain) and a.rain == real.rain
+    assert _statuses(a) == _statuses(real)
+    tagged = [f for f in a.queue if any("storm ahead" in i for i in f.inspection)]
+    assert bool(tagged) is storm and all(f.status in ("WATCH", "INVESTIGATE") for f in tagged)
+
+
+def test_weak_rain_analog_is_labelled_in_replay_assumptions(monkeypatch):
+    sid = "fishers_bowline_2009_01_20"
+    assert "weak" not in assess.replay_case(f"{sid}:A").outcome.assumptions[0]  # locked analogs are strong
+    real = scenarios.rain_analog
+    monkeypatch.setattr(
+        scenarios,
+        "rain_analog",
+        lambda *a, **k: (lambda x: dataclasses.replace(x, sse=0.8 * x.storm_ss, weak=True))(real(*a, **k)),
+    )
+    caches = (assess.replay_case, assess._case)
+    [c.cache_clear() for c in caches]
+    try:
+        weak = assess.replay_case(f"{sid}:A").outcome.assumptions[0]
+    finally:
+        monkeypatch.undo()
+        [c.cache_clear() for c in caches]
+    assert "weak: SSE 80% of the storm" in weak
