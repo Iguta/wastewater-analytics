@@ -1,0 +1,154 @@
+# LOCKED BENCHMARK SCENARIO. Do not edit in place: any change gets a new `version`
+# (and a new file if the id changes). Tune on randomized variants, never on this exact scenario.
+#
+# Field convention: { value, status, confidence, source?, note? }
+#   status     = VERIFIED (checked against the cited public record) | UNVERIFIED (assumption or inference)
+#   confidence = 0-100, our confidence the value is right
+# Wessex telemetry is used only for station *hydraulics*; Indiana rain is never mixed into Wessex training.
+
+id = "bloomington_morningside_2024_04_11"
+version = "v1"
+locked = true
+locked_at = "2026-11-07"
+author = "Iguta (David's Claude Code)"
+title = "Bloomington, Morningside Lift Station equipment-failure overflow, 2024-04-11"
+synthetic_simulation = true   # the overflow is re-simulated; the record facts below are real
+
+# 1. Record facts ------------------------------------------------------------
+[record]
+source_dataset = "https://data.bloomington.in.gov/Utilities-Water/Sanitary-Sewer-Overflows/kfaf-msfz"
+source_api = "https://data.bloomington.in.gov/resource/kfaf-msfz.json"
+date = { value = "2024-04-11", status = "VERIFIED", confidence = 100, source = "kfaf-msfz start_date/end_date" }
+station = { value = "Morningside Lift Station (City of Bloomington Utilities), manhole 2862", status = "VERIFIED", confidence = 100, source = "kfaf-msfz location/manhole" }
+coordinates = { value = [39.1673, -86.4720], status = "VERIFIED", confidence = 95, source = "kfaf-msfz lat_long", note = "dataset point; WGS84 lat, lon" }
+drainage_basin = { value = "Lake Monroe-Stephens Creek, East sewershed", status = "VERIFIED", confidence = 100, source = "kfaf-msfz" }
+reported_volume_gal = { value = 14310, status = "VERIFIED", confidence = 100, source = "kfaf-msfz gallons" }
+duration = { value = "same-day start and end; hours not recorded", status = "VERIFIED", confidence = 100, source = "kfaf-msfz has date-only start/end" }
+cause_text = { value = "Equipment failure", status = "VERIFIED", confidence = 100, source = "kfaf-msfz event" }
+recorded_rain_in = { value = 1.18, status = "VERIFIED", confidence = 100, source = "kfaf-msfz rain field" }
+equipment_subtype = { value = "not published", status = "VERIFIED", confidence = 90, note = "no subtype, press release or IDEM action found so far" }
+
+# Station history from the same dataset: context for the mechanism, not labels.
+[[record.related_events]]
+date = "2024-04-07"
+location = "4317 E Morningside Rd (manhole 2832, upstream on the same street)"
+event = "Blockage in sewer line"
+gallons = 1000
+status = "VERIFIED"
+note = "4 days before the failure: debris/blockage was active in this catchment"
+
+[[record.related_events]]
+date = "2018-04-03"
+location = "Morningside Lift Station - Wet Well & MH (manhole 2861)"
+event = "Precipitation"
+gallons = 8775
+rain_in = 0.5
+status = "VERIFIED"
+note = "station has overflowed on modest rain before: thin wet-weather capacity margin"
+
+[[record.related_events]]
+date = "2015-01-23"
+location = "Morningside Lift Station (manhole 2862)"
+event = "Grease in sewer line"
+gallons = 50
+status = "VERIFIED"
+
+[[record.related_events]]
+date = "1996-04-28"
+location = "Morningside Lift Station (manhole 2861)"
+event = "Precipitation"
+gallons = 2700
+status = "VERIFIED"
+
+# 2. Failure mechanism --------------------------------------------------------
+# The public record cannot support >=80% on any single mechanism, so there are two variants.
+# Variant A is primary. Scores below are relative plausibility, not probabilities of the truth.
+[mechanism]
+primary_variant = "A"
+overall_note = "Record says only 'Equipment failure'. Mechanism is inferred from timing (storm), an upstream blockage 4 days earlier, starter-contact repairs in 2023, and the station's wet-weather overflow history. A and B are tied at 40; A is primary only because it is the one days-ahead hypothesis we can falsify."
+
+[variants.A]
+name = "Progressive impeller ragging / clog during a debris-heavy wet spell"
+mechanism = { value = "impeller ragging -> duty pump clogs and trips; standby also fouled, firm capacity lost under storm inflow", status = "UNVERIFIED", confidence = 40 }
+evidence = [
+  "VERIFIED: 2024-04-07 sewer blockage 1,000 gal on E Morningside Rd, same catchment, 4 days earlier",
+  "VERIFIED: 2015 grease event at this station",
+  "VERIFIED: 6.71 in rain Mar 12-Apr 13, incl. 2.70 in Apr 8-11 (Open-Meteo) washing debris into the system",
+  "INFERENCE: ragging is the most common lift-station equipment failure mode in wet weather",
+]
+precursor_type = { value = "progressive_clog", status = "UNVERIFIED", confidence = 45 }
+precursor_onset_days_before = { value = 6, status = "UNVERIFIED", confidence = 30, note = "starts ~2024-04-05, before the 04-07 blockage was reported" }
+capacity_lost_pct_at_failure = { value = 100, status = "UNVERIFIED", confidence = 40, note = "duty pump 60% degraded 24 h before failure, then clogs/trips; standby assumed fouled too" }
+precursor_shape = { value = "accelerating", status = "UNVERIFIED", confidence = 50 }
+failure_timestamp_utc = { value = "2024-04-11T07:00:00Z", status = "UNVERIFIED", confidence = 30, note = "03:00 EDT, start of the second storm burst on the recorded date; record has no time" }
+backup_failed = { value = false, status = "UNVERIFIED", confidence = 50, note = "no backup power issue reported; alarm assumed to work (overflow ended same day)" }
+expected_detector_outcome = { value = "PREDICTABLE_DAYS_AHEAD", status = "UNVERIFIED", confidence = 45, note = "only if the clog precursor existed: rising per-cycle runtime / more standby assists in the days before" }
+
+[variants.B]
+name = "Sudden pump/motor or control trip under storm load (no precursor)"
+mechanism = { value = "motor overload, VFD/starter fault or level-control failure during peak storm inflow", status = "UNVERIFIED", confidence = 40 }
+evidence = [
+  "VERIFIED: failure coincides with the heaviest rain of the window (Apr 10-11)",
+  "VERIFIED: record has no subtype; an electrical/control fault fits 'Equipment failure' equally well",
+  "VERIFIED: 2023 CBU Utilities Service Board agenda: 'Starter contacts for Morningside Lift Station - TD23-232' and auxiliary contacts replaced (https://bloomington.in.gov/onboard/meetingFiles/12187/download)",
+  "VERIFIED: 2023 'ENG23-036 Lift Station Construction Permit - Morningside Dr'; USB minutes 2024-12-16 list 'rebuilding the Morningside and Basswood lift stations' as a 2024 achievement (https://bloomington.in.gov/onboard/meetingFiles/14424/download)",
+]
+precursor_type = { value = "none", status = "UNVERIFIED", confidence = 35 }
+precursor_onset_days_before = { value = 0, status = "UNVERIFIED", confidence = 35 }
+capacity_lost_pct_at_failure = { value = 100, status = "UNVERIFIED", confidence = 40 }
+precursor_shape = { value = "none", status = "UNVERIFIED", confidence = 35 }
+failure_timestamp_utc = { value = "2024-04-11T07:00:00Z", status = "UNVERIFIED", confidence = 30 }
+backup_failed = { value = false, status = "UNVERIFIED", confidence = 50 }
+expected_detector_outcome = { value = "DETECTABLE_AT_ONSET", status = "UNVERIFIED", confidence = 60, note = "pumps stop while level/inflow rise; must not be suppressed as 'just rain'" }
+
+[mechanism.other]
+note = "Remaining ~20%: check-valve failure, float/controller fault, wear-ring wear. Not modeled in v1."
+
+# 4. Conditions -----------------------------------------------------------------
+[conditions]
+rain_source = "Open-Meteo historical archive (ERA5-based), hourly precipitation, inches, UTC"
+rain_query = "https://archive-api.open-meteo.com/v1/archive?latitude=39.1673&longitude=-86.472&start_date=2024-03-12&end_date=2024-04-13&hourly=precipitation&precipitation_unit=inch&timezone=GMT"
+rain_grid_point = [39.191563, -86.53369]
+rain_file = "fixtures/scenarios/rain/bloomington_morningside_2024_04_11.csv"
+rain_file_sha256 = "f34113a6fafde766d48c65e9f0b9142222b1a9a7e42ab5685a247a3f01e1cb04"
+rain_window_utc = ["2024-03-12T00:00:00Z", "2024-04-13T23:00:00Z"]
+rain_total_in = { value = 6.71, status = "VERIFIED", confidence = 90, note = "reanalysis grid ~6 km from station; not a gauge" }
+rain_apr8_11_local_in = { value = 2.70, status = "VERIFIED", confidence = 85, note = "Dhruv's earlier figure was 2.52; difference is window edges/grid" }
+peak_hour = { value = "2024-04-10T23:00Z, 0.465 in", status = "VERIFIED", confidence = 85 }
+dry_weather_inflow_gpm = { value = 35, status = "UNVERIFIED", confidence = 25, note = "assumed ~200 homes x 250 gpd; replace if CBU publishes station data" }
+storm_peak_inflow_gpm = { value = 140, status = "UNVERIFIED", confidence = 20, note = "4x peaking incl. inflow/infiltration; station has overflowed on 0.5 in before" }
+mean_event_inflow_gpm = { value = 120, status = "UNVERIFIED", confidence = 20 }
+
+# 5. Station stand-in ---------------------------------------------------------
+[station_standin]
+wessex_site = { value = "44371", status = "VERIFIED", confidence = 75, note = "one of the team's 3 model stations (ARCHITECTURE v2 heads-up, board 2026-11-07 17:02Z); audited 2026-11-07" }
+runstop_file = "Drive wessex/sps-run-stop-data.csv"
+runstop_file_sha256 = "a630f8948e86acd9efacc378b260bd970de371fad40bc2ad871df38f40054f58"
+measured_pumps = { value = 2, status = "VERIFIED", confidence = 100, note = "44371_PFFPump1_WASTE_B24898, 44371_PFFPump2_WASTE_B24899" }
+measured_median_run_s = { value = { pump1 = 195, pump2 = 195 }, status = "VERIFIED", confidence = 95, note = "paired within pump; 0 dup rows; 45 / 29 repeated-state events dropped" }
+measured_starts_per_day = { value = { pump1 = 81.9, pump2 = 45.8 }, status = "VERIFIED", confidence = 90 }
+measured_run_hours_per_day = { value = 9.17, status = "VERIFIED", confidence = 90, note = "both pumps, 2022-2023" }
+why = "Two-pump duty/standby station with 1-min level data (per Dhruv; level file not audited by us). Duty skew (pump1 ~64% of starts) lets us simulate a fouled duty pump the standby can't cover. 44371 pump 1 showed a real 46% capacity-index drop ~10 days before going out of service (June 2022), the same precursor shape as variant A."
+hydraulic_scaling = "Run Morningside inflow (35 gpm dry / 140 gpm storm, assumed) through 44371's pump-cycle behaviour scaled by inflow ratio; use the team capacity index (3600/run_s + 3600/fill_s) as the observable."
+pump_capacity_gpm_each = { value = 150, status = "UNVERIFIED", confidence = 20 }
+wet_well_usable_storage_gal = { value = 1500, status = "UNVERIFIED", confidence = 20 }
+previously_considered = "43014 (audited: 2 pumps, ~100 s runs, sha256 4d6b2e83...); dropped to match the team's model stations"
+
+# 6. Outcome to reproduce -------------------------------------------------------
+[outcome]
+overflow_volume_gal = { value = 14310, status = "VERIFIED", confidence = 100 }
+overflow_volume_tolerance_pct = 20     # simulation must land in [11448, 17172] gal
+overflow_duration_min = { value = 132, status = "UNVERIFIED", confidence = 20, note = "mass balance: (14310 + 1500 storage) / 120 gpm mean inflow" }
+outage_duration_min = { value = 145, status = "UNVERIFIED", confidence = 20, note = "~13 min to fill wet well + overflow period, until crew restores pumping" }
+early_warning = "none (baseline: no Dragonfly)"
+discovered_by = { value = "not published", status = "UNVERIFIED", confidence = 0, note = "assume station alarm -> CBU crew; unconfirmed" }
+affected = { value = "Lake Monroe-Stephens Creek drainage basin (receiving basin per record)", status = "VERIFIED", confidence = 80, note = "no specific property or waterbody impact published" }
+
+# 7. Expected detector outcome --------------------------------------------------
+[expected]
+primary = "PREDICTABLE_DAYS_AHEAD"   # variant A
+by_variant = { A = "PREDICTABLE_DAYS_AHEAD", B = "DETECTABLE_AT_ONSET" }
+must_not = [
+  "suppress a pump-stopped / high-level condition because it is raining",
+  "claim the Morningside incident would have been prevented",
+]
