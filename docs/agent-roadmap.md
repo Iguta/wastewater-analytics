@@ -25,6 +25,8 @@ The detector decides. The agent only translates. Nothing below changes that rule
 4. **A smaller model for translation.** Haiku 5.5 is enough for translation-only work. Measure it with `make agent-eval` (19/20 grounding gate) before switching.
 5. **Rule changes go through the spec.** The system prompt is locked verbatim in ARCHITECTURE.md §8.4, so changes 1–3 are a `decision-change` PR plus new `agent_eval.toml` questions.
 
+One-page visual: [future-scope.html](future-scope.html)
+
 ## With real utility data (needs a pilot and compliance clearance)
 
 Everything below waits on the same gate: a utility's written authority, a data-sharing agreement, and the compliance work in `docs/compliance.md` (CMOM evidence, IEC 62443 zones, NIST AI RMF). Nothing trains on utility data before that.

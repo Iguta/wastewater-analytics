@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dragonfly: What's Next</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { background:#11161C; color:#F3F5F7; font-family:'DM Sans', Arial, sans-serif; min-height:100vh; }
+  main { max-width:1500px; margin:0 auto; padding:72px 64px 96px; display:flex; flex-direction:column; gap:40px; }
+  .eyebrow { font-size:18px; font-weight:700; letter-spacing:4px; text-transform:uppercase; color:#FFC53D; }
+  h1 { font-size:68px; font-weight:700; line-height:1.05; margin-top:12px; }
+  .gate { background:#1B232B; border:1px solid #2D3741; border-left:6px solid #FFC53D; border-radius:16px; padding:22px 28px; font-size:22px; color:#C3CCD5; }
+  .gate b { color:#FFC53D; margin-right:12px; }
+  .phase { display:flex; flex-direction:column; gap:16px; }
+  .row { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px; }
+  .card { background:#1B232B; border:1px solid #2D3741; border-radius:16px; padding:28px; display:flex; flex-direction:column; gap:10px; }
+  .card .k { font-size:20px; font-weight:700; color:#FFC53D; }
+  .card p { font-size:21px; line-height:1.4; color:#C3CCD5; }
+  .rule { font-size:30px; font-weight:700; line-height:1.3; }
+  .rule span { color:#FFC53D; }
+  .foot { font-size:18px; color:#8D99A5; }
+  @media (max-width:700px) { main { padding:40px 16px 64px; } h1 { font-size:40px; } }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <p class="eyebrow">Future scope</p>
+    <h1>What's next, with a pilot utility.</h1>
+  </div>
+
+  <div class="gate"><b>Gate</b>The utility's written authority · a data agreement · compliance (CMOM, IEC 62443, NIST AI RMF)</div>
+
+  <section class="phase">
+    <p class="eyebrow">Prove it on real failures</p>
+    <div class="row">
+      <div class="card"><p class="k">1 · Real labels</p><p>Maintenance records and crew verdicts replace planted faults.</p></div>
+      <div class="card"><p class="k">2 · Shadow mode</p><p>One season read-only beside SCADA, scored against what crews found.</p></div>
+      <div class="card"><p class="k">3 · Retune and rescore</p><p>Same gates. A held-out year, scored once.</p></div>
+      <div class="card"><p class="k">4 · More signals</p><p>Flow, pressure, motor current and setpoints, each added only if it beats the benchmark.</p></div>
+    </div>
+  </section>
+
+  <section class="phase">
+    <p class="eyebrow">Run it inside the utility</p>
+    <div class="row">
+      <div class="card"><p class="k">5 · Fully local</p><p>On-prem or air-gapped. No internet needed.</p></div>
+      <div class="card"><p class="k">6 · Small local language model</p><p>Fine-tuned to explain findings. It never predicts or acts.</p></div>
+      <div class="card"><p class="k">7 · Deterministic actions</p><p>Every finding maps to one tested checklist and draft work order.</p></div>
+    </div>
+  </section>
+
+  <section class="phase">
+    <p class="eyebrow">Close the loop</p>
+    <div class="row">
+      <div class="card"><p class="k">8 · Human-approved work orders</p><p>A supervisor approves, then it goes to the CMMS or paging system, logged for CMOM.</p></div>
+      <div class="card"><p class="k">9 · Consequence ranking</p><p>Downstream impact and overflow history order the queue.</p></div>
+      <div class="card"><p class="k">10 · Watch the model</p><p>Drift checks, a monthly reliability report, and rollback to the last frozen version.</p></div>
+    </div>
+  </section>
+
+  <p class="rule">The detector decides. <span>The AI explains.</span> A person acts.</p>
+  <p class="foot">Read-only. Never writes to a PLC or SCADA tag.</p>
+</main>
+</body>
+</html>
