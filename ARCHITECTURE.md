@@ -957,6 +957,50 @@ The labels `stream:data`, `stream:ui`, `stream:api` and `decision-change` must e
 
 When a secret is missing, the workflow exits 0 with a notice.
 
+### 11.6 Per-PR benchmark (the loop that runs on every change)
+
+Every PR is measured against `main` on the same cases, so nobody, human or agent, can merge a regression without seeing it.
+
+**What runs:** a second CI job, `bench`, on every PR that touches `backend/` or `fixtures/`. It runs only after `verify` passes.
+
+1. Run `make eval-dev` on the PR head; it writes `reports/dev/summary.json`.
+2. Check out the PR's base commit into a worktree and run the same command there. Both runs use the same dev seeds and the same fixtures, so the difference is the code.
+3. Run `tools/bench_diff base.json head.json`, which prints one table and exits with a code.
+
+**The table** (posted as one sticky PR comment, replaced on each push; CI log only when the comment can't be posted):
+
+| Metric | Source | Base | Head | Δ | Flag |
+| --- | --- | --- | --- | --- | --- |
+| F1 recall (loss ≥20%, ramp ≥7 d), with Wilson interval | §6.2 | | | | |
+| Median and P10 lead time (days) | §6.2 | | | | |
+| False escalations per family F2, F3, F4, F7 | §6.3 G5 | | | | |
+| Real 2022 INVESTIGATE opens per pump per 180 d, per station | §6.3 G6 | | | | |
+| G1–G7 pass/fail | §6.3 | | | | |
+| Morningside A dev-variant lead (median) | §5.1 | | | | |
+| Runtime of `eval-dev` (s) | — | | | | |
+
+**Flags and what they do:**
+
+| Flag | Rule | Effect |
+| --- | --- | --- |
+| `FAIL` | Any gate G1–G7 goes from pass to fail | Job fails; the PR cannot auto-merge |
+| `REGRESSION` | Recall drops more than 3 points, median lead drops more than 0.5 day, or a G6 station rises more than 0.25 | Job fails unless the PR has the `accept-regression` label **and** a `reports/decisions.md` row explaining why (code-owner approval, §11.3) |
+| `IMPROVED` | The same thresholds in the good direction | Noted in the comment |
+| `NOISE` | Anything smaller | Noted, no action |
+
+**"Flag for improvement":** the comment ends with the 5 worst dev cases on head (each F1 miss or false escalation with its §6.5 bucket: `too_small`, `too_slow`, `few_cycles`, `overlap_days`, `inhibition_cancelled`, `baseline_contaminated`, `qc`), so the next refinement step starts from evidence. It also lists any case that flipped between base and head.
+
+**Rules that keep it honest:**
+
+- It uses **dev** data only. The test tier never runs in CI (§6.5).
+- Thresholds live in `backend/app/gates.toml`, which is CODEOWNERS-protected. Changing a threshold is a `decision-change`.
+- `tools/bench_diff` never pipes or filters output (§11.1) and prints at most 30 lines.
+- A flaky result (head differs from itself on a rerun) is a bug in determinism and fails G3.
+
+**Other layers, already in `verify`** (each PR): MCP tool contract via Inspector, API contract tests, the agent grounding check when a key exists locally, and UI e2e plus axe. The bench adds the one thing those can't: whether the detector got better or worse.
+
+**Owner:** Dhruv builds `bench` and `tools/bench_diff` with the skeleton; David's `evaluate.py` must write `summary.json` with the fields above, keyed exactly as the table names them.
+
 ### 11.5 Merging
 
 - Every PR author's agent runs `gh pr merge --auto --squash`.
