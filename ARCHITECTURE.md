@@ -32,7 +32,7 @@ The analysis scripts and their raw outputs are in `docs/evidence/`.
 | --- | --- | --- |
 | Data available | Run/stop events per pump, wet-well level and hourly site rainfall for 24 stations, 2022–2023. Timestamps carry no timezone. No failure, burst or maintenance labels anywhere. Flow and pressure exist only as 1,500-row sample files. | Wessex data audit |
 | Real outage in the data | Every station is silent from 2023-08-17 10:20 to 2023-08-20 12:21 | Audit `stn_gaps.csv` |
-| The capacity index barely moves with rain | Wet days (≥10 mm) vs dry days: capacity index ratio 0.96–1.03 on 9 of 11 pumps. Raw median run time ratio is 1.14–1.33. | `docs/evidence/ci_rain_check.txt` |
+| The capacity index barely moves with rain | Wet days (≥10 mm) vs dry days: capacity index ratio 0.96–1.03 on 8 of 9 pumps (45078 P3, a lag pump, is 1.20). Raw median run time ratio is 1.09–1.33. | `docs/evidence/ci_rain_check.txt` |
 | The capacity index is much less noisy | Day-to-day IQR/median: capacity index 0.03–0.11, raw run time 0.14–0.33 | same |
 | It catches a real precursor | 44371 pump 1: index steady at about 30.0/h for three weeks, then 28.2 on 2022-05-31, 16.3 on 06-01 (−46%), 11.8 by 06-10. The pump then sat out of service from 06-11 to 06-15. | same |
 | Whole-station shifts exist | At 45385, both pumps' index fell to 0.66× of 2022 in 2023, together. That is a station-level change (setpoints or force main), not pump wear. | same |
@@ -477,7 +477,7 @@ A version cannot freeze unless every gate passes. Gates live in `backend/app/gat
 | G2 | F6: 100% pass the kind table in §5.6 |
 | G3 | `test_no_lookahead` (deleting all data after `as_of` changes nothing) and `test_determinism` (two full runs give byte-identical reports apart from the timestamp) pass |
 | G4 | `HIGH_LEVEL` appears in the safety strip on 100% of the minutes its rule holds. A unit test proves no inhibition path touches it. |
-| G5 | Dev: **0** pump `INVESTIGATE` in each of F2, F3, F4 and F7. Test: report the exact 95% upper bound (0/30 gives "under 10%"). |
+| G5 | Dev: **0 attributable** pump `INVESTIGATE` in each of F2, F3, F4 and F7, where attributable means present with the injection and absent in the same window without it (real incidents in the window are G6's job). Raw counts are always reported beside the attributable ones. Test: report the exact 95% upper bound (0/30 gives "under 10%"). G1 and F1's pre-onset count use the same attributable rule. (David's proposal, 13:12.) |
 | G6 | 2022 real replay: ≤1.0 pump `INVESTIGATE` opens per pump per 180 days |
 | G7 | Each locked Indiana scenario's no-warning simulation is consistent with the record's gallons within ±20% |
 
@@ -601,8 +601,19 @@ Fact:            label, value, status: Literal["VERIFIED", "UNVERIFIED"], confid
 VariantCard:     variant: Literal["A", "B"], scenario_id (e.g. "bloomington_morningside_2024_04_11:A"), name, confidence: int,
                  reason, detectability: Literal["PREDICTABLE_DAYS_AHEAD", "DETECTABLE_AT_ONSET", "NOT_DETECTABLE"], failure_at: datetime
 ScenarioCard:    id, title, version, scenario_hash, facts: list[Fact], outcome_facts: list[Fact], variants: list[VariantCard]
-ScenariosResponse: scenarios: list[ScenarioCard], dev_cases: list[str] (the Lab's fixed dev case ids, §5.6)
+ScenariosResponse: scenarios: list[ScenarioCard], dev_cases: list[DevCase] (the Lab's fixed dev cases, §5.6)
   (Shape proposed by Praneetha in frontend/src/types.ts and adopted as is.)
+BenchmarkRow:    caught: {k, n}, median_lead_days | None, false_storm: {k, n}, false_duty: {k, n}, false_transient: {k, n},
+                 real_alerts_per_pump_6mo
+HeatCell:        loss, ramp, k, n
+ProxyRow:        tier: Literal["dev", "test"], group: Literal["demo_3", "untouched_21"], episodes, preceded
+EvaluationReport: model_version, code_version, benchmarks: dict[Literal["A","B","C","C-persistence","C-inhibition","C-quality"], BenchmarkRow],
+                 heatmap: list[HeatCell], proxy: list[ProxyRow], test_scored: int, gates: dict[str, bool]
+  (Shape proposed by Praneetha in frontend/src/types.ts and adopted. The Lab's proxy panel shows ONLY ProxyRow data from
+   backend/scripts/proxy_events.py; scratch-run numbers such as "16 of 117" never appear in the UI.)
+DevCase:         case_id, experiment: Literal["storm_test", "break_sensor", "cut_power", "one_bad_day"] | None
+  (ScenariosResponse.dev_cases is list[DevCase].)
+ReplayResult additions: source_offline_after_min | None, sensor_fault_flagged: bool
 ToolError:       code: ErrorCode, message, allowed: list[str]
 ```
 
@@ -909,10 +920,10 @@ After replay, the card shows one row per variant: first `WATCH`, first `INVESTIG
   - It writes the JSON into **memory tags** under `[default]Dragonfly/<station>/…`.
   - The view binds to those tags. The data comes from the same API, so there is one inference.
 - **Never** writes to any device or OPC tag.
-- **Gateway:** the native 8.3.10 gateway on David's laptop (`localhost:8088`), with the Docker image `inductiveautomation/ignition:8.3` as the fallback. The project is exported to `ignition/` (Praneetha).
+- **Gateway and owner (David, 13:48):** Praneetha owns the Ignition demo on **her own laptop**, running both the gateway and the API there (`make setup`, then `make serve` from the public repo and committed fixtures). Because the API binds 127.0.0.1, the gateway calls `http://127.0.0.1:8000` (native install) or `http://host.docker.internal:8000` (Docker image `inductiveautomation/ignition:8.3`). The main demo, React UI plus MCP, runs on Dhruv's laptop. The project is exported to `ignition/`.
 - **Timing:**
   - Praneetha may design it now, as a wireframe and tag structure.
-  - Building starts only after the 15:45 milestone passes, time-boxed to 45 min.
+  - Building starts now (David, 14:35), in Designer on Praneetha's laptop against the mock memory tags from #46; the live API is needed only when the poll script is wired. If the replay or Lab retest on main finds a blocker, that comes first. Still first on the cut list.
   - If it doesn't show live tags by 16:20, it stays out of the demo. The React UI is always the primary demo.
 - **Validation:** manual only. It is outside `make verify`.
 

@@ -1,0 +1,825 @@
+{
+  "name": "Dragonfly",
+  "tagType": "Folder",
+  "tags": [
+    {
+      "name": "_meta",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "as_of_utc",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": "2022-06-03T00:00:00Z"
+        },
+        {
+          "name": "api_base",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": "http://127.0.0.1:8000"
+        },
+        {
+          "name": "origin",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "origin_text",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "data_up_to",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "model_version",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "source_hash",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "code_version",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "empty_queue_text",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "last_poll_utc",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "poll_error",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "poll_ok",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Boolean",
+          "value": true
+        },
+        {
+          "name": "queue_count",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Int4",
+          "value": 0
+        },
+        {
+          "name": "safety_count",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Int4",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "_queue_all_json",
+      "tagType": "AtomicTag",
+      "valueSource": "memory",
+      "dataType": "Document",
+      "value": []
+    },
+    {
+      "name": "_safety_all_json",
+      "tagType": "AtomicTag",
+      "valueSource": "memory",
+      "dataType": "Document",
+      "value": []
+    },
+    {
+      "name": "44371",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "display_name",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "status",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "quality",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "evidence_text",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "as_of_utc",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "verdict",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "level_sensor_line",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "storm_line",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "changes_line",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "explanation",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "safety_json",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Document",
+          "value": []
+        },
+        {
+          "name": "queue_json",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Document",
+          "value": []
+        },
+        {
+          "name": "pumps",
+          "tagType": "Folder",
+          "tags": [
+            {
+              "name": "P1",
+              "tagType": "Folder",
+              "tags": [
+                {
+                  "name": "status",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "chip_text",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "quality",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "capacity_change_pct",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_today",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_baseline",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "valid_cycles",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                },
+                {
+                  "name": "runs",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "name": "P2",
+              "tagType": "Folder",
+              "tags": [
+                {
+                  "name": "status",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "chip_text",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "quality",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "capacity_change_pct",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_today",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_baseline",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "valid_cycles",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                },
+                {
+                  "name": "runs",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "45385",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "display_name",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "status",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "quality",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "evidence_text",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "as_of_utc",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "verdict",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "level_sensor_line",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "storm_line",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "changes_line",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "explanation",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "safety_json",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Document",
+          "value": []
+        },
+        {
+          "name": "queue_json",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Document",
+          "value": []
+        },
+        {
+          "name": "pumps",
+          "tagType": "Folder",
+          "tags": [
+            {
+              "name": "P1",
+              "tagType": "Folder",
+              "tags": [
+                {
+                  "name": "status",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "chip_text",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "quality",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "capacity_change_pct",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_today",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_baseline",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "valid_cycles",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                },
+                {
+                  "name": "runs",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "name": "P2",
+              "tagType": "Folder",
+              "tags": [
+                {
+                  "name": "status",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "chip_text",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "quality",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "capacity_change_pct",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_today",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_baseline",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "valid_cycles",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                },
+                {
+                  "name": "runs",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "45078",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "display_name",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "status",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "quality",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "evidence_text",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "as_of_utc",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "verdict",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "level_sensor_line",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "storm_line",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "changes_line",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "explanation",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "String",
+          "value": ""
+        },
+        {
+          "name": "safety_json",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Document",
+          "value": []
+        },
+        {
+          "name": "queue_json",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Document",
+          "value": []
+        },
+        {
+          "name": "pumps",
+          "tagType": "Folder",
+          "tags": [
+            {
+              "name": "P1",
+              "tagType": "Folder",
+              "tags": [
+                {
+                  "name": "status",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "chip_text",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "quality",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "capacity_change_pct",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_today",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_baseline",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "valid_cycles",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                },
+                {
+                  "name": "runs",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "name": "P2",
+              "tagType": "Folder",
+              "tags": [
+                {
+                  "name": "status",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "chip_text",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "quality",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "capacity_change_pct",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_today",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_baseline",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "valid_cycles",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                },
+                {
+                  "name": "runs",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "name": "P3",
+              "tagType": "Folder",
+              "tags": [
+                {
+                  "name": "status",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "chip_text",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "quality",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "String",
+                  "value": ""
+                },
+                {
+                  "name": "capacity_change_pct",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_today",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "ci_baseline",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Float4"
+                },
+                {
+                  "name": "valid_cycles",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                },
+                {
+                  "name": "runs",
+                  "tagType": "AtomicTag",
+                  "valueSource": "memory",
+                  "dataType": "Int4",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

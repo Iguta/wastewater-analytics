@@ -28,6 +28,7 @@ def test_stations_and_scenarios():
     assert len(StationsResponse.model_validate(client.get("/api/stations").json()).stations) == 3
     s = ScenariosResponse.model_validate(client.get("/api/scenarios").json())
     assert {c.id for c in s.scenarios} == {"bloomington_morningside_2024_04_11", "fishers_bowline_2009_01_20"}
+    assert [d.experiment for d in s.dev_cases] == ["storm_test", "cut_power", "break_sensor", "one_bad_day"]
 
 
 def test_assess_then_evidence_then_timeline():
@@ -48,7 +49,7 @@ def test_assess_then_evidence_then_timeline():
         ("/api/assess", {"station_id": "1", "as_of_utc": AS_OF}, 422, "UNKNOWN_STATION"),
         ("/api/assess", {"station_id": "44371"}, 422, "BAD_TIMESTAMP"),
         ("/api/assess", {"station_id": "44371", "as_of_utc": "2022-06-03"}, 422, "BAD_TIMESTAMP"),
-        ("/api/replay", {"case_id": "F1-1003"}, 422, "NOT_AVAILABLE"),
+        ("/api/replay", {"case_id": "F1-500"}, 422, "UNKNOWN_CASE"),
         ("/api/replay", {"case_id": "bad"}, 422, "UNKNOWN_CASE"),
     ],
 )
@@ -97,3 +98,27 @@ def test_ask_returns_agent_result_and_504_on_timeout(monkeypatch):
 
     monkeypatch.setattr(api.agent, "ask", slow)
     assert client.post("/api/ask", json={"question": "why?"}).status_code == 504
+
+
+def test_ask_validates_inputs_and_maps_agent_failures(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    for body, code in (
+        ({"station_id": "x"}, "UNKNOWN_STATION"),
+        ({"scenario_id": "x"}, "UNKNOWN_SCENARIO"),
+        ({"as_of_utc": "2022-06-03"}, "BAD_TIMESTAMP"),
+    ):
+        r = client.post("/api/ask", json={"question": "why?", **body})
+        assert r.status_code == 422 and r.json()["code"] == code
+
+    async def boom(question, context):
+        raise ExceptionGroup("tg", [RuntimeError("x")])
+
+    async def wrapped(question, context):
+        raise ExceptionGroup("tg", [TimeoutError()])
+
+    monkeypatch.setattr(api.agent, "ask", boom)
+    r = client.post("/api/ask", json={"question": "why?"})
+    assert r.status_code == 502 and r.json()["code"] == "AGENT_ERROR"
+    monkeypatch.setattr(api.agent, "ask", wrapped)
+    r = client.post("/api/ask", json={"question": "why?"})
+    assert r.status_code == 504 and r.json()["code"] == "AGENT_TIMEOUT"

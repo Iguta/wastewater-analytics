@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timezone
+from functools import cache
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -13,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from backend import agent
-from backend.app import assess, data, params, scenarios
+from backend.app import assess, data, evaluate, params, scenarios
 from backend.app.contracts import (
     AskResult,
     DevCase,
@@ -28,14 +29,12 @@ from backend.app.contracts import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-STATUS = {"NO_REPORT": 404}  # §8.2: only a missing report is 404; every other ToolError is 422
-# The Lab's fixed dev cases (5.6). F4's seed is a placeholder until David picks the first one with loss >= 0.4.
-DEV_CASES = [
-    DevCase(case_id="F2-0", experiment="storm_test"),
-    DevCase(case_id="F5-0", experiment="cut_power"),
-    DevCase(case_id="F6-0", experiment="break_sensor"),
-    DevCase(case_id="F4-0", experiment="one_bad_day"),
-]
+STATUS = {
+    "NO_REPORT": 404,
+    "AGENT_TIMEOUT": 504,
+    "AGENT_ERROR": 502,
+}  # §8.2: a missing report is 404 and agent failures 502/504; every other ToolError is 422
+EXPERIMENTS = {"F2": "storm_test", "F5": "cut_power", "F6": "break_sensor", "F4": "one_bad_day"}
 # Which query parameter a validation failure names -> its error code.
 PARAM_CODE = {
     "station_id": "UNKNOWN_STATION",
@@ -79,21 +78,28 @@ def health():
 
 @app.get("/api/stations")
 def stations(scenario_id: str | None = None) -> StationsResponse:
+    source_hash, model_version = data.sha256_file(data.WESSEX / "manifest.json"), params.load().version
     if scenario_id:
-        assess.check("44371", scenario_id, assess.REAL_MIN)  # raises: scenarios are not available yet
+        if not assess.known_case(scenario_id):
+            raise assess.AssessError(
+                "UNKNOWN_SCENARIO", f"unknown scenario {scenario_id!r}", assess.scenario_ids()
+            )
+        sd, _, meta = assess._case(scenario_id)
+        info = StationInfo(
+            station_id=sd.station_id, display_name=f"Wessex {sd.station_id}", pumps=sd.pumps, origin=meta["origin"],
+            scenario_id=scenario_id, as_of_min=assess._utc(sd.events["ts"].min()), as_of_max=assess._utc(sd.events["ts"].max()),
+            outage_windows=[],
+        )  # fmt: skip
+        return StationsResponse(stations=[info], source_hash=source_hash, model_version=model_version)
     outage = (datetime(2023, 8, 17, tzinfo=timezone.utc), datetime(2023, 8, 20, tzinfo=timezone.utc))
     infos = [
         StationInfo(
-            station_id=s, display_name=f"Station {s}", pumps=data.load(s).pumps, origin="REAL_REPLAY",
+            station_id=s, display_name=f"Wessex {s}", pumps=data.load(s).pumps, origin="REAL_REPLAY",
             scenario_id=None, as_of_min=assess.REAL_MIN, as_of_max=assess.REAL_MAX, outage_windows=[outage],
         )
         for s in data.STATIONS
     ]  # fmt: skip
-    return StationsResponse(
-        stations=infos,
-        source_hash=data.sha256_file(data.WESSEX / "manifest.json"),
-        model_version=params.load().version,
-    )
+    return StationsResponse(stations=infos, source_hash=source_hash, model_version=model_version)
 
 
 def _facts(table: dict) -> list[Fact]:
@@ -102,6 +108,16 @@ def _facts(table: dict) -> list[Fact]:
         for k, f in table.items()
         if isinstance(f, dict) and "status" in f
     ]  # fmt: skip
+
+
+@cache
+def dev_cases() -> list[DevCase]:
+    """5.6: the first dev seed of F2, F5 and F6, and the first F4 dev seed with loss >= 0.4."""
+    cases = evaluate.make_cases("dev", {"F2": 1, "F5": 1, "F6": 1, "F4": 30})
+    picked = [
+        next(c for c in cases if c.family == f and (f != "F4" or c.spec["loss"] >= 0.4)) for f in EXPERIMENTS
+    ]
+    return [DevCase(case_id=c.case_id, experiment=EXPERIMENTS[c.family]) for c in picked]
 
 
 @app.get("/api/scenarios")
@@ -123,7 +139,7 @@ def scenario_list() -> ScenariosResponse:
                 facts=_facts(s["record"]), outcome_facts=_facts(s["outcome"]), variants=variants,
             )
         )  # fmt: skip
-    return ScenariosResponse(scenarios=cards, dev_cases=DEV_CASES)
+    return ScenariosResponse(scenarios=cards, dev_cases=dev_cases())
 
 
 @app.get("/api/assess")
@@ -156,6 +172,12 @@ def evaluation() -> EvaluationReport:
     return EvaluationReport.model_validate_json(path.read_text())
 
 
+def is_timeout(e: BaseException) -> bool:
+    return isinstance(e, TimeoutError) or (
+        isinstance(e, BaseExceptionGroup) and any(is_timeout(x) for x in e.exceptions)
+    )
+
+
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     station_id: str | None = None
@@ -167,10 +189,24 @@ class AskRequest(BaseModel):
 async def ask(req: AskRequest) -> AskResult:
     if not os.environ.get("ANTHROPIC_API_KEY"):
         return JSONResponse({"error": "agent_offline"}, 503)
+    if req.station_id and req.station_id not in data.STATIONS:
+        raise assess.AssessError(
+            "UNKNOWN_STATION", f"unknown station {req.station_id!r}", list(data.STATIONS)
+        )
+    if req.scenario_id and not assess.known_case(req.scenario_id):
+        raise assess.AssessError(
+            "UNKNOWN_SCENARIO", f"unknown scenario {req.scenario_id!r}", assess.scenario_ids()
+        )
+    if req.as_of_utc:
+        assess.parse_time(req.as_of_utc)
     try:
         return await agent.ask(req.question, req.model_dump(exclude={"question"}))
-    except TimeoutError:
-        return JSONResponse({"error": "timeout"}, 504)
+    except (
+        Exception
+    ) as e:  # anyio wraps task-group failures, so a timeout can arrive inside an ExceptionGroup
+        if is_timeout(e):
+            return tool_error("AGENT_TIMEOUT", "no answer in 60 s")
+        return tool_error("AGENT_ERROR", f"agent failed: {type(e).__name__}")
 
 
 if (ROOT / "frontend" / "dist").is_dir():  # last, so it never shadows /api

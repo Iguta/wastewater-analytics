@@ -34,6 +34,8 @@ Rain makes this hard. Storms also make pumps run longer, so simple thresholds ei
 
 ## Architecture (planned)
 
+Model card and validation ladder: [docs/MODEL_CARD.md](docs/MODEL_CARD.md)
+
 ```
 Telemetry (simulated SCADA historian + real Wessex Water data)
         │  read-only ingestion

@@ -20,6 +20,8 @@ ErrorCode = Literal[
     "UNKNOWN_CASE",
     "BAD_TIMESTAMP",
     "AS_OF_OUT_OF_RANGE",
+    "AGENT_ERROR",
+    "AGENT_TIMEOUT",
     "NO_REPORT",
     "BAD_QUESTION",
     "NOT_AVAILABLE",  # the piece of the model that would answer is not built yet (not in section 7)

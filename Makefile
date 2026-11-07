@@ -3,7 +3,7 @@ SHELL := bash
 
 UV := uv run --frozen --project backend
 
-.PHONY: setup test verify build-ui serve mcp mcp-http mcp-smoke agent-eval
+.PHONY: setup test verify build-ui serve mcp mcp-http mcp-smoke eval-smoke eval-dev eval-test tune agent-eval
 
 setup:
 	cd backend && uv sync --frozen
@@ -36,3 +36,16 @@ agent-eval:
 mcp-smoke:
 	npx --yes @modelcontextprotocol/inspector@2.12.0 --cli $(UV) python -m backend.mcp_server --method tools/list | grep -q assess_station
 	npx --yes @modelcontextprotocol/inspector@2.12.0 --cli $(UV) python -m backend.mcp_server --method tools/call --tool-name assess_station --tool-arg 'station_id="44371"' --tool-arg as_of_utc=2022-06-03T00:00:00Z | grep -q INVESTIGATE
+
+# David's evaluation harness (ARCHITECTURE.md §6). Dev only, except eval-test (once per frozen version).
+eval-smoke:
+	$(UV) python -m backend.scripts.evaluate smoke
+
+eval-dev:
+	$(UV) python -m backend.scripts.evaluate dev
+
+eval-test:
+	$(UV) python -m backend.scripts.evaluate test
+
+tune:
+	$(UV) python -m backend.scripts.tune

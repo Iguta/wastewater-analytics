@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, ApiError } from "./api";
+import { api, errorText } from "./api";
 import { addDays, toAsOf } from "./dates";
 import type { StationAssessment, StationInfo, TimelineDay } from "./types";
 
@@ -27,19 +27,14 @@ export function useStationData(stations: StationInfo[], day: string, scenarioId:
         const [assessment, tl] = await Promise.all([
           api.assess(info.station_id, toAsOf(day), scenarioId ?? undefined),
           prev >= info.as_of_min.slice(0, 10)
-            ? api.timeline(info.station_id, scenarioId, prev, prev)
+            ? api.timeline(info.station_id, scenarioId, toAsOf(prev), toAsOf(day))
             : Promise.resolve([] as TimelineDay[]),
         ]);
         return { info, assessment, yesterday: tl.find((d) => d.day === prev) ?? null };
       }),
     ).then(
       (views) => live && setRes({ state: "ok", views }),
-      (e: unknown) => live && setRes({
-        state: "error",
-        message: e instanceof ApiError
-          ? `Can't reach the Dragonfly server (HTTP ${e.status || "no response"}).`
-          : "Can't reach the Dragonfly server (HTTP no response).",
-      }),
+      (e: unknown) => live && setRes({ state: "error", message: errorText(e) }),
     );
     return () => { live = false; };
   }, [stations, day, scenarioId, attempt]);

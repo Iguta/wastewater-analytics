@@ -59,7 +59,8 @@ async def ask(question: str, context: dict) -> AskResult:
                         reply = await runner.generate_tool_call_response()  # cached: the runner reuses it
                         for u, r in zip(uses, reply["content"]):
                             calls.append(ToolCall(tool=u.name, args=u.input, ok=not r.get("is_error")))
-                            results.append(json.dumps(r["content"]))
+                            c = r["content"]  # raw MCP blocks; grounding needs the decoded tool text
+                            results.append(c if isinstance(c, str) else "".join(b.get("text", "") for b in c))
                     refused = refused or message.stop_reason == "refusal"
                     text = "".join(b.text for b in message.content if b.type == "text")
                 break
@@ -67,8 +68,17 @@ async def ask(question: str, context: dict) -> AskResult:
                 if not extra:
                     raise
                 fallback_dropped = True
-        if refused or not calls or not text:
-            g = Grounding(passed=False, unmatched_numbers=[], forbidden_phrases=[])
+        reason = (
+            "refused or over the tool-call cap"
+            if refused
+            else "no tool call"
+            if not calls
+            else ""
+            if text
+            else "empty answer"
+        )
+        if reason:
+            g = Grounding(passed=False, unmatched_numbers=[reason], forbidden_phrases=[])
         else:
             g = grounding.check(text, results)
         return AskResult(
