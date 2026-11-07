@@ -90,6 +90,7 @@ Naming: `kebab-case`. A repeated element gets an id plus a data attribute for it
 | `lab-ablations` | Ablations table |
 | `lab-heatmap` | Recall heatmap; `lab-heatmap-table` for the table view |
 | `lab-no-report` | "Evaluation not run yet." |
+| `lab-validation-ladder` | "How we know it works": container; each of the six steps is a `lab-rung` |
 | `lab-learned-baseline` | "We tried a trained model; the simpler one held" panel (static text from §4.16) |
 | `exp-storm-test` / `exp-break-sensor` / `exp-cut-power` / `exp-one-bad-day` | Live experiment buttons |
 | `lab-cannot-know` | "What the model cannot know" list |

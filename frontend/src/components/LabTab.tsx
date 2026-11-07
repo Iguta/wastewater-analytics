@@ -56,6 +56,7 @@ export function LabTab() {
           and a physics-only check on the same cases. No chatbot was tested.
         </p>
       </section>
+      <Ladder r={load.s === "ok" ? load.r : null} />
       {load.s === "loading" && <Loading onRetry={retry} />}
       {load.s === "error" && <ErrorState message={load.message} onRetry={retry} />}
       {load.s === "none" && <EmptyState testId="lab-no-report">Evaluation not run yet.</EmptyState>}
@@ -177,6 +178,59 @@ function Proxy({ rows }: { rows: ProxyRow[] }) {
         </p>
       ))}
       <p className="meta">These are pumps taken out of service, not shown to be failures. The dev tier is 2022 data. Descriptive only: no maintenance records exist to measure real precision.</p>
+    </section>
+  );
+}
+
+// "How we know it works": six rungs, each with what it shows and what it does not (docs/MODEL_CARD.md, PR #39).
+// Numbers come from the report where it has them; the rest are the figures already in ARCHITECTURE.md sections 2, 4.16 and 19.
+// The scratch weak-label counts are deliberately absent (section 7: they never appear in the UI).
+interface Rung { title: string; tier: string; result: string; shows: string; notShow: string }
+function ladder(r: EvaluationReport | null): Rung[] {
+  const c = r?.benchmarks?.C;
+  const gates = r?.gates ? Object.entries(r.gates) : [];
+  const dev = r?.proxy?.filter((p) => p.tier === "dev") ?? [];
+  const pending = "Not in the evaluation report yet.";
+  return [
+    { title: "1. Physics check", tier: "Real data, 9 pumps, 2022 to 2023",
+      result: "Pumping capacity changed by a ratio of 0.96 to 1.03 between wet and dry days on 8 of 9 pumps, against 1.09 to 1.33 for raw run time. Day to day spread: 0.03 to 0.11, against 0.14 to 0.33.",
+      shows: "The capacity measure barely moves with rain and is much less noisy than run time.", notShow: "That it detects anything. The ninth pump, a lag pump (45078 P3), has a ratio of 1.20." },
+    { title: "2. Planted faults", tier: "Synthetic faults in real streams, 2022 development data",
+      result: c ? `Caught ${c.caught.k} of ${c.caught.n} planted capacity losses${c.median_lead_days != null ? `, median lead ${c.median_lead_days.toFixed(1)} days` : ""}. False escalations in storm cases: ${c.false_storm.k} of ${c.false_storm.n}.` : pending,
+      shows: "The detector finds the faults we know how to plant and mostly ignores rain.", notShow: "Performance on real failures. We wrote the fault injector, so these are the faults we thought of." },
+    { title: "3. A real early sign", tier: "One real event, development data",
+      result: "At station 44371, pump 1's capacity fell 46% and stayed down before the pump was taken out of service from 2022-06-11 to 06-15. The cause is unknown.",
+      shows: "A real capacity drop, with nothing planted, is visible and flagged.", notShow: "A rate. It is one event, we saw it while designing, and the removal may have been planned after operators saw the same thing." },
+    { title: "4. Pumps taken out of service", tier: "Real data, measurement only",
+      result: dev.length
+        ? dev.map((p) => `${p.tier} tier, ${GROUP[p.group]}: ${p.episodes < 5 ? `n/a (only ${p.episodes})` : `${p.preceded} of ${p.episodes} preceded by a warning`}`).join(". ") + "."
+        : pending,
+      shows: "How much warning the data can hold at all.", notShow: "Precision or failures caught. These are removals, not failures: they include planned work and duty rotation." },
+    { title: "5. Indiana what-ifs", tier: "Simulated, on Wessex telemetry (no Indiana telemetry exists)",
+      result: "Morningside, variant A (assumed gradual clog): over 10 simulated onsets the first Investigate came a median 2.8 days before the simulated trip, 10 of 10 caught; ramps of 3, 6, 10 and 14 days gave 1.3, 2.8, 5.3 and 7.8 days. The locked replay gives 3.3 days. That check had seen the 2023 data. Fishers: scored against a 5-minute target for Source offline; reported, not a pass or fail gate, and no measured result yet.",
+      shows: "The detector behaves sensibly on the shape of two documented events.", notShow: "That it would catch them. Morningside's mechanism is unknown, the lead assumes a gradual ramp, and the telemetry is a UK stand-in." },
+    { title: "6. Stress tests and gates", tier: "Development data",
+      result: gates.length ? `${gates.map(([g, ok]) => `${g} ${ok ? "passed" : "not passed"}`).join(", ")}. A trained model was tested and not adopted (see below).` : `${pending} A trained model was tested and not adopted (see below).`,
+      shows: "The rules hold on adversarial cases, and a simple baseline beat the learned one.", notShow: "The test-tier result. The test tier has been seen once and nothing may be tuned on it." },
+  ];
+}
+
+function Ladder({ r }: { r: EvaluationReport | null }) {
+  return (
+    <section className="panel" data-testid="lab-validation-ladder">
+      <h2 className="section-title">How we know it works</h2>
+      <p className="meta">Six steps, from the weakest claim to the strongest. Each says what it shows and what it does not.</p>
+      <div className="rungs">
+        {ladder(r).map((g) => (
+          <article key={g.title} className="rung" data-testid="lab-rung">
+            <h3 className="sub-title">{g.title}</h3>
+            <p className="meta">{g.tier}</p>
+            <p>{g.result}</p>
+            <p><strong>Shows:</strong> {g.shows}</p>
+            <p><strong>Does not show:</strong> {g.notShow}</p>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
