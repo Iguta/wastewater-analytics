@@ -30,17 +30,19 @@ export function errorText(e: unknown): string {
 
 export const api = {
   health: () => get<{ status: string; model_version: string; source_hash: string; code_version: string }>("/api/health"),
-  assess: (stationId: string, asOfUtc: string, scenarioId?: string) =>
+  assess: (stationId: string, asOfUtc: string, scenarioId?: string, signal?: AbortSignal) =>
     get<StationAssessment>(
       `/api/assess?station_id=${encodeURIComponent(stationId)}&as_of_utc=${encodeURIComponent(asOfUtc)}` +
         (scenarioId ? `&scenario_id=${encodeURIComponent(scenarioId)}` : ""),
+      { signal },
     ),
   stations: (scenarioId?: string | null) =>
     get<StationsResponse>("/api/stations" + (scenarioId ? `?scenario_id=${encodeURIComponent(scenarioId)}` : "")),
-  timeline: (stationId: string, scenarioId: string | null, start: string, end: string) =>
+  timeline: (stationId: string, scenarioId: string | null, start: string, end: string, signal?: AbortSignal) =>
     get<TimelineDay[]>(
       `/api/timeline?station_id=${encodeURIComponent(stationId)}&start=${start}&end=${end}` +
         (scenarioId ? `&scenario_id=${encodeURIComponent(scenarioId)}` : ""),
+      { signal },
     ),
   evidence: (alertId: string, asOfUtc: string) =>
     get<Evidence>(`/api/evidence?alert_id=${encodeURIComponent(alertId)}&as_of_utc=${encodeURIComponent(asOfUtc)}`),

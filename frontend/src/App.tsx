@@ -10,7 +10,7 @@ import { IncidentsTab } from "./components/IncidentsTab";
 import { ReplayBar } from "./components/ReplayBar";
 import { StationsTab } from "./components/StationsTab";
 import type { QueueItem } from "./derive";
-import { dayOf, toAsOf } from "./dates";
+import { addDays, dayOf, toAsOf } from "./dates";
 import type { ReplayResult, ScenarioVariant, StationInfo, StationsResponse } from "./types";
 import { useStationData } from "./useStationData";
 
@@ -54,14 +54,20 @@ export default function App() {
   const stations = boot.state === "ok" && boot.data.stations.every((s) => s.scenario_id === scenarioId) ? boot.data.stations : null;
   const range = useMemo<Range | null>(() => {
     if (!stations?.length) return null;
+    let min = dayOf([...stations.map((s) => s.as_of_min)].sort().reverse()[0]); // intersection of all station ranges
+    let max = dayOf([...stations.map((s) => s.as_of_max)].sort()[0]);
+    if (scenario) { // section 7: a scenario replays from failure - 30 d to failure + 3 d (the API also serves the 120 d of loaded data)
+      const f = dayOf(scenario.v.failure_at);
+      min = [min, addDays(f, -30)].sort().reverse()[0];
+      max = [max, addDays(f, 3)].sort()[0];
+    }
     return {
-      min: dayOf([...stations.map((s) => s.as_of_min)].sort().reverse()[0]), // intersection of all station ranges
-      max: dayOf([...stations.map((s) => s.as_of_max)].sort()[0]),
+      min, max,
       outages: [...new Map(
         stations.flatMap((s) => s.outage_windows.map(([a, b]) => [dayOf(a), dayOf(b)] as [string, string])).map((w) => [w.join("/"), w] as const),
       ).values()],
     };
-  }, [stations]);
+  }, [stations, scenario]);
 
   useEffect(() => {
     if (range && day === null) setDay(DEFAULT_DAY >= range.min && DEFAULT_DAY <= range.max ? DEFAULT_DAY : range.min);
