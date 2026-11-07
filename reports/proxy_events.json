@@ -1,0 +1,128 @@
+{
+  "note": "Measurement only: weak proxies for 'pump out of service', never used for tuning (\u00a75.7).",
+  "tiers_written": [
+    "dev"
+  ],
+  "demo_stations": {
+    "stations": [
+      "44371",
+      "45078",
+      "45385"
+    ],
+    "rotation_stations": [],
+    "counts": {
+      "dev": {
+        "episodes": 9,
+        "preceded": 5
+      }
+    },
+    "rotation_counts": {
+      "dev": {
+        "episodes": 0,
+        "preceded": 0
+      }
+    },
+    "episodes": [
+      {
+        "station": "44371",
+        "pump": "P1",
+        "start": "2022-06-12",
+        "end": "2022-06-14",
+        "days": 3,
+        "tier": "dev",
+        "preceded": true,
+        "first_alert_day": "2022-06-01",
+        "lead_days": 11
+      },
+      {
+        "station": "44371",
+        "pump": "P1",
+        "start": "2022-12-25",
+        "end": "2022-12-27",
+        "days": 3,
+        "tier": "dev",
+        "preceded": true,
+        "first_alert_day": "2022-10-02",
+        "lead_days": 84
+      },
+      {
+        "station": "45385",
+        "pump": "P1",
+        "start": "2022-02-20",
+        "end": "2022-02-22",
+        "days": 3,
+        "tier": "dev",
+        "preceded": false,
+        "first_alert_day": null,
+        "lead_days": null
+      },
+      {
+        "station": "45385",
+        "pump": "P1",
+        "start": "2022-03-05",
+        "end": "2022-03-06",
+        "days": 2,
+        "tier": "dev",
+        "preceded": false,
+        "first_alert_day": null,
+        "lead_days": null
+      },
+      {
+        "station": "45385",
+        "pump": "P1",
+        "start": "2022-04-15",
+        "end": "2022-04-18",
+        "days": 4,
+        "tier": "dev",
+        "preceded": false,
+        "first_alert_day": null,
+        "lead_days": null
+      },
+      {
+        "station": "45385",
+        "pump": "P1",
+        "start": "2022-07-26",
+        "end": "2022-07-28",
+        "days": 3,
+        "tier": "dev",
+        "preceded": false,
+        "first_alert_day": null,
+        "lead_days": null
+      },
+      {
+        "station": "45385",
+        "pump": "P1",
+        "start": "2022-10-10",
+        "end": "2022-10-11",
+        "days": 2,
+        "tier": "dev",
+        "preceded": true,
+        "first_alert_day": "2022-09-06",
+        "lead_days": 34
+      },
+      {
+        "station": "45385",
+        "pump": "P1",
+        "start": "2022-10-28",
+        "end": "2022-10-30",
+        "days": 3,
+        "tier": "dev",
+        "preceded": true,
+        "first_alert_day": "2022-09-06",
+        "lead_days": 52
+      },
+      {
+        "station": "45385",
+        "pump": "P1",
+        "start": "2022-12-27",
+        "end": "2022-12-28",
+        "days": 2,
+        "tier": "dev",
+        "preceded": true,
+        "first_alert_day": "2022-11-28",
+        "lead_days": 29
+      }
+    ],
+    "rotation_episodes": []
+  }
+}
