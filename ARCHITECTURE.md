@@ -76,7 +76,8 @@ Display names are `Wessex 44371`, `Wessex 45385` and `Wessex 45078`. No fictiona
 
 ### 3.3 Time and splits
 
-- **Timezone:** naive timestamps are read as UTC, as recorded. Days are UTC dates. The API takes and returns `as_of_utc` in ISO 8601 with `Z`.
+- **Timezone:** naive timestamps are read as UTC, as recorded. The source is UK local time, so UTC days are offset by up to an hour and the DST change nights (late March, late October) carry a repeated or missing hour. For daily medians this does not matter; a negative or near-zero fill on those nights is excluded by the fill range rule, and the data-quality report counts them.
+- **Historian compression:** the export logs state changes only. A dropped transition merges two runs into one long run, which is why repeated starts and stops are counted rather than invented, and why a long run is kept and capped instead of discarded. Days are UTC dates. The API takes and returns `as_of_utc` in ISO 8601 with `Z`.
 - **Warm-up:** the baseline needs 74 days of history. Real replay `as_of_utc` is therefore valid from `2022-03-16T00:00:00Z` to `2024-01-01T00:00:00Z`.
 - **Dev tier** (tuning allowed): 2022. **Test tier** (score only): 2023. Per-pump baselines are trailing (§4.4), so the split controls only hyperparameter tuning and case generation.
 
@@ -170,16 +171,20 @@ For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, usin
 - `z_d = (log ci_d − median) / max(1.4826·MAD, 0.01)`, clipped to [−10, 10].
 - **Known limit:** a loss that persists longer than `W + G` days is absorbed into the baseline and clears. The Lab caveats say so, and `test_baseline_absorption` asserts it.
 
-### 4.5 Sibling inhibition
+### 4.5 Sibling inhibition (David's D2/D3, `sibling_mode = "shared_drop"`)
 
-- **Pump-specific deviation:** for pump `p`, `u_p = z_p − median(z over the station's OTHER pumps with SUFFICIENT evidence that day)`. If no other pump qualifies, the median term is 0, and the evidence notes that sibling comparison was unavailable. On a 2-pump station, a lone failing pump therefore keeps its full deviation.
-- **Station-wide signal:** `c_d = max(z over SUFFICIENT pumps)`, computed only when at least 2 pumps qualify, and 0 otherwise. It goes negative only when every pump drops together.
+- **Per-pump change:** `r_p = log ci_p − baseline median_p`, the pump's log capacity change.
+- **Shared drop:** `shared_p = min(0, median of r over the station's OTHER pumps with SUFFICIENT evidence that day)`. It is 0 if no other pump qualifies, and the evidence then notes that sibling comparison was unavailable. Only a shared **drop** is subtracted, so a sibling running above normal never makes a healthy pump look worse.
+- **Pump-specific deviation:** `u_p = (r_p − shared_p) / max(1.4826·MAD_p, 0.01)`. The subtraction happens in capacity-change space, before each pump's own scaling, so pumps with different noise levels don't create a false per-pump drop.
+- **Station-wide signal:** `c_d = max(z over SUFFICIENT pumps)`, computed only when at least 2 pumps qualify, and 0 otherwise.
+- **The literal earlier rule stays available** as `sibling_mode = "spec"`, for comparison only. On 2022 dev, the G6 alert rate (pump INVESTIGATE opens per pump per 180 days) is spec 0.74/0.99/0.66 vs shared_drop 0.49/0.99/0.66, and both catch the 44371 precursor.
 
 ### 4.6 CUSUM and pump status
 
 - **Update rule:** `S_d = max(0, S_{d−1} + clip(−u_d, −U, U) − k)`.
 - **When it updates:** only on `SUFFICIENT` days. `PARTIAL`, `INSUFFICIENT` and `SOURCE_OFFLINE` days hold `S` unchanged.
 - **Defaults:** `k = 0.5`, `U = 4`, `h_w = 3`, `h_i = 6`.
+- **Ceiling (David's D1):** `S` is capped at `S_max = 12`, so a closed fault clears in days, not months.
 
 | Condition | Pump status |
 | --- | --- |
@@ -197,7 +202,8 @@ For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, usin
 ### 4.7 Station-wide change
 
 - The same CUSUM runs on `−c_d`.
-- At `S_station ≥ h_w`, it raises a `STATION_WIDE_CHANGE` finding at `WATCH`, never higher.
+- At `S_station ≥ h_w`, it raises a `STATION_WIDE_CHANGE` finding at `WATCH`.
+- **Both pumps failing together** (same age, same rags) looks the same as a setpoint change on this index, so a large shared drop is escalated on size alone: if the station's shared capacity change is at or below −30% on each of the last 3 `SUFFICIENT` days, the finding becomes `INVESTIGATE` with the cause list "all pumps restricted, force-main restriction, or control change". A station that can pump 30% less than normal is serious whatever the cause. It closes when `S_station < 1.0`, with the same `S_max = 12` ceiling.
 - Possible causes listed: level setpoint change, force-main restriction, control change, common supply issue.
 
 ### 4.8 Other findings (minute resolution: evaluated at `as_of` and, in replays, at every minute of data)
@@ -206,7 +212,7 @@ For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, usin
 
 | Finding | Rule | Status | Where shown |
 | --- | --- | --- | --- |
-| `SOURCE_SILENT` | The level stream has missed 5 consecutive expected samples (5 min at 1-minute cadence) **and** no pump event has arrived since the level went silent. Also raised when there is no pump event for `T = max(20 min, 3 × P99 of fill times over the trailing 60 days)` while level is also silent. It clears when either stream resumes. | Station `SOURCE_OFFLINE` | Safety strip |
+| `SOURCE_SILENT` | The level stream has missed **10** consecutive expected samples (10 min at 1-minute cadence) **and** no pump event has arrived since the level went silent. (5 samples was the first choice; on real 2022–23 data it fired about 6 times a day at 44371, which would have made the safety strip flicker. At 10 min: 76 / 61 / 106 silences in two years at 44371 / 45385 / 45078.) Also raised when there is no pump event for `T = max(20 min, 3 × P99 of fill times over the trailing 60 days)` while level is also silent. It clears when either stream resumes. | Station `SOURCE_OFFLINE` | Safety strip |
 | `SENSOR_FAULT` | Pump events keep arriving while level is silent for ≥15 min (`LEVEL_GAP`), or any level flag from §3.5 | `WATCH` | Queue. `HIGH_LEVEL` becomes `UNKNOWN` and is listed in missing evidence. |
 | `HIGH_LEVEL` | Level at or above the station's trailing 60-day P99.9 for 5 consecutive minutes | `INVESTIGATE` | Safety strip. Never suppressed or inhibited. Labeled "SCADA-equivalent; real setpoints unknown." |
 | `PUMP_NOT_RUNNING` | Baseline median ≥10 runs/day, today 0 runs, and a sibling has ≥10 runs today | `WATCH` | Queue |
@@ -301,7 +307,7 @@ The scenario files are the source of truth for every incident parameter. This se
 | Scenario id | Variant A (primary) | Variant B | Stand-in | Outcome to reproduce |
 | --- | --- | --- | --- | --- |
 | `bloomington_morningside_2024_04_11` | Progressive impeller ragging or clog. 6-day accelerating precursor; duty pump 60% degraded 24 h before failure; failure 2024-04-11T07:00Z. `PREDICTABLE_DAYS_AHEAD`, confidence 40. | Sudden pump, motor or control trip under storm load, no precursor. `DETECTABLE_AT_ONSET`, confidence 40. | 44371 | 14,310 gal ±20%; outage 145 min |
-| `fishers_bowline_2009_01_20` | Power loss took down the controller; its backup battery was dead, so pumps, alarm and telemetry went silent at 2009-01-20T10:30Z. `DETECTABLE_AT_ONSET`, confidence 70. Target: `SOURCE_OFFLINE` within 5 min. | Controller or PLC fault with comms up: pumps stop while level rises. `DETECTABLE_AT_ONSET`, confidence 20. | 45385 | 25,000 gal ±20%; outage 530 min; discovery 180 min after failure |
+| `fishers_bowline_2009_01_20` | Power loss took down the controller; its backup battery was dead, so pumps, alarm and telemetry went silent at 2009-01-20T10:30Z. `DETECTABLE_AT_ONSET`, confidence 70. Target: `SOURCE_OFFLINE` within 5 min (expected result about 10 min under the §4.8 rule; reported, not gated). | Controller or PLC fault with comms up: pumps stop while level rises. `DETECTABLE_AT_ONSET`, confidence 20. | 45385 | 25,000 gal ±20%; outage 530 min; discovery 180 min after failure |
 
 **What these benchmarks can and cannot show** (locked wording for the README, Devpost and the demo):
 
@@ -647,11 +653,11 @@ All of these run from a clone of the repo after `make setup`. Replace `<repo>` w
 
 | Harness | Configuration |
 | --- | --- |
-| Claude Code | `claude mcp add dragonfly -- uv run --directory <repo>/backend python mcp_server.py` |
-| Claude Desktop | `{"mcpServers": {"dragonfly": {"command": "uv", "args": ["run", "--directory", "<repo>/backend", "python", "mcp_server.py"]}}}` |
+| Claude Code | `claude mcp add dragonfly -- uv run --project <repo>/backend python -m backend.mcp_server` |
+| Claude Desktop | `{"mcpServers": {"dragonfly": {"command": "uv", "args": ["run", "--project", "<repo>/backend", "python", "-m", "backend.mcp_server"]}}}` |
 | Cursor (`.cursor/mcp.json`) | The same `mcpServers` block |
 | VS Code (`.vscode/mcp.json`) | `{"servers": {"dragonfly": {"type": "stdio", "command": "uv", "args": [ ...same... ]}}}` |
-| Codex (`~/.codex/config.toml`) | `[mcp_servers.dragonfly]` with `command = "uv"` and `args = ["run", "--directory", "<repo>/backend", "python", "mcp_server.py"]` |
+| Codex (`~/.codex/config.toml`) | `[mcp_servers.dragonfly]` with `command = "uv"` and `args = ["run", "--project", "<repo>/backend", "python", "-m", "backend.mcp_server"]` |
 | Remote (claude.ai custom connector, ChatGPT developer-mode connector) | `make mcp-http` plus `make tunnel` gives `https://<random>.trycloudflare.com/mcp`. The tunnel exposes **port 8001 only** (never 8000 or `/api/ask`), is up only during judging, and needs no auth, because it serves only public CC BY data and labeled simulations, under the §8.3 limits. Real utility deployments would need OAuth and an on-prem host; the README says so. |
 
 The README "Use it from your agent" section carries these configurations, `cloudflared` as a prerequisite, a restart line, and three example questions:
@@ -690,7 +696,7 @@ The README "Use it from your agent" section carries these configurations, `cloud
 | Empty safety strip | "No safety findings. SCADA-equivalent checks; real setpoints unknown." |
 | Lab with no evaluation report | "Evaluation not run yet." |
 
-**Mobile (under 768 px):** tiles stack above the queue, queue rows become cards, the header wraps to two rows, the drawer is full-screen, and there is no horizontal scroll.
+**Mobile (under 768 px):** this is a layout, not a separate role view, and it gets no special name. tiles stack above the queue, queue rows become cards, the header wraps to two rows, the drawer is full-screen, and there is no horizontal scroll.
 
 ### 10.2 Status presentation (fixed)
 
@@ -787,6 +793,8 @@ After replay, the card shows one row per variant: first `WATCH`, first `INVESTIG
 5. **What the model cannot know:**
    - sudden power, controller or vandalism failures days ahead;
    - the physical cause;
+   - a failed check valve: backflow shortens the fill and lengthens the run, so the index can hide it or mis-size it;
+   - two pumps wearing out together at the same rate (shown only as a station-wide change, escalated by its size);
    - VFD stations;
    - stations with no telemetry;
    - real alarm setpoints.
@@ -798,7 +806,7 @@ After replay, the card shows one row per variant: first `WATCH`, first `INVESTIG
 
 - Grey background and panels, dark grey text.
 - Color only for abnormal states (§10.2). **No green anywhere.**
-- Charts are greyscale with dashed threshold lines.
+- Charts are greyscale with dashed threshold lines. Abnormal segments may use amber or red, always together with a marker shape or label.
 - Tabular numerals.
 - WCAG 2.1 AA: amber and red text and the grey hatch each meet 4.5:1 contrast; color is never the only cue; full keyboard navigation; visible focus.
 
@@ -914,7 +922,7 @@ At 15:15, Dhruv commits `.verify-strict`; from then on, a skip is a failure. Thi
 
 | Command | When it runs | What it checks |
 | --- | --- | --- |
-| `make agent-eval` (`backend/agent_eval.py`) | CI when `ANTHROPIC_API_KEY` exists and `agent.py`, `mcp_server.py`, `contracts.py` or `explain.py` changed. Otherwise it prints SKIP and exits 0. Also local. | 20 fixed questions in `backend/tests/agent_eval.toml`. A failing question is retried once. **Gate: at least 19/20 pass the grounding check.** Advisory: a `claude-haiku-5-5` judge answers yes, no or unknown to 3 questions per answer (claims a confirmed cause? suggests operating equipment? drops a missing-evidence caveat?). The fix loop never sees the judge rubric. |
+| `make agent-eval` (`backend/agent_eval.py`) | Local only today (no CI secret). In CI it prints SKIP and exits 0. Would run when `ANTHROPIC_API_KEY` exists and `agent.py`, `mcp_server.py`, `contracts.py` or `explain.py` changed. Otherwise it prints SKIP and exits 0. Also local. | 20 fixed questions in `backend/tests/agent_eval.toml`. A failing question is retried once. **Gate: at least 19/20 pass the grounding check.** Advisory: a `claude-haiku-5-5` judge answers yes, no or unknown to 3 questions per answer (claims a confirmed cause? suggests operating equipment? drops a missing-evidence caveat?). The fix loop never sees the judge rubric. |
 | `make eval` | Local, at freeze | The full evaluation (§6) |
 
 ### 11.3 Anti-gaming guard
@@ -931,7 +939,7 @@ At 15:15, Dhruv commits `.verify-strict`; from then on, a skip is a failure. Thi
 
 - branch protection on `main`: PR required, status check `verify` required, code-owner review required, rules enforced for admins too, no force push;
 - "Allow auto-merge";
-- Actions secrets `ANTHROPIC_API_KEY` and `AUTOFIX_TOKEN` (a fine-grained PAT with contents and pull-request write on this repo only).
+- **No Actions secrets today** (David, 12:31). `review.yml`, `autofix.yml` and `agent-eval` take their no-secret path (exit 0 with a notice). The agent demo runs on Dhruv's laptop through MCP (§18). If a key is ever added, `AUTOFIX_TOKEN` is a fine-grained PAT with contents and pull-request write on this repo only.
 
 The labels `stream:data`, `stream:ui`, `stream:api` and `decision-change` must exist; Dhruv creates any that are missing. By 13:30, Dhruv opens one test PR that touches `gates.toml` and confirms it cannot merge without code-owner approval, auto-merge included.
 
@@ -1010,21 +1018,23 @@ This updates AGENTS.md in the same PR.
 
 ## 14. Commands, environment and versions
 
+**Python layout (David's, PR #6):** `backend/` is a package (`backend/__init__.py`), code imports `backend.app.<module>`, and every Python command runs from the repo root with `uv run --frozen --project backend`. Tests live in `backend/tests/` and import `backend.app`.
+
 The `Makefile` holds exactly these commands, with `SHELL := bash` and `.SHELLFLAGS := -eu -o pipefail -c`.
 
 | Target | Command |
 | --- | --- |
 | `setup` | `cd backend && uv sync --frozen`; `cd frontend && npm ci`; `cd e2e && npm ci && npx playwright install --with-deps chromium` |
-| `fixtures` | `uv run --frozen --directory backend python scripts/export_fixtures.py` (David only, needs `$WESSEX_DIR`) |
-| `test` | `ruff check .`, `ruff format --check .` and `pytest -q`, each via `uv run --frozen --directory backend` |
+| `fixtures` | `uv run --frozen --project backend python scripts/export_fixtures.py` (David only, needs `$WESSEX_DIR`) |
+| `test` | `ruff check .`, `ruff format --check .` and `pytest -q`, each via `uv run --frozen --project backend` |
 | `verify` | `tools/verify` (§11.1) |
-| `eval-smoke` / `eval-dev` / `tune` / `eval-test` / `eval` | `uv run --frozen --directory backend python scripts/evaluate.py --tier smoke` / `--tier dev` / `--tier dev --grid` / `--tier test` / `--tier all` |
+| `eval-smoke` / `eval-dev` / `tune` / `eval-test` / `eval` | `uv run --frozen --project backend python scripts/evaluate.py --tier smoke` / `--tier dev` / `--tier dev --grid` / `--tier test` / `--tier all` |
 | `build-ui` | `cd frontend && npm run build` |
-| `serve` | `uv run --frozen --directory backend uvicorn api:app --host 127.0.0.1 --port 8000 --workers 1` (it serves `frontend/dist` if built) |
-| `mcp` / `mcp-http` | `uv run --frozen --directory backend python mcp_server.py` / `… --http` |
+| `serve` | `uv run --frozen --project backend uvicorn backend.api:app --host 127.0.0.1 --port 8000 --workers 1` (it serves `frontend/dist` if built) |
+| `mcp` / `mcp-http` | `uv run --frozen --project backend python -m backend.mcp_server` / `… --http` |
 | `mcp-smoke` | Inspector CLI 2.12.0 against `make mcp` (§11.1) |
 | `e2e` | `cd e2e && npx playwright test` (its `webServer` runs `make build-ui serve`) |
-| `agent-eval` | `uv run --frozen --directory backend python agent_eval.py` |
+| `agent-eval` | `uv run --frozen --project backend python -m backend.agent_eval` |
 | `tunnel` | `cloudflared tunnel --url http://127.0.0.1:8001` |
 
 - **Environment variables:** `WESSEX_DIR` (fixture export only), `ANTHROPIC_API_KEY` (agent, optional), and `BOARD_NAME`, `BOARD_POLL`, `BOARD_AGENT` (board tool). Nothing else.
@@ -1054,6 +1064,14 @@ Lunch is 12:30–13:00 per PLAN.md. Board watchers keep agents working through i
 
 - If the 14:30 milestone slips past 15:00: drop F7, storm readiness, Ignition and `agent-eval` in CI; keep G1–G6.
 - If the 15:00 milestone slips past 15:45: Incidents replays show detection timing only, with no gallons, and the card says so.
+
+- **UI** (proposed by Praneetha 12:28; Dhruv set the order): if the UI is not running on the live API by 15:00, cut in this order, top first:
+  1. The Ignition view (§10.8).
+  2. Ask Dragonfly: show the standard explanation only.
+  3. Lab: the recall heatmap and the ablations table.
+  4. Lab: the live experiments other than "Storm test" and "Cut the power".
+
+  The UI never cuts the Incidents replay (the demo opens on it), the Stations tab, the drawer's capacity chart, explanation and work order, the origin badge, or the four states.
 
 Provenance, no-lookahead, quality handling and honest labels are never cut.
 
