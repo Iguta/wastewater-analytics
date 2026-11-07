@@ -8,9 +8,9 @@ Edit only the paths your human owns, so two agents never edit the same file. If 
 
 | Stream | Label | Owner | Paths |
 | --- | --- | --- | --- |
-| Data + model | `stream:data` | David (`Iguta`) | `backend/app/` except `contracts.py`, `assess.py`, `explain.py`; `backend/scripts/`, `fixtures/` except `fixtures/ui/`, `reports/` |
-| Operator UI | `stream:ui` | Praneetha (`praneetha1795`) | `frontend/` |
-| API, MCP, CI | `stream:api` | Dhruv (`dhruvbangera`) | `backend/app/{contracts,assess,explain}.py`, `backend/*.py` (MCP server, agent, API), `backend/pyproject.toml`, `backend/uv.lock`, `Makefile`, `e2e/`, `fixtures/ui/`, `.github/`, `tools/`, `docs/` |
+| Data + model | `stream:data` | David (`Iguta`) | `backend/app/` except `contracts.py`, `assess.py`, `explain.py` (new files there default to David); `backend/scripts/`, `fixtures/` except `fixtures/ui/`, `reports/` |
+| Operator UI | `stream:ui` | Praneetha (`praneetha1795`) | `frontend/`, `ignition/`, `docs/testids.md` |
+| API, MCP, CI | `stream:api` | Dhruv (`dhruvbangera`) | `backend/app/{contracts,assess,explain}.py`, `backend/*.py` (MCP server, agent, API, agent eval), `backend/tests/conftest.py`, `backend/pyproject.toml`, `backend/uv.lock`, `Makefile`, `e2e/`, `fixtures/ui/`, `.github/`, `tools/`, `docs/` (except `docs/testids.md`), `.gitignore`, `.python-version`, `.vscode/`, `.cursor/` |
 
 - `backend/tests/`: edit only the tests for your own paths.
 - `README.md`, `PLAN.md`, `AGENTS.md`, `CLAUDE.md`, `ARCHITECTURE.md` are shared: change them only in a PR, and say so on the board.
