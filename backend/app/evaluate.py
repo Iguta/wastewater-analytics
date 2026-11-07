@@ -215,16 +215,18 @@ REQUIRED_F6 = {
 }
 
 
-def score(c: Case, b: dict, P: params.Params) -> dict:
+def score(c: Case, b: dict, P: params.Params, background: set | None = None) -> dict:
+    """Score one case. `background` = (pump, day) INVESTIGATE set of the un-injected data; when None it is
+    computed from the case's own clean window (exact), the tuner passes a whole-station clean run (fast)."""
     r = detect.run(b["table"], P)
     win = r[(r.day >= c.start) & (r.day < c.end)]
     inv = win[win.status == "INVESTIGATE"]
     res = {"case_id": c.case_id, "family": c.family, "station": c.station}
-    background = set()
-    if "clean_table" in b:
+    if background is None and "clean_table" in b:
         rc = detect.run(b["clean_table"], P)
         wc = rc[(rc.day >= c.start) & (rc.day < c.end) & (rc.status == "INVESTIGATE")]
         background = set(zip(wc.pump_id, wc.day))
+    background = background or set()
     attributable = inv[
         np.array([(p_, d_) not in background for p_, d_ in zip(inv.pump_id, inv.day)], dtype=bool)
     ]
@@ -260,7 +262,14 @@ def score(c: Case, b: dict, P: params.Params) -> dict:
             & (inv.day <= c.spec["start"] + pd.Timedelta(hours=c.spec["hours"]))
         ]
         m = b.get("minutes_to_offline")
-        res.update(minutes_to_offline=m, passed=m is not None and m <= 10 and not len(out_days))
+        out_attr = [
+            d_ for p_, d_ in zip(out_days.pump_id, out_days.day) if (p_, d_) not in (background or set())
+        ]
+        res.update(
+            minutes_to_offline=m,
+            passed=m is not None and m <= 10 and not len(out_days),
+            passed_attributable=m is not None and m <= 10 and not out_attr,
+        )
     elif c.family == "F6":
         kind = c.spec["kind"]
         if kind in ("duplicate_rows", "repeated_starts"):
@@ -311,6 +320,7 @@ def summarize(rows: list[dict], P: params.Params, year: int, runtime_s: float) -
     f5, f6 = df[df.family == "F5"], df[df.family == "F6"]
     gates = {
         "G1": bool(f5.passed.all()),
+        "G1_attributable": bool(f5.passed_attributable.all()),
         "G2": bool(f6.passed.all()),
         "G3": None,  # asserted by test_no_lookahead / test_determinism
         "G4": None,  # asserted by test_high_level_fires_and_has_no_inhibition_path
