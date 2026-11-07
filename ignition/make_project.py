@@ -171,8 +171,8 @@ warning_card = view_doc(flex("root", [
     label("Check", "", {"fontSize": "13px", "fontWeight": "600"}, {"props.text": prop("view.params.check")}),
     flex("Bottom", [
         label("Id", "", {"fontSize": "11px", "color": MUTED, "fontFamily": "monospace", "wordBreak": "break-all"}, {"props.text": prop("view.params.alert_id")}),
-        {"type": "ia.input.button", "meta": {"name": "WorkOrder"}, "position": {"basis": "170px", "shrink": 0},
-         "props": {"text": "Draft work order", "style": {"backgroundColor": "#FFFFFF", "color": ADD, "border": "1px solid " + ADD,
+        {"type": "ia.input.button", "meta": {"name": "WorkOrder"}, "position": {"basis": "34px", "shrink": 0, "grow": 0},
+         "props": {"text": "Draft work order", "style": {"width": "180px", "backgroundColor": "#FFFFFF", "color": ADD, "border": "1px solid " + ADD,
                                                           "fontSize": "13px", "fontWeight": "600"}},
          "events": {"component": {"onActionPerformed": {"type": "script", "scope": "G", "config": {"script": WORK_ORDER}}}}},
     ], direction="column", alignItems="flex-start", style={"gap": "6px", "marginTop": "4px"}),
