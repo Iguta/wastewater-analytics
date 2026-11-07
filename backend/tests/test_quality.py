@@ -94,3 +94,19 @@ def test_level_out_of_range_flagged_not_dropped():
         c,
     )
     assert len(lv) == 3 and lv.in_range.sum() == 1 and c["LEVEL_OUT_OF_RANGE"] == 2
+
+
+def test_long_run_kept_and_capped():
+    e = ev(
+        [
+            (P1, "2022-01-01 00:00:00", "1"),
+            (P1, "2022-01-01 00:01:40", "0"),
+            (P1, "2022-01-01 00:10:00", "1"),
+            (P1, "2022-01-01 01:30:00", "0"),  # 4,800 s run
+        ]
+    )
+    c = {}
+    cyc = quality.cycles(quality.pair_runs(e, c), c)
+    long = cyc.iloc[1]
+    assert long.valid and long.long_run and abs(long.ci - (3600 / 3600 + 3600 / 500)) < 1e-9
+    assert c["LONG_RUN"] == 1

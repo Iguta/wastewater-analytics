@@ -14,13 +14,13 @@
       "pump_day_quality": {
         "P1": {
           "INSUFFICIENT": 46,
-          "PARTIAL": 14,
-          "SUFFICIENT": 670
+          "PARTIAL": 13,
+          "SUFFICIENT": 671
         },
         "P2": {
-          "INSUFFICIENT": 36,
-          "PARTIAL": 26,
-          "SUFFICIENT": 668
+          "INSUFFICIENT": 35,
+          "PARTIAL": 24,
+          "SUFFICIENT": 671
         }
       },
       "pumps": [
@@ -35,12 +35,13 @@
         "LEVEL_BAD_ROW": 0,
         "LEVEL_DUPLICATE_ROW": 0,
         "LEVEL_OUT_OF_RANGE": 0,
+        "LONG_RUN": 215,
         "OPEN_RUN": 1,
         "OVERLAP": 332,
         "RAIN_GAP": 0,
         "REPEATED_START": 46,
         "REPEATED_STOP": 28,
-        "RUN_OUT_OF_RANGE": 301
+        "RUN_OUT_OF_RANGE": 86
       },
       "source_hash": "5e9ef8086cc0de9590267b55a50706d4456a8a15b7b8867f9a28d44dbcb79cdf"
     },
@@ -62,8 +63,8 @@
         },
         "P2": {
           "INSUFFICIENT": 31,
-          "PARTIAL": 58,
-          "SUFFICIENT": 641
+          "PARTIAL": 57,
+          "SUFFICIENT": 642
         },
         "P3": {
           "INSUFFICIENT": 28,
@@ -85,12 +86,13 @@
         "LEVEL_BAD_ROW": 0,
         "LEVEL_DUPLICATE_ROW": 0,
         "LEVEL_OUT_OF_RANGE": 0,
+        "LONG_RUN": 556,
         "OPEN_RUN": 1,
         "OVERLAP": 4647,
         "RAIN_GAP": 0,
         "REPEATED_START": 157,
         "REPEATED_STOP": 311,
-        "RUN_OUT_OF_RANGE": 556
+        "RUN_OUT_OF_RANGE": 0
       },
       "source_hash": "5e9ef8086cc0de9590267b55a50706d4456a8a15b7b8867f9a28d44dbcb79cdf"
     },
@@ -128,11 +130,12 @@
         "LEVEL_BAD_ROW": 0,
         "LEVEL_DUPLICATE_ROW": 0,
         "LEVEL_OUT_OF_RANGE": 0,
+        "LONG_RUN": 164,
         "OVERLAP": 472,
         "RAIN_GAP": 0,
         "REPEATED_START": 44,
         "REPEATED_STOP": 38,
-        "RUN_OUT_OF_RANGE": 165
+        "RUN_OUT_OF_RANGE": 1
       },
       "source_hash": "5e9ef8086cc0de9590267b55a50706d4456a8a15b7b8867f9a28d44dbcb79cdf"
     }
