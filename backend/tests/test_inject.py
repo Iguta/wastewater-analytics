@@ -111,3 +111,13 @@ def test_fishers_a_replay_goes_silent_within_10_minutes():
     assert truth[-1]["transform"] == "station_trip" and truth[-1]["level"] == "deleted"
     out = detect.realtime(st.events, st.level, f + pd.Timedelta(minutes=10), params.load())
     assert any(x["type"] == "SOURCE_SILENT" for x in out)
+
+
+def test_test_tier_log_is_append_only_and_records_v2_once():
+    import json
+
+    from backend.app import evaluate
+
+    runs = [json.loads(x) for x in evaluate.TEST_RUNS.read_text().splitlines() if x.strip()]
+    v2 = [r for r in runs if r["model_version"] == "dragonfly-ci-v2-tuned"]
+    assert len(v2) == 1 and not v2[0]["forced"] and "G5" in v2[0]["gates"]

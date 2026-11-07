@@ -22,8 +22,9 @@ def test_real_2022_precursor_escalates(r44371):
     p1 = r44371[r44371.pump_id == "P1"].set_index("day")
     assert p1.loc["2022-05-30", "status"] == "NORMAL"
     assert p1.loc["2022-06-01", "status"] in ("WATCH", "INVESTIGATE")
-    assert p1.loc["2022-06-02", "status"] == "INVESTIGATE"
-    assert p1.loc["2022-06-02", "incident_id"] == "REAL:44371:P1:CAPACITY_DROP:2022-06-01"
+    # v2-tuned (h_i = 8): WATCH 06-01, INVESTIGATE 06-03, about 9 days before the pump was pulled (06-12)
+    assert p1.loc["2022-06-03", "status"] == "INVESTIGATE"
+    assert p1.loc["2022-06-03", "incident_id"] == "REAL:44371:P1:CAPACITY_DROP:2022-06-01"
 
 
 def test_g6_dev_false_escalation_rate(r44371):
@@ -33,7 +34,9 @@ def test_g6_dev_false_escalation_rate(r44371):
 
 
 def test_warmup_is_insufficient_evidence(r44371):
-    assert (r44371[r44371.day < "2022-02-15"].status == "INSUFFICIENT_EVIDENCE").all()
+    # the baseline needs G guard days plus min_baseline_days usable days before any status
+    first = r44371.day.min() + pd.Timedelta(days=P.G + P.min_baseline_days)
+    assert (r44371[r44371.day < first].status == "INSUFFICIENT_EVIDENCE").all()
 
 
 def test_determinism():
