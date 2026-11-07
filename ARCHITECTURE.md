@@ -170,16 +170,20 @@ For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, usin
 - `z_d = (log ci_d − median) / max(1.4826·MAD, 0.01)`, clipped to [−10, 10].
 - **Known limit:** a loss that persists longer than `W + G` days is absorbed into the baseline and clears. The Lab caveats say so, and `test_baseline_absorption` asserts it.
 
-### 4.5 Sibling inhibition
+### 4.5 Sibling inhibition (David's D2/D3, `sibling_mode = "shared_drop"`)
 
-- **Pump-specific deviation:** for pump `p`, `u_p = z_p − median(z over the station's OTHER pumps with SUFFICIENT evidence that day)`. If no other pump qualifies, the median term is 0, and the evidence notes that sibling comparison was unavailable. On a 2-pump station, a lone failing pump therefore keeps its full deviation.
-- **Station-wide signal:** `c_d = max(z over SUFFICIENT pumps)`, computed only when at least 2 pumps qualify, and 0 otherwise. It goes negative only when every pump drops together.
+- **Per-pump change:** `r_p = log ci_p − baseline median_p`, the pump's log capacity change.
+- **Shared drop:** `shared_p = min(0, median of r over the station's OTHER pumps with SUFFICIENT evidence that day)`. It is 0 if no other pump qualifies, and the evidence then notes that sibling comparison was unavailable. Only a shared **drop** is subtracted, so a sibling running above normal never makes a healthy pump look worse.
+- **Pump-specific deviation:** `u_p = (r_p − shared_p) / max(1.4826·MAD_p, 0.01)`. The subtraction happens in capacity-change space, before each pump's own scaling, so pumps with different noise levels don't create a false per-pump drop.
+- **Station-wide signal:** `c_d = max(z over SUFFICIENT pumps)`, computed only when at least 2 pumps qualify, and 0 otherwise.
+- **The literal earlier rule stays available** as `sibling_mode = "spec"`, for comparison only. On 2022 dev, the G6 alert rate (pump INVESTIGATE opens per pump per 180 days) is spec 0.74/0.99/0.66 vs shared_drop 0.49/0.99/0.66, and both catch the 44371 precursor.
 
 ### 4.6 CUSUM and pump status
 
 - **Update rule:** `S_d = max(0, S_{d−1} + clip(−u_d, −U, U) − k)`.
 - **When it updates:** only on `SUFFICIENT` days. `PARTIAL`, `INSUFFICIENT` and `SOURCE_OFFLINE` days hold `S` unchanged.
 - **Defaults:** `k = 0.5`, `U = 4`, `h_w = 3`, `h_i = 6`.
+- **Ceiling (David's D1):** `S` is capped at `S_max = 12`, so a closed fault clears in days, not months.
 
 | Condition | Pump status |
 | --- | --- |
@@ -197,7 +201,7 @@ For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, usin
 ### 4.7 Station-wide change
 
 - The same CUSUM runs on `−c_d`.
-- At `S_station ≥ h_w`, it raises a `STATION_WIDE_CHANGE` finding at `WATCH`, never higher.
+- At `S_station ≥ h_w`, it raises a `STATION_WIDE_CHANGE` finding at `WATCH`, never higher. It closes when `S_station < 1.0`, with the same `S_max = 12` ceiling.
 - Possible causes listed: level setpoint change, force-main restriction, control change, common supply issue.
 
 ### 4.8 Other findings (minute resolution: evaluated at `as_of` and, in replays, at every minute of data)
