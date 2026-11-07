@@ -27,6 +27,8 @@ MODEL = "claude-sonnet-5-5"  # the one model setting; Haiku 5.5 is swapped here 
 MAX_TOOL_CALLS = 6
 MAX_TURNS = 6
 TIMEOUT_S = 60
+SANDBOX = ROOT / "logs" / "agent_cwd"
+PREFIX = "mcp__dragonfly__"
 TOOLS = ["assess_station", "get_evidence", "replay_case"]
 SYSTEM = (
     "You explain read-only lift-station assessments to utility operators. Call the tools to get facts; never answer "
@@ -91,13 +93,17 @@ async def ask(question: str, context: dict, session_id: str | None = None) -> As
     sdk_session, turns = SESSIONS.get(key, (None, 0))
     if turns >= MAX_TURNS:  # the 7th question starts a fresh conversation
         sdk_session, turns = None, 0
+    SANDBOX.mkdir(
+        parents=True, exist_ok=True
+    )  # a stable empty cwd: the agent sees no repo files, and sessions can resume
     options = ClaudeAgentOptions(
-        model=MODEL, effort="low", system_prompt=SYSTEM, cwd=ROOT, max_turns=MAX_TOOL_CALLS + 1,
-        mcp_servers={"dragonfly": {"command": sys.executable, "args": ["-m", "backend.mcp_server"]}},
+        model=MODEL, effort="low", system_prompt=SYSTEM, cwd=SANDBOX, max_turns=MAX_TOOL_CALLS + 1,
+        mcp_servers={"dragonfly": {"command": sys.executable, "args": ["-m", "backend.mcp_server"], "env": {"PYTHONPATH": str(ROOT)}}},
         tools=[],  # no built-in tool (shell, files, web) exists for the model
-        allowed_tools=[f"mcp__dragonfly__{t}" for t in TOOLS],
+        allowed_tools=[PREFIX + t for t in TOOLS],
         permission_mode="dontAsk",  # anything not allowed is denied, never prompted
         setting_sources=[],
+        env={"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"},  # no dev memory in an operator-facing context
         output_format={"type": "json_schema", "schema": Answer.model_json_schema()},
         resume=sdk_session,
     )  # fmt: skip
@@ -114,15 +120,13 @@ async def ask(question: str, context: dict, session_id: str | None = None) -> As
                 else []
             )
             for b in blocks:
-                if isinstance(b, ToolUseBlock):
+                if isinstance(b, ToolUseBlock) and b.name.startswith(
+                    PREFIX
+                ):  # not StructuredOutput, not a denied built-in
                     uses[b.id] = b
-                elif isinstance(b, ToolResultBlock):
+                elif isinstance(b, ToolResultBlock) and b.tool_use_id in uses:
                     u = uses[b.tool_use_id]
-                    calls.append(
-                        ToolCall(
-                            tool=u.name.removeprefix("mcp__dragonfly__"), args=u.input, ok=not b.is_error
-                        )
-                    )
+                    calls.append(ToolCall(tool=u.name.removeprefix(PREFIX), args=u.input, ok=not b.is_error))
                     c = b.content or ""
                     results.append(c if isinstance(c, str) else "".join(x.get("text", "") for x in c))
             if isinstance(m, ResultMessage):
