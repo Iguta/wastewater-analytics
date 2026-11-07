@@ -508,8 +508,6 @@ def replay_case(case_id: str) -> ReplayResult:
         st.station_id, case_id, _utc(min(st.events["ts"].min(), st.level["ts"].min()).ceil("D")), end
     )
     daily = _bundle(st.station_id, end, case_id).daily
-    watch = _first_day(tl, lambda d: d.station_status in ("WATCH", "INVESTIGATE"))
-    inv = _first_day(tl, lambda d: d.station_status == "INVESTIGATE")
     onset = (
         ":" in case_id
         and scenarios.v(scenarios.load(case_id.split(":")[0])[0]["variants"][case_id[-1]]["precursor_type"])
@@ -518,6 +516,20 @@ def replay_case(case_id: str) -> ReplayResult:
     spec = meta["case"].spec if "case" in meta else {}
     t0 = meta.get("failure_at", spec.get("failure", spec.get("start")))
     failure = _utc(t0)
+    history = _first_day(tl, lambda d: d.station_status in ("WATCH", "INVESTIGATE"))
+    # §7: a scenario is scored from failure - 30 d; earlier findings are the stand-in's own history
+    # §7: a scenario is scored from failure - 30 d, and only findings that open inside it count;
+    # a status already held at window start is the stand-in's own history
+    start = (failure - timedelta(days=30)).date() if ":" in case_id else tl[0].day
+    pairs = [(a, b) for a, b in zip(tl, tl[1:]) if b.day >= start]
+
+    def opened(levels):
+        return _first_day(
+            [b for a, b in pairs if b.station_status in levels and a.station_status not in levels],
+            lambda d: True,
+        )
+
+    watch, inv = opened(("WATCH", "INVESTIGATE")), opened(("INVESTIGATE",))
     offline, high, fault = _minute_scan(st, t0, p) if t0 is not None else (None, None, False)
     lead = (
         None
@@ -529,14 +541,10 @@ def replay_case(case_id: str) -> ReplayResult:
         out = _outcome(
             case_id, meta, inv, t0, min((m for m in (offline, high) if m is not None), default=None)
         )
-        if (
-            watch is not None
-            and watch <= failure
-            and (onset or inv is None or watch < inv - pd.Timedelta(days=30))
-        ):
+        if history is not None and history < failure - timedelta(days=30):
             out.assumptions.append(
-                f"stand-in history: the {st.station_id} stand-in carries real findings before the simulated failure "
-                f"(first WATCH {watch:%Y-%m-%d}), unrelated to this scenario; lead time is not computed"
+                f"stand-in history: the {st.station_id} stand-in carries real findings before the scored window "
+                f"(first WATCH {history:%Y-%m-%d}), unrelated to this scenario; they are not counted as warnings"
             )
     bench = {}
     for k, r in {"A": evaluate.bench_a(daily, p), "B": evaluate.bench_b(daily, p), "C": daily}.items():

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import cache
 from pathlib import Path
 
@@ -80,7 +80,7 @@ def stations(scenario_id: str | None = None) -> StationsResponse:
         sd, _, meta = assess._case(scenario_id)
         info = StationInfo(
             station_id=sd.station_id, display_name=f"Wessex {sd.station_id}", pumps=sd.pumps, origin=meta["origin"],
-            scenario_id=scenario_id, as_of_min=assess._utc(sd.events["ts"].min()), as_of_max=assess._utc(sd.events["ts"].max()),
+            scenario_id=scenario_id, as_of_min=assess._utc(meta["failure_at"]) - timedelta(days=30), as_of_max=assess._utc(sd.events["ts"].max()),
             outage_windows=[],
         )  # fmt: skip
         return StationsResponse(stations=[info], source_hash=source_hash, model_version=model_version)

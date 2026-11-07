@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -144,3 +144,18 @@ def test_scenario_assessment_and_evidence_use_the_case_stream():
         and a.queue[0].alert_id.startswith(MORNINGSIDE_A)
     )
     assert assess.get_evidence(a.queue[0].alert_id, t).origin == "SIMULATED_INCIDENT"
+
+
+def test_scenario_markers_only_count_findings_opened_in_the_scored_window():
+    from backend import api
+
+    for case in ("fishers_bowline_2009_01_20:A", "bloomington_morningside_2024_04_11:A"):
+        r = assess.replay_case(case)
+        start = r.failure_at - timedelta(days=30)
+        assert api.stations(case).stations[0].as_of_min == start
+        days = {d.day: d.station_status for d in r.timeline}
+        for marker in (r.first_watch_at, r.first_investigate_at):
+            if marker is not None:
+                assert marker > start
+                opened = marker.date() - timedelta(days=1)
+                assert days[opened - timedelta(days=1)] != days[opened]  # a new finding, not one carried in
