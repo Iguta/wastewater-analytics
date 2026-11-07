@@ -4,14 +4,16 @@ import { axeClean, copyClean } from './checks';
 const DAY = '2022-06-05'; // 44371 precursor: P1 is INVESTIGATE under v1 and v2 (v2 opens it 06-04)
 const day = (d: string, n: number) => new Date(Date.parse(d) + n * 864e5).toISOString().slice(0, 10);
 
-const open = async (page: Page) => {
-  await page.goto('/');
-  await expect(page.getByTestId('station-tile').first()).toBeVisible();
-};
 const goTo = async (page: Page, d: string) => {
   await page.getByTestId('scrubber-date').fill(d);
   await page.getByTestId('scrubber-date').press('Enter');
   await expect(page.getByTestId('scrubber-live-date')).toHaveText(d);
+};
+// Start every test on DAY, not the UI's default landing date, so the precursor row exists under any frozen model version.
+const open = async (page: Page) => {
+  await page.goto('/');
+  await expect(page.getByTestId('station-tile').first()).toBeVisible();
+  await goTo(page, DAY);
 };
 const openDrawer = async (page: Page) => {
   await page.getByRole('row', { name: /Investigate/ }).first().click();
