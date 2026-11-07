@@ -1,10 +1,10 @@
 # Competitive Analysis: Early Warning for Lift Station Pump Failures
 
-## Executive Summary
+## Summary
 
 Early pump-failure warning for wastewater lift stations is a proven category, and the opportunity is in the part the current vendors serve least: small and mid-size utilities that need warnings they can trust. Established vendors show that SCADA data can predict pump problems. Their public materials emphasize health scores, lead-time averages and work orders. Our concept adds three things: a visible rain-versus-wear explanation on every alert, honest uncertainty with a tracked accuracy record, and two purpose-built interfaces, one for the field technician and one for the maintenance planner. It runs read-only on data a utility already collects, with no new sensors.
 
-## Problem Background
+## Problem 
 
 Lift stations use pumps to move sewage toward the treatment plant. When a pump fails and nobody notices in time, the wet well fills and sewage overflows into yards, streets and creeks. The result is cleanup cost, state fines and resident complaints.
 
