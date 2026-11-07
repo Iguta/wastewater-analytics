@@ -166,7 +166,6 @@ def test_promote_moves_one_place_below_safety_and_tags_every_watch():
     assert [f.pump_id for f in q] == [None, "P2", "P1"] and [f.priority for f in q] == [1, 2, 3]
     assert [f.status for f in q] == ["SOURCE_OFFLINE", "WATCH", "WATCH"]
     assert [len(f.inspection) for f in q] == [1, 2, 2] and "2024-04-11" in q[1].inspection[-1]
-    assert [f.pump_id for f in queue()] == [None, "P1", "P2"]  # storm_ahead False never calls _promote
 
 
 def _statuses(a):
@@ -184,8 +183,11 @@ def test_forecast_never_changes_a_status(monkeypatch):
     assert any(a.storm.storm_ahead for a in with_storm if a.as_of_utc.day in (8, 9, 10))
     monkeypatch.setattr(assess, "_forecast", lambda _id: None)
     assess.assess_station.cache_clear()
+    tagged = lambda a: [f for f in a.queue if any("storm ahead" in i for i in f.inspection)]  # noqa: E731
+    assert any(tagged(a) for a in with_storm if a.storm.storm_ahead)
     for a, t in zip(with_storm, days):
-        assert _statuses(assess.assess_station("44371", t, MORNINGSIDE_A)) == _statuses(a)
+        off = assess.assess_station("44371", t, MORNINGSIDE_A)
+        assert _statuses(off) == _statuses(a) and not tagged(off)  # no forecast: no promotion, no storm line
     assess.assess_station.cache_clear()
 
 
