@@ -23,6 +23,9 @@ class Params:
     reopen_days: int = 7
     S_max: float = 12.0
     min_effect: float = -8.0
+    close_normal_days: int = 3
+    ablation_u_w: float = 3.0
+    ablation_u_i: float = 5.0
     sibling_mode: str = "shared_drop"
     persistence: bool = True
     inhibition: bool = True

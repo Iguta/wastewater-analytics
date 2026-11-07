@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import pandas as pd
 
-from . import quality
+from . import params, quality
 
 SILENT_SAMPLES = 10  # §4.8: SOURCE_SILENT after 10 missed level samples
-SILENCE = pd.Timedelta(minutes=10)  # default at 1-min cadence
+SILENCE = pd.Timedelta(minutes=10)  # SILENT_SAMPLES x the 1-min level cadence
 COLUMNS = [
     "station_id",
     "pump_id",
@@ -54,12 +54,20 @@ def offline_hours_by_day(
     return pd.Series(out, dtype=float)
 
 
+MIN_VALID_CYCLES = params.load().min_valid_cycles
+
+
 def day_quality(r) -> str:
     if r.offline_hours > 6:
         return "SOURCE_OFFLINE"
     if r.valid_cycles < 5:
         return "INSUFFICIENT"
-    if r.valid_cycles >= 20 and r.overlap_share <= 0.2 and r.offline_hours <= 1 and r.invalid_share <= 0.2:
+    if (
+        r.valid_cycles >= MIN_VALID_CYCLES
+        and r.overlap_share <= 0.2
+        and r.offline_hours <= 1
+        and r.invalid_share <= 0.2
+    ):
         return "SUFFICIENT"
     return "PARTIAL"
 
