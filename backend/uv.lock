@@ -193,7 +193,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anyio" },
-    { name = "claude-agent-sdk", specifier = ">=0.2.179" },
+    { name = "claude-agent-sdk", specifier = "==0.2.179" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "mcp", specifier = "==2.3.0" },

@@ -44,6 +44,7 @@ PARAM_CODE = {
     "alert_id": "UNKNOWN_ALERT",
     "case_id": "UNKNOWN_CASE",
     "question": "BAD_QUESTION",
+    "session_id": "BAD_QUESTION",
     "verdict": "BAD_FEEDBACK",
     "by": "BAD_FEEDBACK",
     "note": "BAD_FEEDBACK",
@@ -189,7 +190,7 @@ class AskRequest(BaseModel):
     as_of_utc: str | None = None
     scenario_id: str | None = None
     alert_id: str | None = Field(default=None, pattern=ALERT_ID_PATTERN)
-    session_id: str | None = Field(default=None, max_length=64)
+    session_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,64}$")
 
 
 @app.post("/api/ask")

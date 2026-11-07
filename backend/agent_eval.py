@@ -1,4 +1,4 @@
-"""Agent eval (ARCHITECTURE.md 11.2): 26 fixed questions, a failing one retried once. Gate: at least 19 pass the grounding check."""
+"""Agent eval (ARCHITECTURE.md 11.2): 28 fixed questions, a failing one retried once. Gate: at least 19 pass the grounding check."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 
 from backend import agent
 
-PASS_MIN = 25  # of 26: the same 95% as 19 of 20
-META = {"question", "follow_up_of", "what_if", "off_topic"}
+PASS_MIN = 27  # of 28: the same 95% as 19 of 20
+META = {"question", "follow_up_of", "what_if", "off_topic", "must_say"}
 
 
 async def passes(q: dict) -> bool:
@@ -35,9 +35,9 @@ async def passes(q: dict) -> bool:
         except Exception as e:  # a timeout or API error is a failed attempt, not a crashed eval
             print(f"  error: {type(e).__name__}")
             continue
-        if r.grounding.passed:
+        if r.grounding.passed and q.get("must_say", "").lower() in (r.answer_markdown or "").lower():
             return True
-        print(f"  withheld: {r.grounding.model_dump()}")
+        print(f"  failed: {r.grounding.model_dump()}")
     return False
 
 

@@ -158,3 +158,10 @@ def test_feedback_rejects_bad_input(monkeypatch, tmp_path, bad):
     r = client.post("/api/feedback", json={**fb, **bad})
     assert r.status_code == 422 and r.json()["code"] in ("BAD_FEEDBACK", "UNKNOWN_ALERT")
     assert not (tmp_path / "logs").exists()
+
+
+@pytest.mark.parametrize("bad", ["", "a b", "x" * 65, "../etc", "id;rm"])
+def test_ask_rejects_a_bad_session_id(monkeypatch, bad):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    r = client.post("/api/ask", json={"question": "why?", "session_id": bad})
+    assert r.status_code == 422 and r.json()["code"] == "BAD_QUESTION"

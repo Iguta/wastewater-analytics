@@ -139,3 +139,70 @@ async def test_what_if_is_logged_not_answered(fake, q):
 
 def test_what_if_does_not_catch_plain_questions():
     assert not any(agent.WHAT_IF.search(q) for q in ("Why is P1 flagged?", "Which stations need attention?"))
+
+
+@pytest.mark.anyio
+async def test_file_a_work_order_uses_only_get_evidence_and_never_claims_to_file(monkeypatch, fake):
+    draft = dict(
+        GOOD, supports=["A draft work order is attached to this alert; a person must review and file it."]
+    )
+
+    async def one_get_evidence(*, prompt, options):
+        yield AssistantMessage(
+            content=[ToolUseBlock("t0", "mcp__dragonfly__get_evidence", {"alert_id": ALERT})], model="m"
+        )
+        yield UserMessage(content=[ToolResultBlock("t0", TOOL_TEXT)])
+        yield ResultMessage(
+            subtype="success", duration_ms=0, duration_api_ms=0, is_error=False, num_turns=1,
+            session_id="sdk1", stop_reason="end_turn", structured_output=draft,
+        )  # fmt: skip
+
+    monkeypatch.setattr(agent, "query", one_get_evidence)
+    r = await agent.ask("File a work order for 44371 P1", {})
+    assert [c.tool for c in r.tool_calls] == ["get_evidence"] and not r.withheld
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "I filed the work order.",
+        "The work order has been sent to the crew.",
+        "Work order assigned to the night shift.",
+        "I created a work order for P1.",
+    ],
+)
+async def test_a_claim_of_acting_on_a_work_order_is_withheld(fake, claim):
+    fake(dict(GOOD, supports=[claim]))
+    r = await agent.ask("File a work order", {})
+    assert r.withheld and r.answer is None
+
+
+@pytest.mark.anyio
+async def test_describing_the_draft_is_not_a_claim(fake):
+    fake(
+        dict(
+            GOOD,
+            inspect=[
+                "The draft work order asks the crew to check the impeller; a person reviews and files it."
+            ],
+        )
+    )
+    assert not (await agent.ask("What does the work order ask?", {})).withheld
+
+
+@pytest.mark.anyio
+async def test_sessions_are_capped_oldest_first(fake, monkeypatch):
+    monkeypatch.setattr(agent, "MAX_SESSIONS", 2)
+    fake(GOOD)
+    for sid in ("a", "b", "c"):
+        await agent.ask("why?", {"alert_id": ALERT}, sid)
+    assert [k[0] for k in agent.SESSIONS] == ["b", "c"]
+    await agent.ask("again", {"alert_id": ALERT}, "b")  # touching b makes c the oldest
+    await agent.ask("new", {"alert_id": ALERT}, "d")
+    assert [k[0] for k in agent.SESSIONS] == ["b", "d"]
+
+
+def test_system_prompt_matches_the_locked_spec_verbatim():
+    spec = (agent.ROOT / "ARCHITECTURE.md").read_text()
+    assert agent.SYSTEM in spec

@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MODEL = "claude-sonnet-5-5"  # the one model setting; Haiku 5.5 is swapped here after `make agent-eval`
 MAX_TOOL_CALLS = 6
 MAX_TURNS = 6
+MAX_SESSIONS = 200
 TIMEOUT_S = 60
 SANDBOX = ROOT / "logs" / "agent_cwd"
 PREFIX = "mcp__dragonfly__"
@@ -37,15 +38,23 @@ SYSTEM = (
     "Never estimate a missing reading, a failure probability, a failure date or a confirmed cause; say what is "
     "missing instead. Never suggest operating, overriding or resetting equipment or alarms. When results are "
     "SIMULATED or SYNTHETIC, say so. You cannot run new analyses, and you never add, subtract, compare or convert "
-    "numbers. If a question is not about the tool results, say you only explain Dragonfly assessments. Keep answers under 150 words, as the structured "
+    "numbers. If a question is not about the tool results, say you only explain Dragonfly assessments. Work orders are "
+    "drafted by the system, not by you. You may describe the drafted work order returned by get_evidence (its checks "
+    "and caveats) and answer questions about it. Never say you filed, sent, assigned or changed one; a human reviews "
+    "and files it. Keep answers under 150 words, as the structured "
     "fields: summary, what changed, what supports it, what contradicts it, what is missing, what to inspect, and "
     "the alert ids cited."
 )
 WHAT_IF = re.compile(
     r"\bwhat(?:'s| is| would| will)?\s+(?:happens?\s+)?if\b|\brecalculat|\bre-?run\b|\bsimulate\b", re.I
 )
+# A past-tense claim of acting on a work order, in either word order. shortcut: also withholds a negated "I did not file"; fine for a safety rule.
+ACTED = r"(?:filed|sent|assigned|submitted|created|closed|opened|dispatched|scheduled)"
+WORK_ORDER_CLAIM = re.compile(
+    rf"\b{ACTED}\b[^.\n]{{0,60}}work order|work order[^.\n]{{0,60}}\b{ACTED}\b", re.I
+)
 REFUSAL = "I can't run new analyses; I've logged this for the reliability team."
-# shortcut: sessions live in process memory and are never evicted, move to a TTL store if the server runs long.
+# Sessions live in process memory, newest last; the oldest is evicted past MAX_SESSIONS, so a restart or eviction just starts a fresh conversation.
 SESSIONS: dict[tuple[str, str | None], tuple[str, int]] = {}  # (session_id, alert_id) -> (sdk session, turns)
 
 
@@ -65,9 +74,10 @@ def check_answer(a: Answer, results: list[str]) -> Grounding:
     texts = [a.summary, *a.what_changed, *a.supports, *a.contradicts, *a.missing, *a.inspect]
     parts = [grounding.check(t, results) for t in texts]
     return Grounding(
-        passed=all(p.passed for p in parts) and all(i in raw for i in a.alert_ids),
+        passed=all(p.passed for p in parts) and all(i in raw for i in a.alert_ids) and not any(WORK_ORDER_CLAIM.search(t) for t in texts),
         unmatched_numbers=[n for p in parts for n in p.unmatched_numbers] + [i for i in a.alert_ids if i not in raw],
-        forbidden_phrases=[f for p in parts for f in p.forbidden_phrases],
+        forbidden_phrases=[f for p in parts for f in p.forbidden_phrases]
+        + [m.group() for t in texts for m in WORK_ORDER_CLAIM.finditer(t)],
     )  # fmt: skip
 
 
@@ -150,7 +160,10 @@ async def ask(question: str, context: dict, session_id: str | None = None) -> As
         else check_answer(answer, results)
     )
     if g.passed and session_id and final:
+        SESSIONS.pop(key, None)  # re-insert last: the dict stays oldest-first
         SESSIONS[key] = (final.session_id, turns + 1)
+        while len(SESSIONS) > MAX_SESSIONS:
+            del SESSIONS[next(iter(SESSIONS))]
     return AskResult(
         answer_markdown=render(answer) if g.passed else None, answer=answer if g.passed else None,
         withheld=not g.passed, tool_calls=calls, grounding=g, model=MODEL,

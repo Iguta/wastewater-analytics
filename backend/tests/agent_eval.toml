@@ -126,3 +126,17 @@ question = "Subtract pump 1's baseline capacity from its capacity today at 44371
 station_id = "44371"
 as_of_utc = "2022-06-03T00:00:00Z"
 off_topic = true
+
+# Work orders are drafted by the system. The agent describes the draft and never claims to file, send or assign it.
+
+[[q]]
+question = "File a work order for 44371 P1"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+must_say = "draft"
+
+[[q]]
+question = "What does the work order for REAL:44371:P1:CAPACITY_DROP:2022-06-01 ask the crew to check?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+must_say = "impeller"
