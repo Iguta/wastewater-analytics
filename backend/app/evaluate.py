@@ -2,7 +2,7 @@
 
 `python -m backend.app.evaluate dev` writes reports/dev/summary.json (§11.6 keys) and reports/dev/cases.csv.
 Daily feature tables are param-independent, so they are built once per case and cached in memory for tuning.
-The test tier is scored only at freeze: `evaluate test` refuses to run without FREEZE=1.
+The test tier is scored once per frozen params version; every run appends one line to reports/test_runs.jsonl.
 """
 
 from __future__ import annotations
@@ -516,7 +516,7 @@ def evaluation_report(results: dict, P: params.Params) -> dict:
             for b in c["f1_recall_bins"]
         ],
         "proxy": rows,
-        "test_scored": len(json.loads(TEST_LOCK.read_text())) if TEST_LOCK.exists() else 0,
+        "test_scored": len(_test_runs()),
         "gates": c["gates"],
     }
 
@@ -544,14 +544,19 @@ def _build_one(c: Case):
     return c, build(c)
 
 
-TEST_LOCK = ROOT / "reports" / "test" / "scored.json"
+TEST_RUNS = ROOT / "reports" / "test_runs.jsonl"  # §6.5 step 7: append-only, one line per eval-test run
+
+
+def _test_runs() -> list[dict]:
+    return (
+        [json.loads(x) for x in TEST_RUNS.read_text().splitlines() if x.strip()] if TEST_RUNS.exists() else []
+    )
 
 
 def run(tier: str = "dev", P: params.Params | None = None, workers: int | None = None, families=FAMILIES):
     P = P or params.load()
     if tier == "test":  # §6.5: once per frozen params version, aggregates only
-        scored = json.loads(TEST_LOCK.read_text()) if TEST_LOCK.exists() else {}
-        if P.version in scored and os.environ.get("FORCE") != "1":
+        if any(r["model_version"] == P.version for r in _test_runs()) and os.environ.get("FORCE") != "1":
             raise SystemExit(f"test tier already scored for {P.version}; FORCE=1 overrides (§6.5)")
     cases = make_cases(tier, families)
     with ProcessPoolExecutor(max_workers=workers) as ex:
@@ -573,7 +578,22 @@ def run(tier: str = "dev", P: params.Params | None = None, workers: int | None =
             json.dumps(report, indent=2, sort_keys=True, default=_jsonable) + "\n"
         )
     else:
-        scored = json.loads(TEST_LOCK.read_text()) if TEST_LOCK.exists() else {}
-        scored[P.version] = pd.Timestamp.now(tz="UTC").isoformat()
-        TEST_LOCK.write_text(json.dumps(scored, indent=2, sort_keys=True) + "\n")
+        line = {
+            "model_version": P.version,
+            "scored_at": pd.Timestamp.now(tz="UTC").isoformat(),
+            "forced": os.environ.get("FORCE") == "1",
+            "code_version": _code_version(),
+            **{
+                k: summary[k]
+                for k in (
+                    "f1_recall_loss20_ramp7",
+                    "lead_days",
+                    "false_escalations",
+                    "real_investigate_opens_per_pump_180d",
+                    "gates",
+                )
+            },
+        }
+        with TEST_RUNS.open("a") as f:  # append only: earlier runs are never rewritten
+            f.write(json.dumps(line, sort_keys=True, default=_jsonable) + "\n")
     return summary, results, built
