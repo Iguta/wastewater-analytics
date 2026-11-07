@@ -1,4 +1,4 @@
-import type { StationAssessment, ToolError } from "./types";
+import type { StationAssessment, StationsResponse, TimelineDay, ToolError } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public toolError?: ToolError) {
@@ -27,6 +27,13 @@ export const api = {
   assess: (stationId: string, asOfUtc: string, scenarioId?: string) =>
     get<StationAssessment>(
       `/api/assess?station_id=${encodeURIComponent(stationId)}&as_of_utc=${encodeURIComponent(asOfUtc)}` +
+        (scenarioId ? `&scenario_id=${encodeURIComponent(scenarioId)}` : ""),
+    ),
+  stations: (scenarioId?: string | null) =>
+    get<StationsResponse>("/api/stations" + (scenarioId ? `?scenario_id=${encodeURIComponent(scenarioId)}` : "")),
+  timeline: (stationId: string, scenarioId: string | null, start: string, end: string) =>
+    get<TimelineDay[]>(
+      `/api/timeline?station_id=${encodeURIComponent(stationId)}&start=${start}&end=${end}` +
         (scenarioId ? `&scenario_id=${encodeURIComponent(scenarioId)}` : ""),
     ),
 };

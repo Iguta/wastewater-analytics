@@ -34,4 +34,12 @@ export interface StationAssessment {
   storm: StormOutlook | null; missing_evidence: string[];
   explanation: string; recommended_action: string; provenance: Provenance;
 }
+export interface StationInfo {
+  station_id: string; display_name: string; pumps: string[]; origin: Origin;
+  scenario_id: string | null; as_of_min: string; as_of_max: string;
+  outage_windows: [string, string][];
+}
+export interface StationsResponse { stations: StationInfo[]; source_hash: string; model_version: string }
+export interface TimelinePump { pump_id: string; status: Status; ci: number | null; base_median: number | null; cusum: number }
+export interface TimelineDay { day: string; station_status: Status; pumps: TimelinePump[] }
 export interface ToolError { code: string; message: string; allowed: string[] }
