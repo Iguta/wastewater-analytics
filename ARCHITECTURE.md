@@ -477,7 +477,7 @@ A version cannot freeze unless every gate passes. Gates live in `backend/app/gat
 | G2 | F6: 100% pass the kind table in §5.6 |
 | G3 | `test_no_lookahead` (deleting all data after `as_of` changes nothing) and `test_determinism` (two full runs give byte-identical reports apart from the timestamp) pass |
 | G4 | `HIGH_LEVEL` appears in the safety strip on 100% of the minutes its rule holds. A unit test proves no inhibition path touches it. |
-| G5 | Dev: **0** pump `INVESTIGATE` in each of F2, F3, F4 and F7. Test: report the exact 95% upper bound (0/30 gives "under 10%"). |
+| G5 | Dev: **0 attributable** pump `INVESTIGATE` in each of F2, F3, F4 and F7, where attributable means present with the injection and absent in the same window without it (real incidents in the window are G6's job). Raw counts are always reported beside the attributable ones. Test: report the exact 95% upper bound (0/30 gives "under 10%"). G1 and F1's pre-onset count use the same attributable rule. (David's proposal, 13:12.) |
 | G6 | 2022 real replay: ≤1.0 pump `INVESTIGATE` opens per pump per 180 days |
 | G7 | Each locked Indiana scenario's no-warning simulation is consistent with the record's gallons within ±20% |
 
