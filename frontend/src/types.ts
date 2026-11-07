@@ -72,7 +72,25 @@ export interface ScenarioCard {
   id: string; title: string; version: string; scenario_hash: string;
   facts: ScenarioFact[]; outcome_facts: ScenarioFact[]; variants: ScenarioVariant[];
 }
-export interface ScenariosResponse { scenarios: ScenarioCard[]; dev_cases: { case_id: string; family: string; title: string }[] }
+export type Experiment = "storm_test" | "break_sensor" | "cut_power" | "one_bad_day";
+// PROPOSED: dev_cases marks the fixed case for each Lab experiment (section 5.6 picks the seeds).
+export interface DevCase { case_id: string; family: string; title: string; experiment: Experiment | null }
+export interface ScenariosResponse { scenarios: ScenarioCard[]; dev_cases: DevCase[] }
+// PROPOSED shape for GET /api/evaluation (not in section 7 yet; asked on the board). Every count carries its denominator.
+export interface Rate { k: number; n: number }
+export type BenchmarkKey = "A" | "B" | "C" | "C-persistence" | "C-inhibition" | "C-quality";
+export interface BenchmarkRow {
+  caught: Rate; median_lead_days: number | null;
+  false_storm: Rate; false_duty: Rate; false_transient: Rate; real_alerts_per_pump_6mo: number | null;
+}
+export interface EvaluationReport {
+  model_version: string; code_version: string; test_scored: number;
+  benchmarks: Record<BenchmarkKey, BenchmarkRow>;
+  heatmap: { loss_bins: string[]; ramp_bins: string[]; cells: { loss: string; ramp: string; k: number; n: number }[] };
+  proxy: { tier: string; episodes: number; preceded: number }[];
+  weak_labels: { episodes: number; with_precursor: number; warned: number } | null;
+  caveats: string[];
+}
 export interface Sensitivity { label: string; simulated_gal: number }
 export interface Outcome { no_warning_gal: number; with_dragonfly_gal: number; sensitivity: Sensitivity[]; assumptions: string[] }
 export interface BenchmarkRun { first_investigate_at: string | null; lead_time_h: number | null; incident_opens: number }
@@ -80,6 +98,8 @@ export interface ReplayResult {
   case_id: string; origin: Origin; family: string; title: string; truth: Record<string, unknown>;
   timeline: TimelineDay[]; first_watch_at: string | null; first_investigate_at: string | null;
   failure_at: string | null; lead_time_h: number | null; outcome: Outcome | null; benchmarks: Record<string, BenchmarkRun>;
+  // PROPOSED optional fields for the Lab experiments (asked on the board):
+  source_offline_after_min?: number | null; sensor_fault_flagged?: boolean;
 }
 export interface StationInfo {
   station_id: string; display_name: string; pumps: string[]; origin: Origin;

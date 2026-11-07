@@ -5,6 +5,7 @@ import { Header } from "./components/Header";
 import { EmptyState, ErrorState, Loading } from "./components/ScreenState";
 import { Scrubber } from "./components/Scrubber";
 import type { Range } from "./components/Scrubber";
+import { LabTab } from "./components/LabTab";
 import { IncidentsTab } from "./components/IncidentsTab";
 import { ReplayBar } from "./components/ReplayBar";
 import { StationsTab } from "./components/StationsTab";
@@ -123,7 +124,7 @@ export default function App() {
             <IncidentsTab replays={replays} onReplay={startReplay} loadingCase={loadingCase} />
           </>
         )}
-        {tab === "lab" && <EmptyState testId="lab-no-report">Evaluation not run yet.</EmptyState>}
+        {tab === "lab" && <LabTab />}
       </main>
       {open && <Drawer item={open.item} asOf={toAsOf(day!)} scenarioId={scenarioId} returnTo={open.row} onClose={() => setOpen(null)} />}
     </>

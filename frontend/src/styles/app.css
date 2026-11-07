@@ -96,3 +96,10 @@ body { margin: 0; }
 .replay-bar p { margin: 0; }
 .markers { display: flex; flex-wrap: wrap; gap: var(--space-2); min-height: 22px; }
 @media (max-width: 767px) { .variants { grid-template-columns: 1fr; } }
+
+/* Lab */
+.lab { display: flex; flex-direction: column; gap: var(--space-4); }
+.experiments { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3); }
+.experiment { border: 1px solid var(--border); padding: var(--space-3); background: var(--bg); }
+.heat-bar { height: 8px; background: var(--hatch-a); margin-top: 4px; }
+.heat-bar span { display: block; height: 100%; background: var(--chart-line); }

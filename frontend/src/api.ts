@@ -1,4 +1,4 @@
-import type { AskResult, Evidence, ReplayResult, ScenariosResponse, StationAssessment, StationsResponse, TimelineDay, ToolError } from "./types";
+import type { AskResult, EvaluationReport, Evidence, ReplayResult, ScenariosResponse, StationAssessment, StationsResponse, TimelineDay, ToolError } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public toolError?: ToolError) {
@@ -42,4 +42,5 @@ export const api = {
     get<AskResult>("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal }),
   scenarios: () => get<ScenariosResponse>("/api/scenarios"),
   replay: (caseId: string) => get<ReplayResult>(`/api/replay?case_id=${encodeURIComponent(caseId)}`),
+  evaluation: () => get<EvaluationReport>("/api/evaluation"),
 };
