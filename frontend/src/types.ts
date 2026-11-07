@@ -35,7 +35,8 @@ export interface StationAssessment {
   explanation: string; recommended_action: string; provenance: Provenance;
 }
 export interface TraceRow {
-  day: string; quality: Quality; valid_cycles: number; ci: number | null; base_median: number | null;
+  day: string; quality: Quality; valid_cycles: number; excluded: Record<string, number>; rain_mm: number | null;
+  ci: number | null; base_median: number | null;
   base_mad: number | null; z: number | null; common: number | null; u: number | null; cusum: number; status: Status;
 }
 export interface Transition { on: string; from_status: Status; to_status: Status; reason: string }
@@ -50,6 +51,7 @@ export interface Evidence {
   finding: Finding; rain: RainContext; quality_flags: string[];
   supporting: string[]; contradictory: string[]; unavailable: string[];
   trace: TraceRow[]; transitions: Transition[]; raw_events: RawEvent[]; level: LevelPoint[];
+  level_signal_id: string; thresholds: { h_w: number; h_i: number; min_effect: number };
   work_order: WorkOrder; provenance: Provenance;
 }
 export interface AskResult {

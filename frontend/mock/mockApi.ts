@@ -23,6 +23,7 @@ const SCENARIOS = [
       { variant: "B", scenario_id: `${MORN}:B`, name: "Sudden pump, motor or control trip under storm load", confidence: 40, reason: "Starter contacts replaced in 2023; no precursor assumed.", detectability: "DETECTABLE_AT_ONSET", failure_at: "2024-04-11T07:00:00Z" },
     ] },
 ];
+const scopeOf = (alertId: string) => { const s = alertId.split(":").slice(0, -4).join(":"); return s === "REAL" ? null : s; };
 const sc = (id: string | null) => (id ? id.split(":")[0] : null);
 const scenarioFailureDay = "2024-04-11";
 function scenarioStatus(variant: string, pump: string, day: string): "NORMAL" | "WATCH" | "INVESTIGATE" {
@@ -93,19 +94,19 @@ export function mockApi(): Plugin {
         if (u.pathname === "/evidence") {
           const [station, pump] = q.get("alert_id")!.split(":").slice(-4);
           const day = q.get("as_of_utc")!.slice(0, 10);
-          const a = assess(station, day, q.get("alert_id")!.split(":").slice(0, -4).join(":") || null);
+          const a = assess(station, day, scopeOf(q.get("alert_id")!));
           const finding = a.queue.find((f) => f.pump_id === pump) ?? a.queue[0];
           const trace = []; for (let i = 89; i >= 0; i--) {
             const d = dayAdd(day, -i); const s = pumpStatus(station, pump, d);
             const ci = s === "NORMAL" ? 30 + Math.sin(i) : 30 - Math.min(14, (89 - i - 80) * 2.5);
-            trace.push({ day: d, quality: "SUFFICIENT", valid_cycles: 38, ci, base_median: 30, base_mad: 0.04, z: 0, common: 0, u: 0, cusum: s === "NORMAL" ? 0.3 : s === "WATCH" ? 3.5 : 7.5, status: s });
+            trace.push({ day: d, quality: "SUFFICIENT", valid_cycles: 38, excluded: { LONG_RUN: 2 }, rain_mm: i % 7 === 0 ? 8 : 0.4, ci, base_median: 30, base_mad: 0.04, z: 0, common: 0, u: 0, cusum: s === "NORMAL" ? 0.3 : s === "WATCH" ? 3.5 : 7.5, status: s });
           }
           const raw_events = []; for (let h = 0; h < 24; h++) { raw_events.push({ ts: `${finding.opened_on}T${String(h).padStart(2, "0")}:10:00Z`, pump_id: pump, state: "ON", signal_id: "mock-sig" }, { ts: `${finding.opened_on}T${String(h).padStart(2, "0")}:14:00Z`, pump_id: pump, state: "OFF", signal_id: "mock-sig" }); }
           const level = Array.from({ length: 96 }, (_, i) => ({ ts: `${finding.opened_on}T${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}:00Z`, value: 20 + 10 * Math.abs(Math.sin(i / 5)), units: "%" }));
           return send(200, { alert_id: finding.alert_id, station_id: station, pump_id: pump, origin: "REAL_REPLAY", as_of_utc: q.get("as_of_utc"), finding,
             rain: { today_mm: 0, last_72h_mm: 2.4, source: "mock" }, quality_flags: ["LONG_RUN: 2 runs capped at 3,600 s"],
             supporting: ["Capacity below normal on 3 of the last 3 days"], contradictory: ["The other pump is normal"], unavailable: ["Motor current"],
-            trace, transitions: [], raw_events, level,
+            trace, transitions: [], raw_events, level, level_signal_id: "mock-level", thresholds: { h_w: 3, h_i: 6, min_effect: -0.08 },
             work_order: { title: "Inspect pump (draft)", station_id: station, pump_id: pump, priority: "High", requested_by: "Dragonfly draft - needs human review", checks: ["Impeller clog or ragging"], evidence_alert_id: finding.alert_id, caveats: ["Not a diagnosis"] },
             provenance: prov });
         }

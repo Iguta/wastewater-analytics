@@ -577,7 +577,7 @@ StormOutlook:    issued_on, forecast_rain_48h_in, max_gust_48h_mph, storm_ahead:
 StationAssessment: station_id, display_name, as_of_utc, origin, scenario_id | None, status, quality,
                  pumps: list[PumpState], queue: list[Finding], safety: list[Finding], rain: RainContext,
                  storm: StormOutlook | None, missing_evidence: list[str], explanation, recommended_action, provenance
-TraceRow:        day, quality, valid_cycles, ci, base_median, base_mad, z, common, u, cusum, status
+TraceRow:        day, quality, valid_cycles, excluded: dict[str, int] (cycles excluded, by §3.5 flag), ci, base_median, base_mad, z, common, u, cusum, status, rain_mm | None
 Transition:      on: date, from_status, to_status, reason
 RawEvent:        ts, pump_id, state: Literal["ON", "OFF"], signal_id
 WorkOrder:       title, station_id, pump_id | None, priority, requested_by = "Dragonfly draft - needs human review",
@@ -585,7 +585,8 @@ WorkOrder:       title, station_id, pump_id | None, priority, requested_by = "Dr
 Evidence:        alert_id, station_id, pump_id | None, origin, as_of_utc, finding: Finding, rain: RainContext,
                  quality_flags: list[str], supporting: list[str], contradictory: list[str], unavailable: list[str],
                  trace: list[TraceRow] (<= 90), transitions: list[Transition], raw_events: list[RawEvent] (<= 500, trigger day),
-                 level: list[tuple[datetime, float]] (<= 1440), work_order: WorkOrder, provenance
+                 level: list[tuple[datetime, float]] (<= 1440), level_signal_id, thresholds: {h_w, h_i, min_effect} (from params.toml, so the UI never hard-codes them),
+                 work_order: WorkOrder, provenance
 TimelineDay:     day, station_status, pumps: list[{pump_id, status, ci, base_median, cusum}]
 Outcome:         no_warning_gal, with_dragonfly_gal, sensitivity: list[Sensitivity], assumptions: list[str]
 ReplayResult:    case_id, origin, family, title, truth: dict, timeline: list[TimelineDay],
