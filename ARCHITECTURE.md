@@ -210,7 +210,7 @@ For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, usin
 
 | Finding | Rule | Status | Where shown |
 | --- | --- | --- | --- |
-| `SOURCE_SILENT` | The level stream has missed 5 consecutive expected samples (5 min at 1-minute cadence) **and** no pump event has arrived since the level went silent. Also raised when there is no pump event for `T = max(20 min, 3 × P99 of fill times over the trailing 60 days)` while level is also silent. It clears when either stream resumes. | Station `SOURCE_OFFLINE` | Safety strip |
+| `SOURCE_SILENT` | The level stream has missed **10** consecutive expected samples (10 min at 1-minute cadence) **and** no pump event has arrived since the level went silent. (5 samples was the first choice; on real 2022–23 data it fired about 6 times a day at 44371, which would have made the safety strip flicker. At 10 min: 76 / 61 / 106 silences in two years at 44371 / 45385 / 45078.) Also raised when there is no pump event for `T = max(20 min, 3 × P99 of fill times over the trailing 60 days)` while level is also silent. It clears when either stream resumes. | Station `SOURCE_OFFLINE` | Safety strip |
 | `SENSOR_FAULT` | Pump events keep arriving while level is silent for ≥15 min (`LEVEL_GAP`), or any level flag from §3.5 | `WATCH` | Queue. `HIGH_LEVEL` becomes `UNKNOWN` and is listed in missing evidence. |
 | `HIGH_LEVEL` | Level at or above the station's trailing 60-day P99.9 for 5 consecutive minutes | `INVESTIGATE` | Safety strip. Never suppressed or inhibited. Labeled "SCADA-equivalent; real setpoints unknown." |
 | `PUMP_NOT_RUNNING` | Baseline median ≥10 runs/day, today 0 runs, and a sibling has ≥10 runs today | `WATCH` | Queue |
@@ -305,7 +305,7 @@ The scenario files are the source of truth for every incident parameter. This se
 | Scenario id | Variant A (primary) | Variant B | Stand-in | Outcome to reproduce |
 | --- | --- | --- | --- | --- |
 | `bloomington_morningside_2024_04_11` | Progressive impeller ragging or clog. 6-day accelerating precursor; duty pump 60% degraded 24 h before failure; failure 2024-04-11T07:00Z. `PREDICTABLE_DAYS_AHEAD`, confidence 40. | Sudden pump, motor or control trip under storm load, no precursor. `DETECTABLE_AT_ONSET`, confidence 40. | 44371 | 14,310 gal ±20%; outage 145 min |
-| `fishers_bowline_2009_01_20` | Power loss took down the controller; its backup battery was dead, so pumps, alarm and telemetry went silent at 2009-01-20T10:30Z. `DETECTABLE_AT_ONSET`, confidence 70. Target: `SOURCE_OFFLINE` within 5 min. | Controller or PLC fault with comms up: pumps stop while level rises. `DETECTABLE_AT_ONSET`, confidence 20. | 45385 | 25,000 gal ±20%; outage 530 min; discovery 180 min after failure |
+| `fishers_bowline_2009_01_20` | Power loss took down the controller; its backup battery was dead, so pumps, alarm and telemetry went silent at 2009-01-20T10:30Z. `DETECTABLE_AT_ONSET`, confidence 70. Target: `SOURCE_OFFLINE` within 5 min (expected result about 10 min under the §4.8 rule; reported, not gated). | Controller or PLC fault with comms up: pumps stop while level rises. `DETECTABLE_AT_ONSET`, confidence 20. | 45385 | 25,000 gal ±20%; outage 530 min; discovery 180 min after failure |
 
 **What these benchmarks can and cannot show** (locked wording for the README, Devpost and the demo):
 
