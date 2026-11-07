@@ -27,7 +27,15 @@ The detector decides. The agent only translates. Nothing below changes that rule
 
 ## With real utility data (needs a pilot and compliance clearance)
 
-- **Real labels.** A pilot utility's maintenance records and operator verdicts become ground truth (§6.8), measured in the per-PR benchmark (§11.6).
-- **Better predictive layer.** Tuned and validated on real failures, not only planted faults. The learned baseline (§4.16) is retried there.
-- **A small local language model** for the translation step, fine-tuned on approved operator Q&A. It runs on-prem for utilities that cannot send data to a cloud model. It still only calls the MCP tools and never predicts.
-- **The gate is compliance.** CMOM evidence, IEC 62443 zones and NIST AI RMF (`docs/compliance.md`) come before any real data or model training. Nothing trains on utility data without the utility's written authority.
+Everything below waits on the same gate: a utility's written authority, a data-sharing agreement, and the compliance work in `docs/compliance.md` (CMOM evidence, IEC 62443 zones, NIST AI RMF). Nothing trains on utility data before that.
+
+1. **Real labels replace planted faults.** Maintenance records, work-order closures and the `/api/feedback` verdicts become ground truth (§6.8). Every labeled failure becomes a case in the per-PR benchmark (§11.6), so accuracy is finally measured on real failures, not injected ones.
+2. **Shadow mode before alerts.** Run read-only beside the utility's SCADA for a season. Compare every Dragonfly finding with what crews found. Publish precision and lead time per station before anyone acts on an alert.
+3. **Retune and revalidate on real data.** The same six hyperparameters, retuned on the utility's dev years and scored once on a held-out year, with the same gates. The learned baseline (§4.16) and the per-cycle model get a fair retry where labels exist.
+4. **More signals, each earning its place.** Flow and pressure meters, motor current, VFD speed, and the utility's real alarm setpoints. Each one enters only if it beats the run/stop index on the benchmark.
+5. **Fully local, no internet.** The detector, API, MCP server and UI already run on one machine. Add a local small language model for the explanation step, so the whole stack runs on-prem or air-gapped inside the utility's OT network zone.
+6. **A fine-tuned small model for explanation only.** Trained on approved operator Q&A and the deterministic templates. It still only calls the three read-only tools and passes the grounding check; it never predicts, diagnoses or files anything.
+7. **Deterministic action workflows.** Every finding type × status × evidence quality maps to one action: checklist, priority, response window and draft work order (extending `explain.py`). Each mapping is versioned and testable, never chosen by a model.
+8. **CMMS and notification hand-off with human approval.** A supervisor approves the drafted work order and it is sent to the utility's CMMS or paging system. Nothing is dispatched automatically, and every hand-off is logged for the CMOM evidence trail.
+9. **Consequence-weighted ranking.** GIS data (receiving waters, schools, basements downstream) and each station's overflow history weight the attention queue, alongside the forecast already used for storm readiness.
+10. **Continuous monitoring of the model itself.** Drift checks on the capacity index and alert rates per station, a monthly reliability report, and a defined process to roll back to the last frozen version when a gate regresses.
