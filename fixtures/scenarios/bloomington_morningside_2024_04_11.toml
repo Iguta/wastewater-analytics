@@ -7,8 +7,8 @@
 # Wessex telemetry is used only for station *hydraulics*; Indiana rain is never mixed into Wessex training.
 
 id = "bloomington_morningside_2024_04_11"
-version = "v2"
-changelog = ["v1 2026-11-07: initial lock", "v2 2026-11-07: add day-ahead forecast pin in [conditions] (Dhruv ask); no other field changed"]
+version = "v3"
+changelog = ["v1 2026-11-07: initial lock", "v2 2026-11-07: add day-ahead forecast pin in [conditions] (Dhruv ask); no other field changed", "v3 2026-11-07: G7 fix (§5.4, inflow assumption only): dry_weather_inflow_gpm 35 -> 49. outcome.no_warning_run v1 at 35 gpm gave 9,951 gal (-30%, miss); at 49 gpm 14,532 gal (+1.6%). Analog Wessex 44371 2023-05-09."]
 locked = true
 locked_at = "2026-11-07"
 author = "Iguta (David's Claude Code)"
@@ -116,7 +116,7 @@ rain_window_utc = ["2024-03-12T00:00:00Z", "2024-04-13T23:00:00Z"]
 rain_total_in = { value = 6.71, status = "VERIFIED", confidence = 90, note = "reanalysis grid ~6 km from station; not a gauge" }
 rain_apr8_11_local_in = { value = 2.70, status = "VERIFIED", confidence = 85, note = "Dhruv's earlier figure was 2.52; difference is window edges/grid" }
 peak_hour = { value = "2024-04-10T23:00Z, 0.465 in", status = "VERIFIED", confidence = 85 }
-dry_weather_inflow_gpm = { value = 35, status = "UNVERIFIED", confidence = 25, note = "assumed ~200 homes x 250 gpd; replace if CBU publishes station data" }
+dry_weather_inflow_gpm = { value = 49, status = "UNVERIFIED", confidence = 25, note = "v3: set so the no-warning simulation reproduces the recorded 14,310 gal (G7); ~280 homes x 250 gpd. v1 was 35" }
 storm_peak_inflow_gpm = { value = 140, status = "UNVERIFIED", confidence = 20, note = "4x peaking incl. inflow/infiltration; station has overflowed on 0.5 in before" }
 mean_event_inflow_gpm = { value = 120, status = "UNVERIFIED", confidence = 20 }
 forecast_source = "Open-Meteo previous-runs API (forecast issued 1 day / 2 days before each hour), UTC"

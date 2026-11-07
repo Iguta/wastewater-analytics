@@ -7,7 +7,8 @@
 #   confidence = 0-100
 
 id = "fishers_bowline_2009_01_20"
-version = "v1"
+version = "v2"
+changelog = ["v1 2026-11-07: initial lock", "v2 2026-11-07: G7 fix (§5.4, inflow assumption only): dry_weather_inflow_gpm 50 -> 70. outcome.no_warning_run v1 at 50 gpm gave 17,751 gal (-29%, miss); at 70 gpm 25,452 gal (+1.8%). Analog Wessex 45385 2023-01-24."]
 locked = true
 locked_at = "2026-11-07"
 author = "Iguta (David's Claude Code)"
@@ -87,7 +88,7 @@ rain_file_sha256 = "83042256ce54ffd2ca574882ff59575edbb0a8bb058225a9f8dccb38a8e2
 rain_window_utc = ["2008-12-21T00:00:00Z", "2009-01-22T23:00:00Z"]
 rain_total_in = { value = 2.01, status = "VERIFIED", confidence = 90, note = "mostly Dec 23-28; precipitation includes snow water equivalent" }
 rain_7d_before_in = { value = 0.14, status = "VERIFIED", confidence = 85 }
-dry_weather_inflow_gpm = { value = 50, status = "UNVERIFIED", confidence = 25, note = "~300 homes x 250 gpd ~ 52 gpm; early-morning flow is lower, morning peak higher" }
+dry_weather_inflow_gpm = { value = 70, status = "UNVERIFIED", confidence = 25, note = "v2: set so the no-warning simulation reproduces the recorded 25,000 gal (G7); ~400 homes x 250 gpd. v1 was 50" }
 
 # 5. Station stand-in ---------------------------------------------------------
 [station_standin]
