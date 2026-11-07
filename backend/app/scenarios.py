@@ -172,7 +172,7 @@ def case_stream(case_id: str, lookback_days: int = 120):
                     "pump": duty,
                     "onset": onset,
                     "failure": failure,
-                    "loss_24h": float(v(varspec.get("loss_24h", 0.6))),
+                    "loss_24h": float(v(varspec["loss_24h"])),
                     "shape": v(varspec["precursor_shape"]),
                 }
             )
