@@ -1,0 +1,224 @@
+<!doctype html><html><head><meta charset="utf-8"><style>@page{size:1920px 1080px;margin:0}*{box-sizing:border-box;margin:0}body{margin:0}section.s{width:1920px;height:1080px;position:relative;overflow:hidden;page-break-after:always;break-after:page}</style></head><body><section class="s" id="cover" data-transition="fade" style="background:#11161C;color:#F3F5F7;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:center;gap:40px">
+<p style="font-size:28px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#FFC53D">Indy Init 2026 · Project overview</p>
+<h1 style="font-size:176px;font-weight:700;line-height:1">Dragonfly AI</h1>
+<p style="font-size:52px;line-height:1.25;color:#C3CCD5">A SCADA-native, read-only early-warning layer that spots a lift-station pump losing capacity before it fails.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:26px;color:#8D99A5">David Iguta Ndung’u · Dhruv Bangera · Sai Praneetha Chimalamarri</p>
+
+</section>
+<section class="s" id="problem" data-transition="fade" style="background:#F3F5F7;color:#151A1F;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:26px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#8A4B00">The problem</p>
+<h2 style="font-size:84px;font-weight:700;line-height:1.05">Lift-station pumps lose capacity quietly, then fail.</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:40px;border:1px solid #D7DCE2;border-radius:16px">
+<p style="font-size:96px;font-weight:700;line-height:1">14,310 gal</p>
+<h3 style="font-size:36px;font-weight:700">Morningside, Bloomington, April 2024</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5560">Equipment-failure overflow during a storm. The record does not say what failed, so we do not claim a cause.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:40px;border:1px solid #D7DCE2;border-radius:16px">
+<p style="font-size:96px;font-weight:700;line-height:1">25,000 gal</p>
+<h3 style="font-size:36px;font-weight:700">Fishers, Indiana, January 2009</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5560">Power failed and the controller’s backup battery was dead, so nobody was alerted.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6B7682">Sources: Bloomington SSO dataset; IBJ, Aug 2013; IDEM Agreed Order</p>
+
+</section>
+<section class="s" id="who" data-transition="fade" style="background:#F3F5F7;color:#151A1F;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:26px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#8A4B00">Who it helps</p>
+<h2 style="font-size:84px;font-weight:700;line-height:1.05">The people who keep wastewater moving.</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #D7DCE2;border-radius:16px">
+<h3 style="font-size:44px;font-weight:700">Operators</h3>
+<p style="font-size:30px;line-height:1.4;color:#4A5560">See which pump needs inspection, with evidence in plain words, instead of finding out from an alarm.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #D7DCE2;border-radius:16px">
+<h3 style="font-size:44px;font-weight:700">Maintenance planners</h3>
+<p style="font-size:30px;line-height:1.4;color:#4A5560">Get a draft work order and a storm-ahead flag, so repairs happen before the weather arrives.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #D7DCE2;border-radius:16px">
+<h3 style="font-size:44px;font-weight:700">Small utilities</h3>
+<p style="font-size:30px;line-height:1.4;color:#4A5560">Works on on/off timestamps they already log. No new sensors and no failure labels needed.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6B7682">Dragonfly AI · Indy Init 2026</p>
+
+</section>
+<section class="s" id="built" data-transition="fade" style="background:#11161C;color:#F3F5F7;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:26px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#FFC53D">What we built</p>
+<h2 style="font-size:84px;font-weight:700;line-height:1.05">A hidden flow meter in data you already log.</h2>
+</div>
+<div style="display:flex;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#1B232B;padding:36px;border:1px solid #2D3741;border-radius:16px">
+<p style="font-size:26px;font-weight:700;color:#FFC53D">1 · Measure</p>
+<p style="font-size:30px;line-height:1.4;color:#C3CCD5">From pump on/off times alone, compute each pump’s capacity. Rain cancels out of the calculation.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#1B232B;padding:36px;border:1px solid #2D3741;border-radius:16px">
+<p style="font-size:26px;font-weight:700;color:#FFC53D">2 · Compare</p>
+<p style="font-size:30px;line-height:1.4;color:#C3CCD5">Each pump against its own history, with the sibling pump as a control group.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#1B232B;padding:36px;border:1px solid #2D3741;border-radius:16px">
+<p style="font-size:26px;font-weight:700;color:#FFC53D">3 · Warn</p>
+<p style="font-size:30px;line-height:1.4;color:#C3CCD5">Raise Watch, then Investigate, only when capacity falls and stays down.</p>
+</div>
+</div>
+<p style="font-size:30px;line-height:1.4;color:#C3CCD5">Delivered through an operator UI, a read-only Ignition view, and an MCP server so any AI agent can query it.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8D99A5">Read-only. Never writes to a PLC or SCADA tag.</p>
+
+</section>
+<section class="s" id="scada" data-transition="fade" style="background:#F3F5F7;color:#151A1F;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:26px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#8A4B00">SCADA-native</p>
+<h2 style="font-size:84px;font-weight:700;line-height:1.05">We build on top of SCADA, not instead of it.</h2>
+</div>
+<div style="display:flex;gap:24px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:36px;border:1px solid #D7DCE2;border-radius:16px">
+<p style="font-size:26px;font-weight:700;color:#4A5560">1 · Stays as it is</p>
+<h3 style="font-size:38px;font-weight:700">Data acquisition</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5560">Pumps, PLCs, RTUs and the SCADA historian keep running untouched. We replace nothing.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:36px;border:1px solid #D7DCE2;border-radius:16px">
+<p style="font-size:26px;font-weight:700;color:#1F4E8C">2 · Added on top</p>
+<h3 style="font-size:38px;font-weight:700">Dragonfly analysis</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5560">Reads the pump on/off and wet-well level data SCADA already logs. Read-only.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:36px;border:1px solid #D7DCE2;border-radius:16px">
+<p style="font-size:26px;font-weight:700;color:#1F4E8C">3 · Shown where operators work</p>
+<h3 style="font-size:38px;font-weight:700">Inside the SCADA screen</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5560">An Ignition Perspective view shows station tiles, the safety strip and the attention queue.</p>
+</div>
+</div>
+<p style="font-size:30px;line-height:1.4;color:#151A1F"><b>No new sensors, no rip-and-replace, no write path.</b> The view only fills read-only memory tags and never writes to a device or OPC tag.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6B7682">The Ignition view is a read-only add-on built on the same API as the web UI.</p>
+
+</section>
+<section class="s" id="rain" data-transition="fade" style="background:#11161C;color:#F3F5F7;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:26px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#FFC53D">Why it works</p>
+<h2 style="font-size:72px;font-weight:700;line-height:1.1">Rain moves run time. It barely moves our measure.</h2>
+</div>
+<div style="position:relative;width:1500px;height:350px">
+<div style="position:absolute;left:300px;top:50px;width:3px;height:90px;background:#E8ECEF"></div>
+<div style="position:absolute;left:300px;top:196px;width:3px;height:84px;background:#E8ECEF"></div>
+<p style="position:absolute;left:0px;top:0px;width:1500px;font-size:30px;font-weight:700;color:#C3CCD5">Raw run time, wet day ÷ dry day</p>
+<div style="position:absolute;left:720px;top:50px;width:570px;height:60px;background:#FFC53D;border-radius:10px"></div>
+<p style="position:absolute;left:720px;top:62px;width:570px;font-size:34px;font-weight:700;color:#3A2800;text-align:center">1.14–1.33×</p>
+<p style="position:absolute;left:0px;top:150px;width:1500px;font-size:30px;font-weight:700;color:#C3CCD5">Capacity index, wet day ÷ dry day</p>
+<div style="position:absolute;left:180px;top:200px;width:210px;height:60px;background:#8DB8EE;border-radius:10px"></div>
+<p style="position:absolute;left:180px;top:212px;width:210px;font-size:30px;font-weight:700;color:#0B1B2E;text-align:center">0.96–1.03×</p>
+<p style="position:absolute;left:240px;top:290px;width:120px;font-size:26px;color:#E8ECEF;text-align:center">1.0</p>
+<p style="position:absolute;left:540px;top:290px;width:120px;font-size:26px;color:#8D99A5;text-align:center">1.1</p>
+<p style="position:absolute;left:840px;top:290px;width:120px;font-size:26px;color:#8D99A5;text-align:center">1.2</p>
+<p style="position:absolute;left:1140px;top:290px;width:120px;font-size:26px;color:#8D99A5;text-align:center">1.3</p>
+<p style="position:absolute;left:1380px;top:290px;width:120px;font-size:26px;color:#8D99A5;text-align:center">1.4</p>
+</div>
+<p style="font-size:30px;line-height:1.4;color:#C3CCD5">1.0 means no change on wet days. The capacity index stayed within 0.96–1.03× on 9 of 11 pumps.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8D99A5">Source: Wessex Water telemetry (CC BY), docs/evidence/ci_rain_check.txt. Wet day = 10 mm or more of rain.</p>
+
+</section>
+<section class="s" id="capacity" data-transition="fade" style="background:#F3F5F7;color:#151A1F;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:26px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#8A4B00">Real data</p>
+<h2 style="font-size:72px;font-weight:700;line-height:1.1">A real pump, as its capacity fell.</h2>
+</div>
+<div style="position:relative;width:1100px;height:420px">
+<p style="position:absolute;left:0px;top:16px;width:56px;font-size:24px;color:#6B7682;text-align:right">30</p>
+<p style="position:absolute;left:0px;top:106px;width:56px;font-size:24px;color:#6B7682;text-align:right">20</p>
+<p style="position:absolute;left:0px;top:196px;width:56px;font-size:24px;color:#6B7682;text-align:right">10</p>
+<svg aria-label="Capacity of Wessex 44371 pump 1 in 2022: about 30 per hour, then 28.2 on May 31, 16.3 on June 1 and 11.8 on June 10, followed by an outage June 11 to 15" viewBox="0 0 960 300" width="960" height="300" style="position:absolute;left:70px;top:0px">
+<rect x="836" y="0" width="124" height="300" fill="#F1D6D3"/>
+<line x1="0" y1="30" x2="960" y2="30" stroke="#D7DCE2" stroke-width="2"/>
+<line x1="0" y1="120" x2="960" y2="120" stroke="#D7DCE2" stroke-width="2"/>
+<line x1="0" y1="210" x2="960" y2="210" stroke="#D7DCE2" stroke-width="2"/>
+<line x1="0" y1="299" x2="960" y2="299" stroke="#6B7682" stroke-width="2"/>
+<polyline points="0,30 464.5,30 480,46.2 511,153.3" fill="none" stroke="#151A1F" stroke-width="5" stroke-linejoin="round"/>
+<line x1="511" y1="153.3" x2="805" y2="193.8" stroke="#151A1F" stroke-width="4" stroke-dasharray="10 8"/>
+<circle cx="480" cy="46.2" r="9" fill="#FFC53D" stroke="#8A4B00" stroke-width="3"/>
+<circle cx="511" cy="153.3" r="10" fill="#B42318"/>
+<circle cx="805" cy="193.8" r="10" fill="#B42318"/>
+</svg>
+<p style="position:absolute;left:90px;top:44px;width:360px;font-size:26px;font-weight:700;color:#151A1F">About 30 /h for weeks</p>
+<p style="position:absolute;left:260px;top:132px;width:290px;font-size:26px;font-weight:700;color:#B42318;text-align:right">16.3 on Jun 1 (−46%)</p>
+<p style="position:absolute;left:560px;top:212px;width:300px;font-size:26px;font-weight:700;color:#B42318;text-align:right">11.8 on Jun 10</p>
+<p style="position:absolute;left:70px;top:312px;width:120px;font-size:24px;color:#6B7682">May 15</p>
+<p style="position:absolute;left:541px;top:312px;width:100px;font-size:24px;color:#6B7682;text-align:center">Jun 1</p>
+<p style="position:absolute;left:835px;top:312px;width:100px;font-size:24px;color:#6B7682;text-align:center">Jun 10</p>
+<p style="position:absolute;left:910px;top:312px;width:120px;font-size:24px;color:#6B7682;text-align:right">Jun 15</p>
+<p style="position:absolute;left:70px;top:356px;width:960px;font-size:24px;line-height:1.4;color:#4A5560">Shaded: pump out of service Jun 11–15. Only the readings above are plotted; the dashed line is not data.</p>
+</div>
+<p style="position:absolute;left:1260px;top:380px;width:532px;font-size:36px;line-height:1.3;font-weight:700;color:#151A1F">By Jun 1, capacity was 46% below normal, ten days before the pump went out of service.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6B7682">Wessex 44371 pump 1, 2022. Dev data, not a held-out test. Source: docs/evidence/ci_rain_check.txt</p>
+
+</section>
+<section class="s" id="numbers" data-transition="fade" style="background:#11161C;color:#F3F5F7;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#FFC53D">Reading the screen</p>
+<h2 style="font-size:84px;font-weight:700;line-height:1.05">What the numbers mean.</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div style="background:#1B232B;padding:28px 32px;border:1px solid #2D3741;border-radius:16px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:700">Capacity, in “/h”</h3>
+<p style="font-size:26px;line-height:1.4;color:#C3CCD5">How many times this pump could empty the wet well’s working volume in an hour. Higher is stronger.</p>
+</div>
+<div style="background:#1B232B;padding:28px 32px;border:1px solid #2D3741;border-radius:16px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:700">Capacity change, in %</h3>
+<p style="font-size:26px;line-height:1.4;color:#C3CCD5">Today against this pump’s own normal. −18.4% means 18.4% weaker than usual (example value).</p>
+</div>
+<div style="background:#1B232B;padding:28px 32px;border:1px solid #2D3741;border-radius:16px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:700">Running total of shortfall</h3>
+<p style="font-size:26px;line-height:1.4;color:#C3CCD5">Adds up each day a pump runs below normal. One bad day fades out; a lasting drop keeps climbing.</p>
+</div>
+<div style="background:#1B232B;padding:28px 32px;border:1px solid #2D3741;border-radius:16px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:700">Watch line and Investigate line</h3>
+<p style="font-size:26px;line-height:1.4;color:#C3CCD5">Watch at 3, Investigate at 6, and Investigate also needs 2 of the last 3 days low.</p>
+</div>
+<div style="background:#1B232B;padding:28px 32px;border:1px solid #2D3741;border-radius:16px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:700">Run time: observed vs expected</h3>
+<p style="font-size:26px;line-height:1.4;color:#C3CCD5">Seconds per run today against what a healthy pump would take at today’s inflow (example: 212 s vs 173 s).</p>
+</div>
+<div style="background:#1B232B;padding:28px 32px;border:1px solid #2D3741;border-radius:16px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:700">Evidence quality</h3>
+<p style="font-size:26px;line-height:1.4;color:#C3CCD5">Sufficient means 20 or more complete pump cycles that day. Otherwise it says Partial or Not enough data.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8D99A5">Example values come from our design mock. Rain does not change capacity, so a storm alone does not raise a flag.</p>
+
+</section>
+<section class="s" id="trust" data-transition="fade" style="background:#11161C;color:#F3F5F7;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:26px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#FFC53D">Honest by design</p>
+<h2 style="font-size:84px;font-weight:700;line-height:1.05">It says plainly when it does not know.</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+<div style="background:#1B232B;padding:36px;border:1px solid #2D3741;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:36px;font-weight:700">Read-only</h3>
+<p style="font-size:28px;line-height:1.4;color:#C3CCD5">No write path to any control system. Safety alarms are never hidden.</p>
+</div>
+<div style="background:#1B232B;padding:36px;border:1px solid #2D3741;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:36px;font-weight:700">Evidence, not guesses</h3>
+<p style="font-size:28px;line-height:1.4;color:#C3CCD5">Every alert shows raw timestamps, data quality and what is missing.</p>
+</div>
+<div style="background:#1B232B;padding:36px;border:1px solid #2D3741;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:36px;font-weight:700">No failure predictions</h3>
+<p style="font-size:28px;line-height:1.4;color:#C3CCD5">It flags a pump to inspect. It never gives a failure date or a probability.</p>
+</div>
+<div style="background:#1B232B;padding:36px;border:1px solid #2D3741;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:36px;font-weight:700">Simulations are labeled</h3>
+<p style="font-size:28px;line-height:1.4;color:#C3CCD5">Indiana incidents are record-anchored what-ifs, not real station data.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8D99A5">Next step: a pilot with real maintenance logs to measure true precision.</p>
+
+</section>
+<section class="s" id="thanks" data-transition="fade" style="background:#11161C;color:#F3F5F7;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:center;gap:40px">
+<p style="font-size:28px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#FFC53D">Dragonfly AI</p>
+<h1 style="font-size:176px;font-weight:700;line-height:1">Thank you.</h1>
+<p style="font-size:44px;line-height:1.3;color:#C3CCD5">Not a chatbot that guesses what’s wrong. A pipeline that measures each pump’s capacity from data you already log, and knows when the evidence is strong enough to interrupt an operator.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:26px;color:#8D99A5">David Iguta Ndung’u · Dhruv Bangera · Sai Praneetha Chimalamarri · Indy Init 2026</p>
+
+</section>
+</body></html>
