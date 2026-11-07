@@ -76,3 +76,38 @@ def test_truth_isolation():
         assert "inject" not in imported and "evaluate" not in imported
         args = {a.arg for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) for a in n.args.args}
         assert "truth" not in args
+
+
+def test_station_trip_removes_runs_and_simulates_level(sd):
+    s, r = pd.Timestamp("2022-10-05 06:00"), pd.Timestamp("2022-10-05 09:00")
+    trace = pd.Series(50.0, index=pd.date_range(s, r, freq="15s"))
+    out, truth = inject.station_trip(sd, s, r, level_trace=trace)
+    assert not out.events.ts.between(s, r, inclusive="left").any()
+    w = out.level[out.level.ts.between(s, r, inclusive="left")]
+    assert len(w) > 100 and (w.value == 50.0).all() and truth["level"] == "SIMULATED"
+    out2, t2 = inject.station_trip(sd, s, r, drop_level=True)
+    assert not out2.level.ts.between(s, r, inclusive="left").any() and t2["level"] == "deleted"
+
+
+def test_apply_runs_transforms_in_order_and_returns_truth(sd):
+    s = pd.Timestamp("2022-10-05 06:00")
+    out, truth = inject.apply(
+        sd,
+        [
+            {"name": "outage", "start": s, "hours": 2},
+            {"name": "sensor_fault", "kind": "duplicate_rows", "start": s},
+        ],
+        seed=3,
+    )
+    assert [t["transform"] for t in truth] == ["outage", "sensor_fault"]
+    assert len(out.events) > len(sd.events[~sd.events.ts.between(s, s + pd.Timedelta(hours=2))])
+
+
+def test_fishers_a_replay_goes_silent_within_10_minutes():
+    from backend.app import detect, params, scenarios
+
+    st, truth, meta = scenarios.case_stream("fishers_bowline_2009_01_20:A")
+    f = meta["failure_at"]
+    assert truth[-1]["transform"] == "station_trip" and truth[-1]["level"] == "deleted"
+    out = detect.realtime(st.events, st.level, f + pd.Timedelta(minutes=10), params.load())
+    assert any(x["type"] == "SOURCE_SILENT" for x in out)

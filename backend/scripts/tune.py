@@ -72,6 +72,7 @@ def evaluate_combo(combo: dict) -> dict:
 def main(limit: int | None = None) -> None:
     t0 = time.time()
     cases = E.make_cases("dev")
+    print(f"dropped {E.DROPPED.get('dev')}", flush=True)
     with mp.get_context("fork").Pool() as pool:
         BUILT.extend(pool.map(E._build_one, cases, chunksize=4))
     for st in data.STATIONS:

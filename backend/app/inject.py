@@ -187,3 +187,56 @@ def sensor_fault(sd, kind, start, rng):
         "kind": kind,
         "start": start,
     }
+
+
+def station_trip(sd, start, restore, level_trace: pd.Series | None = None, drop_level: bool = False):
+    """§5.2 the visible failure: no pump runs from start to restore. The level in that window is replaced by
+    the §5.4 simulated trace (labelled SIMULATED by the caller), or deleted when the station loses power."""
+    start, restore = pd.Timestamp(start), pd.Timestamp(restore)
+    r = _runs(sd)
+    r = r[~((r["start"] < restore) & (r["end"] > start))]  # any run touching the trip window is gone
+    ev = _to_events(r, sd)
+    lv = sd.level[~sd.level.ts.between(start, restore, inclusive="left")]
+    if not drop_level and level_trace is not None:
+        tr = (
+            level_trace[(level_trace.index >= start) & (level_trace.index < restore)].resample("1min").first()
+        )
+        units = sd.level["units"].iloc[0] if len(sd.level) else "%"
+        sig = sd.level["signal_id"].iloc[0] if len(sd.level) else "SIMULATED"
+        sim = pd.DataFrame(
+            {"signal_id": sig, "ts": tr.index, "value": tr.to_numpy(), "units": units, "in_range": True}
+        )
+        lv = pd.concat([lv, sim], ignore_index=True).sort_values("ts").reset_index(drop=True)
+    truth = {
+        "transform": "station_trip",
+        "start": start,
+        "restore": restore,
+        "level": "deleted" if drop_level else ("SIMULATED" if level_trace is not None else "unchanged"),
+    }
+    return replace(sd, events=ev, level=lv), truth
+
+
+TRANSFORMS = {
+    "capacity_loss": capacity_loss,
+    "transient": transient,
+    "station_shift": station_shift,
+    "duty_swap": duty_swap,
+    "outage": outage,
+    "sensor_fault": sensor_fault,
+    "station_trip": station_trip,
+}
+
+
+def apply(stream: StationData, transforms: list[dict], seed: int) -> tuple[StationData, list[dict]]:
+    """§8.1 seam: apply [{"name": ..., **kwargs}] in order. Returns the transformed stream and the truth list,
+    which goes only to the evaluator and replay_case (§5.8)."""
+    rng = np.random.default_rng(seed)
+    truth = []
+    for t in transforms:
+        kw = {k: v for k, v in t.items() if k != "name"}
+        fn = TRANSFORMS[t["name"]]
+        if "rng" in fn.__code__.co_varnames[: fn.__code__.co_argcount]:
+            kw["rng"] = rng
+        stream, tr = fn(stream, **kw)
+        truth.append(tr)
+    return stream, truth

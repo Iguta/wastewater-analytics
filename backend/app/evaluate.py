@@ -10,8 +10,6 @@ from __future__ import annotations
 import json
 import math
 import os
-import sys
-import time
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from functools import cache
@@ -28,6 +26,7 @@ LOOKBACK_DAYS = 120  # baseline history kept before the window (W + G + warm-up 
 TIERS = {"dev": (2022, 0), "test": (2023, 1000)}
 FAMILIES = {"F1": 200, "F2": 30, "F3": 30, "F4": 30, "F5": 30, "F6": 30, "F7": 30}
 REAL_OUTAGE = (pd.Timestamp("2023-08-17"), pd.Timestamp("2023-08-21"))
+DROPPED: dict = {}
 
 
 @cache
@@ -41,9 +40,12 @@ def real_table(st: str, end: str) -> pd.DataFrame:
     return features.daily_table(s.events, s.level, s.rain, end, st)
 
 
-def proxy_windows(st: str) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
-    """§5.7 episodes (busy pump 0 runs >= 2 days while a sibling runs >= 10) at one station, for rejection."""
-    t = real_table(st, "2024-01-01")
+@cache
+def proxy_windows(st: str, tier: str) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
+    """§5.7 episodes (busy pump 0 runs >= 2 days while a sibling runs >= 10) at one station, for rejection.
+    Reads only the tier's own year: the dev tier never touches 2023 data."""
+    year = TIERS[tier][0]
+    t = real_table(st, f"{year + 1}-01-01")
     r = detect.run(t, params.load())
     out = []
     for _p, g in r.groupby("pump_id"):
@@ -58,6 +60,15 @@ def proxy_windows(st: str) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
     return out
 
 
+@cache
+def eligible_pumps(st: str, start: pd.Timestamp, tier: str) -> list[str]:
+    """§5.6: F1 injects only into pumps with >= 20 valid cycles on >= 30 of the 74 baseline days."""
+    t = real_table(st, f"{TIERS[tier][0] + 1}-01-01")
+    base = t[(t.day >= start - pd.Timedelta(days=74)) & (t.day < start)]
+    ok = base[base.valid_cycles >= 20].groupby("pump_id").size()
+    return sorted(ok[ok >= 30].index)
+
+
 @dataclass
 class Case:
     case_id: str
@@ -68,46 +79,54 @@ class Case:
     spec: dict
 
 
-def _window(rng, year: int, st: str, center=None) -> tuple[pd.Timestamp, pd.Timestamp, int]:
-    """120-day scored window with W + G (74) days of real history before it. Windows within 14 days of a
-    proxy episode or the real 2023-08 outage are redrawn; where none is clean (45385 2022 rotates pumps every
-    6-10 weeks) the least-overlapping draw is used and its overlap count is recorded on the case."""
+def _window(rng, tier: str, st: str, center=None):
+    """120-day scored window with W + G (74) days of real history before it, clear (+-14 d) of every proxy
+    episode and the real 2023-08 outage. Returns None when no clean window is found in 200 draws."""
+    year = TIERS[tier][0]
     lo = max(pd.Timestamp(f"{year}-01-01"), pd.Timestamp("2022-03-16"))
     hi = pd.Timestamp(f"{year + 1}-01-01") - pd.Timedelta(days=WINDOW_DAYS)
-    bad = proxy_windows(st) + [REAL_OUTAGE]
-    best = None
+    bad = [*proxy_windows(st, tier), REAL_OUTAGE]
     for _ in range(200):
         if center is not None:
             s = min(max((center - pd.Timedelta(days=WINDOW_DAYS // 2)).floor("D"), lo), hi)
+            center = None
         else:
             s = lo + pd.Timedelta(days=int(rng.integers(0, max(1, (hi - lo).days))))
         e = s + pd.Timedelta(days=WINDOW_DAYS)
-        k = sum(not (e < a - pd.Timedelta(days=14) or s > b + pd.Timedelta(days=14)) for a, b in bad)
-        if best is None or k < best[2]:
-            best = (s, e, k)
-        if k == 0:
-            break
-        center = None
-    return best
+        if all(e < a - pd.Timedelta(days=14) or s > b + pd.Timedelta(days=14) for a, b in bad):
+            return s, e
+    return None
 
 
 def make_cases(tier: str, families=FAMILIES) -> list[Case]:
+    """Deterministic §5.6 cases. A draw whose window would overlap a proxy episode or the outage, or (F1)
+    whose station has no eligible pump, redraws the station; after 10 tries the case is dropped and counted
+    in DROPPED[tier]."""
     year, base = TIERS[tier]
     cases = []
+    DROPPED[tier] = {}
     for fam, n in families.items():
         for i in range(n):
             seed = base + i
-            rng = np.random.default_rng([int(fam[1]), seed])
-            st = str(rng.choice(data.STATIONS))
-            pumps = station(st).pumps
-            spec: dict = {}
-            center = None
-            if fam == "F2":
-                rain = station(st).rain.set_index("ts_hour")["mm"].resample("D").sum(min_count=20)
-                wet = rain[rain.index.year == year].nlargest(30).index
-                center = wet[i % len(wet)]
-                spec["wet_day"] = center
-            s, e, overlap = _window(rng, year, st, center)
+            rng = np.random.default_rng([int(fam[1]), seed])  # family in the seed: see decisions.md D5
+            for _try in range(10):
+                st = str(rng.choice(data.STATIONS))
+                center = None
+                if fam == "F2":
+                    rain = station(st).rain.set_index("ts_hour")["mm"].resample("D").sum(min_count=20)
+                    wet = rain[rain.index.year == year].nlargest(30).index
+                    center = wet[i % len(wet)]
+                win = _window(rng, tier, st, center)
+                if win is None:
+                    continue
+                s, e = win
+                pumps = eligible_pumps(st, s, tier) if fam == "F1" else station(st).pumps
+                if pumps:
+                    break
+            else:
+                DROPPED[tier][fam] = DROPPED[tier].get(fam, 0) + 1
+                continue
+            spec: dict = {"wet_day": center} if fam == "F2" else {}
 
             def day(lo, hi, s=s, rng=rng):
                 return s + pd.Timedelta(days=float(rng.uniform(lo, hi)))
@@ -145,7 +164,6 @@ def make_cases(tier: str, families=FAMILIES) -> list[Case]:
                 }
             elif fam == "F7":
                 spec = {"onset": day(20, 80).floor("D"), "factor": float(rng.uniform(0.75, 0.85))}
-            spec["proxy_overlap"] = overlap
             cases.append(Case(f"{fam}-{seed}", fam, st, s, e, spec))
     return cases
 
@@ -163,7 +181,7 @@ def _clip(sd: data.StationData, c: Case) -> data.StationData:
     )
 
 
-def build(c: Case) -> dict:
+def build(c: Case, keep_stream: bool = False) -> dict:
     """Inject the fault and build the param-independent daily table (plus realtime probes for F5/F6)."""
     sd = _clip(station(c.station), c)
     rng = np.random.default_rng([int(c.family[1]), int(c.case_id.split("-")[1]), 7])
@@ -185,6 +203,8 @@ def build(c: Case) -> dict:
     counts: dict = {}
     t = features.daily_table(sd.events, sd.level, sd.rain, c.end, c.station, counts)
     out = {"table": t, "truth": truth, "counts": counts}
+    if keep_stream:  # replay_case needs the injected stream; the tuner must not carry it (memory)
+        out["stream"] = sd
     P = params.load()
     if c.family == "F5":
         mins = None
@@ -215,15 +235,16 @@ REQUIRED_F6 = {
 }
 
 
-def score(c: Case, b: dict, P: params.Params, background: set | None = None) -> dict:
+def score(c: Case, b: dict, P: params.Params, background: set | None = None, runner=None) -> dict:
     """Score one case. `background` = (pump, day) INVESTIGATE set of the un-injected data; when None it is
     computed from the case's own clean window (exact), the tuner passes a whole-station clean run (fast)."""
-    r = detect.run(b["table"], P)
+    runner = runner or detect.run
+    r = runner(b["table"], P)
     win = r[(r.day >= c.start) & (r.day < c.end)]
     inv = win[win.status == "INVESTIGATE"]
     res = {"case_id": c.case_id, "family": c.family, "station": c.station}
     if background is None and "clean_table" in b:
-        rc = detect.run(b["clean_table"], P)
+        rc = runner(b["clean_table"], P)
         wc = rc[(rc.day >= c.start) & (rc.day < c.end) & (rc.status == "INVESTIGATE")]
         background = set(zip(wc.pump_id, wc.day))
     background = background or set()
@@ -273,7 +294,7 @@ def score(c: Case, b: dict, P: params.Params, background: set | None = None) -> 
     elif c.family == "F6":
         kind = c.spec["kind"]
         if kind in ("duplicate_rows", "repeated_starts"):
-            clean = detect.run(b["clean_table"], P)
+            clean = runner(b["clean_table"], P)
             same = clean[(clean.day >= c.start) & (clean.day < c.end)]["status"].to_numpy()
             passed = b["counts"].get(REQUIRED_F6[kind], 0) > 0 and (same == win["status"].to_numpy()).all()
         else:
@@ -292,99 +313,241 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return (c - h, c + h)
 
 
-def g6(P: params.Params, year: int) -> dict:
-    out = {}
-    for st in data.STATIONS:
-        r = detect.run(real_table(st, f"{year + 1}-01-01"), P)
-        y = r[r.day.dt.year == year]
-        opens = y[y.status == "INVESTIGATE"].incident_id.nunique()
-        out[st] = round(opens / len(station(st).pumps) / (365 / 180), 3)
+def _trailing(g: pd.DataFrame, col: str, P: params.Params, fn) -> np.ndarray:
+    v, d = g[col].to_numpy(dtype=float), (g.day - g.day.min()).dt.days.to_numpy()
+    out = np.full(len(v), np.nan)
+    for i in range(len(v)):
+        w = v[(d >= d[i] - P.G - P.W) & (d <= d[i] - P.G - 1)]
+        w = w[~np.isnan(w)]
+        if len(w) >= P.min_baseline_days:
+            out[i] = fn(w)
     return out
 
 
-def summarize(rows: list[dict], P: params.Params, year: int, runtime_s: float) -> dict:
+def bench_a(t: pd.DataFrame, P: params.Params, r_i: float = 1.5) -> pd.DataFrame:
+    """§4.15 A, simple rule: daily median run time vs its trailing median. No QC, persistence or siblings."""
+    parts = []
+    for _p, g in t.sort_values("day").groupby("pump_id"):
+        g = g.copy()
+        ratio = g.run_median_s.to_numpy(dtype=float) / _trailing(g, "run_median_s", P, np.median)
+        g["status"] = np.where(
+            ratio > r_i, "INVESTIGATE", np.where(ratio > 1 + (r_i - 1) / 2, "WATCH", "NORMAL")
+        )
+        parts.append(g)
+    return _opens(pd.concat(parts, ignore_index=True))
+
+
+def bench_b(t: pd.DataFrame, P: params.Params, z_i: float = 5.0) -> pd.DataFrame:
+    """§4.15 B, physics only: single-day z of log CI vs trailing median/MAD. All days, no siblings."""
+    parts = []
+    for _p, g in t.sort_values("day").groupby("pump_id"):
+        g = g.copy()
+        g["logci"] = np.log(g.ci)
+        med = _trailing(g, "logci", P, np.median)
+        mad = _trailing(g, "logci", P, lambda w: np.median(np.abs(w - np.median(w))))
+        z = (g.logci.to_numpy() - med) / np.maximum(1.4826 * mad, 0.01)
+        g["status"] = np.where(z < -z_i, "INVESTIGATE", np.where(z < -(z_i - 2), "WATCH", "NORMAL"))
+        parts.append(g)
+    return _opens(pd.concat(parts, ignore_index=True))
+
+
+def _opens(r: pd.DataFrame) -> pd.DataFrame:
+    """incident_id for the simple benchmarks: one per run of consecutive INVESTIGATE days."""
+    r = r.sort_values(["pump_id", "day"]).reset_index(drop=True)
+    inv = r.status == "INVESTIGATE"
+    new = inv & ~(inv.groupby(r.pump_id).shift(fill_value=False))
+    r["incident_id"] = (r.pump_id + ":" + new.groupby(r.pump_id).cumsum().astype(str)).where(inv)
+    return r
+
+
+BENCHMARKS = {
+    "A": (bench_a, {}),
+    "B": (bench_b, {}),
+    "C": (None, {}),
+    "C-persistence": (None, {"persistence": False}),
+    "C-inhibition": (None, {"inhibition": False}),
+    "C-quality": (None, {"quality_gate": False}),
+}
+
+
+def g6(P: params.Params, year: int, runner=None) -> dict:
+    runner = runner or detect.run
+    out = {}
+    for st in data.STATIONS:
+        r = runner(real_table(st, f"{year + 1}-01-01"), P)
+        y = r[r.day.dt.year == year]
+        opens = y[y.status == "INVESTIGATE"].incident_id.nunique()
+        out[st] = round(opens / len(station(st).pumps) / (365 / 180), 6)
+    return out
+
+
+LOSS_BINS = [0.10, 0.20, 0.30, 0.40, 0.50]
+RAMP_BINS = [3, 7, 14, 21, 30]
+
+
+def summarize(rows: list[dict], P: params.Params, tier: str, runner=None) -> dict:
+    """reports/<tier>/summary.json, keyed by the §11.6 table rows. Floats rounded to 6 dp (G3)."""
     df = pd.DataFrame(rows)
     f1 = df[df.family == "F1"]
     head = f1[f1.headline]
     k, n = int(head.caught.sum()), len(head)
     lo, hi = wilson(k, n)
-    fe = {
-        f: f"{int(df[df.family == f].false_escalation.sum())}/{int((df.family == f).sum())}"
-        for f in ("F2", "F3", "F4", "F7")
-    }
-    fe_attr = {
-        f: f"{int(df[df.family == f].false_escalation_attributable.sum())}/{int((df.family == f).sum())}"
-        for f in ("F2", "F3", "F4", "F7")
-    }
-    g6v = g6(P, year)
+    fam = {"F2": "storm", "F3": "duty_swap", "F4": "transient", "F7": "station_shift"}
+
+    def kn(col, f):
+        d = df[df.family == f]
+        return {"k": int(d[col].sum()), "n": len(d)}
+
+    g6v = g6(P, TIERS[tier][0], runner)
     f5, f6 = df[df.family == "F5"], df[df.family == "F6"]
-    gates = {
-        "G1": bool(f5.passed.all()),
-        "G1_attributable": bool(f5.passed_attributable.all()),
-        "G2": bool(f6.passed.all()),
-        "G3": None,  # asserted by test_no_lookahead / test_determinism
-        "G4": None,  # asserted by test_high_level_fires_and_has_no_inhibition_path
-        "G5": all(v.startswith("0/") for v in fe.values()),
-        "G5_attributable": all(v.startswith("0/") for v in fe_attr.values()),
-        "G6": all(v <= 1.0 for v in g6v.values()),
-        "G7": None,  # asserted by test_g7_no_warning_run_reproduces_record
-    }
-    return {
+    fe_attr = {f: kn("false_escalation_attributable", f) for f in fam}
+    bins = []
+    f1 = f1.assign(lb=pd.cut(f1.loss, LOSS_BINS, right=False), rb=pd.cut(f1.ramp, RAMP_BINS, right=False))
+    for (lb, rb), g in f1.groupby(["lb", "rb"], observed=True):
+        bk, bn = int(g.caught.sum()), len(g)
+        blo, bhi = wilson(bk, bn)
+        bins.append(
+            {
+                "loss": [lb.left, lb.right],
+                "ramp_days": [rb.left, rb.right],
+                "k": bk,
+                "n": bn,
+                "wilson95": [round(blo, 6), round(bhi, 6)],
+                "shown": bn >= 20,
+            }
+        )
+    summary = {
         "model_version": P.version,
         "params": {k2: getattr(P, k2) for k2 in ("k", "U", "h_w", "h_i", "W", "G", "min_effect")},
-        "f1_recall": {
-            "k": k,
-            "n": n,
-            "value": round(k / n, 4) if n else None,
-            "wilson95": [round(lo, 4), round(hi, 4)],
-            "scope": "loss >= 20% and ramp >= 7 d",
-            "stations": 3,
-            "years": 1,
-        },
+        "f1_recall_loss20_ramp7": {"k": k, "n": n, "wilson95": [round(lo, 6), round(hi, 6)]},
+        "f1_recall_bins": bins,
         "lead_days": {
-            "median": round(float(f1.lead_d.median()), 2),
-            "p10": round(float(f1.lead_d.quantile(0.1)), 2),
+            "median": round(float(f1.lead_d.median()), 6),
+            "p10": round(float(f1.lead_d.quantile(0.1)), 6),
             "n": len(f1),
             "misses_as_zero": True,
         },
-        "watch_lead_days": {"median": round(float(f1.watch_lead_d.median()), 2)},
-        "f1_false_escalation_before_onset": int(f1.false_escalation.sum()),
-        "false_escalations": fe,
-        "false_escalations_attributable": fe_attr,  # excludes INVESTIGATE also present in the clean window
-        "f1_false_escalation_before_onset_attributable": int(f1.false_escalation_attributable.sum()),
-        "g6_investigate_opens_per_pump_per_180d": g6v,
-        "f5_minutes_to_offline": {
-            "median": float(f5.minutes_to_offline.median()) if len(f5) else None,
-            "max": float(f5.minutes_to_offline.max()) if len(f5) else None,
+        "false_escalations": {fam[f]: v for f, v in fe_attr.items()},
+        "false_escalations_raw": {fam[f]: kn("false_escalation", f) for f in fam},
+        "f1_investigate_before_onset": {
+            "attributable": int(f1.false_escalation_attributable.sum()),
+            "raw": int(f1.false_escalation.sum()),
         },
-        "f6_pass": f"{int(f6.passed.sum())}/{len(f6)}",
-        "gates": gates,
-        "morningside_a_dev_lead_median_d": None,  # needs station_trip replays (replay_case); not built yet
-        "runtime_s": round(runtime_s, 1),
+        "real_2022_investigate_opens_per_pump_180d": g6v,
+        "gates": {
+            "G1": bool(f5.passed_attributable.all()),
+            "G2": bool(f6.passed.all()),
+            "G5": all(v["k"] == 0 for v in fe_attr.values()),
+            "G6": all(v <= 1.0 for v in g6v.values()),
+            # G3, G4, G7 are asserted by tests (no-lookahead/determinism, HIGH_LEVEL inhibition, G7 sim)
+        },
+        "gates_raw": {
+            "G1": bool(f5.passed.all()),
+            "G5": all(df[df.family == f].false_escalation.sum() == 0 for f in fam),
+        },
+        "f5_minutes_to_offline_max": float(f5.minutes_to_offline.max()) if len(f5) else None,
+        "morningside_a_dev_lead_median_d": None,  # needs station_trip replays; next PR
+        "cases_dropped": DROPPED.get(tier, {}),
     }
+    return summary
+
+
+def evaluation_report(results: dict, P: params.Params) -> dict:
+    """reports/evaluation.json in the §7 EvaluationReport shape (#33)."""
+    bench = {}
+    for name, (rows, s) in results.items():
+        df = pd.DataFrame(rows)
+        f1 = df[df.family == "F1"]
+        head = f1[f1.headline]
+
+        def kn(f, df=df):
+            d = df[df.family == f]
+            return {"k": int(d.false_escalation_attributable.sum()), "n": len(d)}
+
+        bench[name] = {
+            "caught": {"k": int(head.caught.sum()), "n": len(head)},
+            "median_lead_days": round(float(f1.lead_d.median()), 6),
+            "false_storm": kn("F2"),
+            "false_duty": kn("F3"),
+            "false_transient": kn("F4"),
+            "real_alerts_per_pump_6mo": round(
+                float(np.mean(list(s["real_2022_investigate_opens_per_pump_180d"].values()))), 6
+            ),
+        }
+    c = results["C"][1]
+    proxy = json.loads((ROOT / "reports" / "proxy_events.json").read_text())
+    allst = json.loads((ROOT / "reports" / "proxy_events_all_stations.json").read_text())
+    rows = [{"tier": "dev", "group": "demo_3", **proxy["demo_stations"]["counts"]["dev"]}]
+    untouched = allst.get("untouched_stations", {}).get("counts", {}).get("dev")
+    if untouched:
+        rows.append({"tier": "dev", "group": "untouched_21", **untouched})
+    return {
+        "model_version": f"{P.version} (dev, untuned)" if not P.version.endswith("tuned") else P.version,
+        "code_version": _code_version(),
+        "benchmarks": bench,
+        "heatmap": [
+            {"loss": b["loss"][0], "ramp": b["ramp_days"][0], "k": b["k"], "n": b["n"]}
+            for b in c["f1_recall_bins"]
+        ],
+        "proxy": rows,
+        "test_scored": len(json.loads(TEST_LOCK.read_text())) if TEST_LOCK.exists() else 0,
+        "gates": c["gates"],
+    }
+
+
+def _code_version() -> str:
+    import subprocess
+
+    try:
+        sha = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=ROOT
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--", "backend"], capture_output=True, text=True, cwd=ROOT
+        ).stdout.strip()
+        return (sha + ("-dirty" if dirty else "")) or "unknown"
+    except OSError:
+        return "unknown"
+
+
+def _jsonable(o):
+    return o.item() if hasattr(o, "item") else str(o)
 
 
 def _build_one(c: Case):
     return c, build(c)
 
 
-def run(tier: str = "dev", P: params.Params | None = None, workers: int | None = None):
-    if tier == "test" and os.environ.get("FREEZE") != "1":
-        raise SystemExit("test tier is scored once per frozen version: set FREEZE=1 (§6.5)")
+TEST_LOCK = ROOT / "reports" / "test" / "scored.json"
+
+
+def run(tier: str = "dev", P: params.Params | None = None, workers: int | None = None, families=FAMILIES):
     P = P or params.load()
-    t0 = time.time()
-    cases = make_cases(tier)
+    if tier == "test":  # §6.5: once per frozen params version, aggregates only
+        scored = json.loads(TEST_LOCK.read_text()) if TEST_LOCK.exists() else {}
+        if P.version in scored and os.environ.get("FORCE") != "1":
+            raise SystemExit(f"test tier already scored for {P.version}; FORCE=1 overrides (§6.5)")
+    cases = make_cases(tier, families)
     with ProcessPoolExecutor(max_workers=workers) as ex:
         built = list(ex.map(_build_one, cases, chunksize=4))
-    rows = [score(c, b, P) for c, b in built]
-    summary = summarize(rows, P, TIERS[tier][0], time.time() - t0)
+    results = {}
+    for name, (fn, switches) in BENCHMARKS.items():
+        Pb = P.with_(**switches)
+        runner = (lambda t, p, fn=fn: fn(t, p)) if fn else None
+        rows = [score(c, b, Pb, runner=runner) for c, b in built]
+        results[name] = (rows, summarize(rows, Pb, tier, runner))
+    summary = results["C"][1]
     out = ROOT / "reports" / tier
     out.mkdir(parents=True, exist_ok=True)
-    (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True, default=str) + "\n")
-    pd.DataFrame(rows).to_csv(out / "cases.csv", index=False)
-    return summary, rows, built
-
-
-if __name__ == "__main__":
-    s, _, _ = run(sys.argv[1] if len(sys.argv) > 1 else "dev")
-    print(json.dumps(s, indent=2, default=str))
+    (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True, default=_jsonable) + "\n")
+    if tier == "dev":
+        pd.DataFrame(results["C"][0]).round(6).to_csv(out / "cases.csv", index=False)
+        report = evaluation_report(results, P)
+        (ROOT / "reports" / "evaluation.json").write_text(
+            json.dumps(report, indent=2, sort_keys=True, default=_jsonable) + "\n"
+        )
+    else:
+        scored = json.loads(TEST_LOCK.read_text()) if TEST_LOCK.exists() else {}
+        scored[P.version] = pd.Timestamp.now(tz="UTC").isoformat()
+        TEST_LOCK.write_text(json.dumps(scored, indent=2, sort_keys=True) + "\n")
+    return summary, results, built
