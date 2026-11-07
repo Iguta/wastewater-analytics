@@ -577,7 +577,8 @@ StormOutlook:    issued_on, forecast_rain_48h_in, max_gust_48h_mph, storm_ahead:
 StationAssessment: station_id, display_name, as_of_utc, origin, scenario_id | None, status, quality,
                  pumps: list[PumpState], queue: list[Finding], safety: list[Finding], rain: RainContext,
                  storm: StormOutlook | None, missing_evidence: list[str], explanation, recommended_action, provenance
-TraceRow:        day, quality, valid_cycles, excluded: dict[str, int] (cycles excluded, by §3.5 flag), ci, base_median, base_mad, z, common, u, cusum, status, rain_mm | None
+TraceRow:        day, quality, valid_cycles, excluded: dict[str, int] (cycles excluded, by §3.5 flag), ci, base_median, base_mad, z, common, u, cusum, status, rain_mm | None,
+                 run_median_s | None, expected_run_s | None
 Transition:      on: date, from_status, to_status, reason
 RawEvent:        ts, pump_id, state: Literal["ON", "OFF"], signal_id
 WorkOrder:       title, station_id, pump_id | None, priority, requested_by = "Dragonfly draft - needs human review",
@@ -596,6 +597,12 @@ StationInfo:     station_id, display_name, pumps: list[str], origin, scenario_id
                  as_of_min: datetime, as_of_max: datetime, outage_windows: list[tuple[datetime, datetime]]
                  (real data gaps to mark on the scrubber; the 2023-08-17..20 gap at least)
 StationsResponse: stations: list[StationInfo], source_hash, model_version
+Fact:            label, value, status: Literal["VERIFIED", "UNVERIFIED"], confidence: int (0–100), source, source_url | None
+VariantCard:     variant: Literal["A", "B"], scenario_id (e.g. "bloomington_morningside_2024_04_11:A"), name, confidence: int,
+                 reason, detectability: Literal["PREDICTABLE_DAYS_AHEAD", "DETECTABLE_AT_ONSET", "NOT_DETECTABLE"], failure_at: datetime
+ScenarioCard:    id, title, version, scenario_hash, facts: list[Fact], outcome_facts: list[Fact], variants: list[VariantCard]
+ScenariosResponse: scenarios: list[ScenarioCard], dev_cases: list[str] (the Lab's fixed dev case ids, §5.6)
+  (Shape proposed by Praneetha in frontend/src/types.ts and adopted as is.)
 ToolError:       code: ErrorCode, message, allowed: list[str]
 ```
 
@@ -951,7 +958,7 @@ At 15:15, Dhruv commits `.verify-strict`; from then on, a skip is a failure. Thi
    - a 500 from the API (route interception) shows the error state and banner;
    - at 390×844, `scrollWidth ≤ innerWidth` and the drawer is full-screen;
    - the "Moved up: storm ahead" row appears;
-   - a DOM regex checks that every gallons figure is preceded by "Simulated:";
+   - a DOM regex checks that every gallons figure is either preceded by "Simulated:" or is a record figure followed by "(record)" next to a VERIFIED chip. The record's own 14,310 and 25,000 gal are real and must not be labeled simulated.
    - a DOM scan finds no banned word (§10.7);
    - the A/B switch changes the replay;
    - Copy puts the work order on the clipboard;
