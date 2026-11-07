@@ -47,3 +47,12 @@ def test_ids_dates_and_labels_are_ignored():
     assert check(
         "P3 at 45385 on 2031-02-09T00:00:00Z, alert REAL:45385:P3:X:2031-02-09, case F2-0.", [TOOL]
     ).passed
+
+
+def test_status_must_match_the_pump_it_names():
+    tools = [
+        '{"pumps": [{"pump_id": "P1", "status": "NORMAL"}, {"pump_id": "P2", "status": "INVESTIGATE"}], "status": "INVESTIGATE"}'
+    ]
+    assert not check("P1 is INVESTIGATE.", tools).passed
+    assert check("P2 is INVESTIGATE. P1 is NORMAL.", tools).passed
+    assert check("The station is INVESTIGATE.", tools).passed

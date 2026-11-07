@@ -15,6 +15,8 @@ IGNORED = re.compile(
     rf"|\b(?:{'|'.join(data.STATIONS)})\b|\bP[1-4]\b"
 )
 STATUS = re.compile(rf"\b(?:{'|'.join(get_args(Status))})\b")
+PUMP_STATUS = re.compile(r'"pump_id":\s*"(P[1-4])",\s*"status":\s*"([A-Z_]+)"')
+SENTENCE = re.compile(r"(?<!\d)\.(?!\d)|[;\n]")
 FORBIDDEN = ["probability", "will fail", "confirmed", "guarantee", "definitely", "prevent"]
 
 
@@ -27,9 +29,17 @@ def check(answer: str, tool_results: list[str]) -> Grounding:
     results = "\n".join(tool_results)
     tool_values = [float(n) for n in re.findall(NUMBER, results)]
     bare = IGNORED.sub(" ", answer)
-    # shortcut: a status word is checked against the statuses the tools returned, not the station or pump it names; match per subject when evals show a swap
     returned = set(STATUS.findall(results))
-    wrong = [s for s in STATUS.findall(bare) if s not in returned]
+    pump_status: dict[str, set[str]] = {}
+    for pump, status in PUMP_STATUS.findall(results):
+        pump_status.setdefault(pump, set()).add(status)
+    wrong = []
+    for m in STATUS.finditer(answer):
+        # A status word must match the pump it names (the last P1-P4 earlier in the same sentence), else any returned status.
+        named = re.findall(r"\bP[1-4]\b", SENTENCE.split(answer[: m.start()])[-1])
+        allowed = pump_status.get(named[-1], returned) if named else returned
+        if m.group() not in allowed:
+            wrong.append(m.group())
     unmatched = [a for a in re.findall(NUMBER, bare) if not _matches(a, tool_values)]
     phrases = [p for p in FORBIDDEN if p in answer.lower()]
     return Grounding(
