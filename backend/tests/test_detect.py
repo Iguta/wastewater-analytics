@@ -48,22 +48,22 @@ def _daily(ci_by_pump: dict[str, list[float]]) -> pd.DataFrame:
     for pump, cis in ci_by_pump.items():
         for d, ci in zip(days, cis):
             rows.append(
-                dict(
-                    station_id="9",
-                    pump_id=pump,
-                    day=d,
-                    runs=50,
-                    valid_cycles=50,
-                    overlap_share=0.0,
-                    invalid_share=0.0,
-                    offline_hours=0.0,
-                    ci=ci,
-                    run_median_s=100.0,
-                    fill_median_s=500.0,
-                    rain_mm=0.0,
-                    level_flags=[],
-                    quality="SUFFICIENT",
-                )
+                {
+                    "station_id": "9",
+                    "pump_id": pump,
+                    "day": d,
+                    "runs": 50,
+                    "valid_cycles": 50,
+                    "overlap_share": 0.0,
+                    "invalid_share": 0.0,
+                    "offline_hours": 0.0,
+                    "ci": ci,
+                    "run_median_s": 100.0,
+                    "fill_median_s": 500.0,
+                    "rain_mm": 0.0,
+                    "level_flags": [],
+                    "quality": "SUFFICIENT",
+                }
             )
     return pd.DataFrame(rows)
 
