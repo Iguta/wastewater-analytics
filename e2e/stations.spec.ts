@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { axeClean, copyClean } from './checks';
 
-const DAY = '2022-06-03'; // 44371 precursor: P1 is INVESTIGATE
+const DAY = '2022-06-05'; // 44371 precursor: P1 is INVESTIGATE under v1 and v2 (v2 opens it 06-04)
 const day = (d: string, n: number) => new Date(Date.parse(d) + n * 864e5).toISOString().slice(0, 10);
 
 const open = async (page: Page) => {
@@ -41,17 +41,19 @@ test.describe('frame', () => {
 
   test('arrow keys update the aria-live date', async ({ page }) => {
     await open(page);
+    const start = await page.getByTestId('scrubber-live-date').innerText();
     await page.getByRole('slider', { name: 'Scrub through days' }).press('ArrowRight');
-    await expect(page.getByTestId('scrubber-live-date')).toHaveText(day(DAY, 1));
+    await expect(page.getByTestId('scrubber-live-date')).toHaveText(day(start, 1));
   });
 
   test('reduced motion: Replay does not auto-advance', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await open(page);
+    const next = day(await page.getByTestId('scrubber-live-date').innerText(), 1);
     await page.getByTestId('replay-toggle').click();
-    await expect(page.getByTestId('scrubber-live-date')).toHaveText(day(DAY, 1));
+    await expect(page.getByTestId('scrubber-live-date')).toHaveText(next);
     await page.waitForTimeout(2500);
-    await expect(page.getByTestId('scrubber-live-date')).toHaveText(day(DAY, 1));
+    await expect(page.getByTestId('scrubber-live-date')).toHaveText(next);
   });
 });
 
