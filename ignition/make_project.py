@@ -1,19 +1,30 @@
 """Write a read-only Dragonfly Perspective project (SCADA-overlay layout) into an Ignition 8.3 data/projects folder.
 
-Usage: python3 ignition/make_project.py /usr/local/bin/ignition/data/projects   (then restart the gateway)
+Usage: python3 ignition/make_project.py /usr/local/bin/ignition/data/projects [--force] [--api URL]   (then restart the gateway)
 Open:  http://localhost:8088/data/perspective/client/Dragonfly
 
 shortcut: the view's bindings call the REST API directly (system.net.httpGet), not the §10.8 gateway timer that
 writes memory tags; switch the custom.a binding to the [default]Dragonfly tags once that path is running.
-Read-only either way: it only GETs /api/assess and writes no tags.
+Read-only either way: it only GETs /api/assess and /api/evidence and writes no tags.
 """
-import json, sys
+import argparse, json, shutil
 from pathlib import Path
 
-root = Path(sys.argv[1]) / "Dragonfly"
-API = "http://127.0.0.1:8000"
+ap = argparse.ArgumentParser(description="Write the Dragonfly Perspective project into an Ignition data/projects folder.")
+ap.add_argument("projects_dir", help="for example /usr/local/bin/ignition/data/projects")
+ap.add_argument("--api", default="http://127.0.0.1:8000", help="Dragonfly API base (Docker gateway: http://host.docker.internal:8000)")
+ap.add_argument("--force", action="store_true", help="replace an existing Dragonfly project, including Designer edits")
+args = ap.parse_args()
+root = Path(args.projects_dir) / "Dragonfly"
+API = args.api.rstrip("/")
+if root.exists() and not args.force:
+    raise SystemExit("%s exists; rerun with --force to replace it (Designer edits will be lost)" % root)
+if root.exists():
+    shutil.rmtree(root)
 TS = "2026-11-07T21:30:00Z"
 INK, MUTED, PANEL, LINE, ADD, ADD_LIGHT = "#1B1F23", "#4A5560", "#F4F5F6", "#B8BEC4", "#2D4A6B", "#9CC0F0"
+WORDS = ("case({v}, 'INVESTIGATE', 'Investigate: inspect this pump', 'WATCH', 'Watch: capacity is dropping', "
+         "'INSUFFICIENT_EVIDENCE', 'Not enough data', 'SOURCE_OFFLINE', 'Source offline', 'NORMAL', 'Normal', {v})")
 STATUS_BG = ("case({v}, 'INVESTIGATE', '#B42318', 'WATCH', '#B54708', 'SOURCE_OFFLINE', '#3B434B', "
              "'INSUFFICIENT_EVIDENCE', '#6B7280', '#8A939B')")
 
@@ -62,7 +73,7 @@ def panel(name, title, sub, children, dashed=False, basis="auto", grow=0):
 
 def repeater(name, view_path, transform, source):
     return {"type": "ia.display.flex-repeater", "meta": {"name": name}, "position": {"shrink": 0},
-            "props": {"path": view_path, "direction": "column", "elementPosition": {"basis": "125px", "shrink": 0, "grow": 0},
+            "props": {"path": view_path, "direction": "column", "elementPosition": {"basis": "165px", "shrink": 0, "grow": 0},
                       "style": {"gap": "10px"}, "instances": []},
             "propConfig": {"props.instances": prop(source, transform)}}
 
@@ -75,8 +86,9 @@ def view_doc(rootnode, params=None, custom=None, prop_config=None, size=(900, 13
 
 
 FETCH = (
+    "\timport urllib\n"
     "\tst, asof = value.split('|')[0], value.split('|')[1]\n"
-    "\turl = '%s/api/assess?station_id=' + st + '&as_of_utc=' + asof\n"
+    "\turl = '%s/api/assess?station_id=' + urllib.quote(st) + '&as_of_utc=' + urllib.quote(asof)\n"
     "\ttry:\n"
     "\t\treturn system.util.jsonDecode(system.net.httpGet(url, 5000, 15000))\n"
     "\texcept Exception as e:\n"
@@ -101,7 +113,7 @@ WARNINGS = (
     "\t\t\t'title': (f.get('pump_id') or 'Station') + ': ' + f['type'].replace('_', ' ').lower(),\n"
     "\t\t\t'summary': f.get('summary', ''),\n"
     "\t\t\t'opened': 'Opened %s, flagged %s days' % (f.get('opened_on'), f.get('days_open')),\n"
-    "\t\t\t'check': ('First check: ' + checks[0]) if checks else ''})\n"
+    "\t\t\t'check': ('First check: ' + checks[0]) if checks else '', 'as_of': str(self.view.custom.as_of)})\n"
     "\treturn out"
 )
 
@@ -111,39 +123,56 @@ SAFETY = (
     "\treturn '\\n'.join(['%s  %s  (since %s)' % (f['status'].replace('_', ' '), f.get('summary', ''), f.get('since_utc', '')) for f in value])"
 )
 
-# --- Embedded card views -------------------------------------------------------------------------------------------
-pump_card = view_doc(flex("root", [
-    flex("Equip", [
-        label("Id", "", {"fontWeight": "700", "fontSize": "18px"}, {"props.text": prop("view.params.pump_id")}),
-        label("Runs", "", {"fontSize": "13px", "color": MUTED},
-              {"props.text": expr("'Runs today: ' + {view.params.runs}")}),
-    ], style={"border": "1px solid #AEB5BC", "padding": "6px 14px", "backgroundColor": "#FFFFFF", "gap": "2px"}),
-    flex("Added", [
-        label("Tag", "ADDED BY EARLY WARNING", {"fontSize": "11px", "letterSpacing": "0.06em", "color": ADD, "fontWeight": "700"}),
-        label("Health", "", {"fontSize": "13px", "fontWeight": "700", "color": "#FFFFFF", "padding": "2px 8px"},
-              {"props.text": expr("{view.params.pump_id} + ' HEALTH: ' + replace({view.params.status}, '_', ' ')"),
-               "props.style.backgroundColor": expr(STATUS_BG.format(v="{view.params.status}"))}),
-        label("Change", "", {"fontSize": "13px"}, {"props.text": prop("view.params.change")}),
-        label("Ev", "", {"fontSize": "12px", "color": MUTED},
-              {"props.text": expr("'Evidence: ' + {view.params.evidence}")}),
-    ], style={"border": "2px dashed " + ADD_LIGHT, "padding": "6px 12px", "gap": "3px"}),
-], style={"gap": "6px", "width": "220px"}),
-    params={"pump_id": "", "status": "", "runs": 0, "change": "", "evidence": ""}, size=(200, 230))
 
+WORK_ORDER = (
+    "\timport urllib\n"
+    "\tp = self.view.params\n"
+    "\turl = '%s/api/evidence?alert_id=' + urllib.quote(str(p.alert_id)) + '&as_of_utc=' + urllib.quote(str(p.as_of))\n"
+    "\ttry:\n"
+    "\t\tw = system.util.jsonDecode(system.net.httpGet(url, 5000, 15000))['work_order']\n"
+    "\t\tlines = ['WORK ORDER (DRAFT)', w['title'], '', 'Station: %%s   Pump: %%s   Priority: %%s' %% (w['station_id'], w.get('pump_id') or '-', w['priority']),\n"
+    "\t\t\t'Requested by: ' + w['requested_by'], '', 'Checks:']\n"
+    "\t\tlines += ['  [ ] ' + c for c in w['checks']]\n"
+    "\t\tlines += ['', 'Evidence: ' + w['evidence_alert_id'], '', 'Caveats:'] + ['  - ' + c for c in w['caveats']]\n"
+    "\t\ttext = '\\n'.join(lines)\n"
+    "\texcept Exception as e:\n"
+    "\t\ttext = 'Could not load the work order from the Dragonfly API: ' + str(e)\n"
+    "\tsystem.perspective.openPopup('workorder', 'Cards/WorkOrder', params={'text': text}, title='Draft work order',\n"
+    "\t\tmodal=True, showCloseIcon=True, draggable=True, resizable=True, position={'width': 620, 'height': 560})"
+) % API
+
+work_order_view = view_doc(flex("root", [
+    label("Head", "Draft work order. Review and edit, then copy it into your maintenance system.",
+          {"fontSize": "13px", "color": MUTED}),
+    {"type": "ia.input.text-area", "meta": {"name": "Text"}, "position": {"grow": 1, "basis": "380px"},
+     "props": {"text": "", "style": {"fontFamily": "monospace", "fontSize": "13px"}},
+     "propConfig": {"props.text": prop("view.params.text")}},
+    label("Foot", "Dragonfly never sends this anywhere and writes nothing to SCADA. A person decides what happens next.",
+          {"fontSize": "12px", "color": MUTED}),
+], style={"padding": "16px", "gap": "10px", "backgroundColor": PANEL}),
+    params={"text": ""}, size=(520, 600))
+
+# --- Embedded card views -------------------------------------------------------------------------------------------
 warning_card = view_doc(flex("root", [
     flex("Top", [
         label("Chip", "", {"color": "#FFFFFF", "fontSize": "12px", "fontWeight": "700", "padding": "2px 10px",
                            "letterSpacing": "0.04em"},
-              {"props.text": expr("replace({view.params.status}, '_', ' ')"),
+              {"props.text": expr(WORDS.format(v="{view.params.status}")),
                "props.style.backgroundColor": expr(STATUS_BG.format(v="{view.params.status}"))}),
         label("Title", "", {"fontWeight": "600", "fontSize": "15px"}, {"props.text": prop("view.params.title")}),
     ], direction="row", alignItems="center", style={"gap": "10px"}),
     label("Summary", "", {"fontSize": "14px"}, {"props.text": prop("view.params.summary")}),
     label("Opened", "", {"fontSize": "13px", "color": MUTED}, {"props.text": prop("view.params.opened")}),
     label("Check", "", {"fontSize": "13px", "fontWeight": "600"}, {"props.text": prop("view.params.check")}),
-    label("Id", "", {"fontSize": "11px", "color": MUTED, "fontFamily": "monospace"}, {"props.text": prop("view.params.alert_id")}),
+    flex("Bottom", [
+        label("Id", "", {"fontSize": "11px", "color": MUTED, "fontFamily": "monospace"}, {"props.text": prop("view.params.alert_id")}, grow=1),
+        {"type": "ia.input.button", "meta": {"name": "WorkOrder"}, "position": {"basis": "170px", "shrink": 0},
+         "props": {"text": "Draft work order", "style": {"backgroundColor": "#FFFFFF", "color": ADD, "border": "1px solid " + ADD,
+                                                          "fontSize": "13px", "fontWeight": "600"}},
+         "events": {"component": {"onActionPerformed": {"type": "script", "scope": "G", "config": {"script": WORK_ORDER}}}}},
+    ], direction="row", alignItems="center", style={"gap": "10px", "marginTop": "4px"}),
 ], style={"backgroundColor": "#FFFFFF", "border": "1px solid " + LINE, "padding": "12px 14px", "gap": "4px"}),
-    params={"status": "", "title": "", "summary": "", "opened": "", "check": "", "alert_id": ""}, size=(125, 420))
+    params={"status": "", "title": "", "summary": "", "opened": "", "check": "", "alert_id": "", "as_of": ""}, size=(165, 420))
 
 # --- Main view -----------------------------------------------------------------------------------------------------
 A = "{view.custom.a"
@@ -179,7 +208,7 @@ header = flex("Header", [
 ], direction="row", wrap="wrap", justify="space-between", alignItems="center",
     style={"backgroundColor": "#2B3238", "padding": "10px 32px", "gap": "12px 32px"})
 
-concept = label("Concept", "What an operator sees inside the utility's own SCADA. The utility's screen stays as it is. "
+concept = label("Concept", "Mock-up of a utility SCADA screen with Dragonfly added. The utility's own graphics stay as they are. "
                 "Dragonfly additions are outlined in dashed blue and labeled. Display only.",
                 {"fontSize": "13px", "color": "#3B434B", "padding": "12px 32px 0"})
 
@@ -219,16 +248,19 @@ for p, y in zip(pumps, ys):
         line1 = 'Capacity %+.0f%% vs normal' % c if c is not None else 'Capacity change unknown'
         line2 = ('Flagged %s days' % days[p['pump_id']]) if days.get(p['pump_id']) else ('Evidence: ' + p.get('quality', ''))
         o.append('<text x="610" y="%d" font-size="11" font-weight="700" letter-spacing="0.6" fill="#2D4A6B">ADDED BY EARLY WARNING</text>' % (tag_y + 12))
-        o.append('<rect x="610" y="%d" width="180" height="96" fill="#FFFFFF" stroke="#2D4A6B" stroke-width="2" stroke-dasharray="6 4"/>' % (tag_y + 20))
+        o.append('<rect x="610" y="%d" width="180" height="112" fill="#FFFFFF" stroke="#2D4A6B" stroke-width="2" stroke-dasharray="6 4"/>' % (tag_y + 20))
         o.append('<text x="622" y="%d" font-size="11" font-weight="700" letter-spacing="0.6" fill="#3B434B">%s HEALTH</text>' % (tag_y + 40, esc(p.get('pump_id'))))
-        lbl = st.replace('_', ' ')
-        o.append('<rect x="622" y="%d" width="%d" height="22" fill="%s"/>' % (tag_y + 48, 30 + 8 * len(lbl), C[st]))
+        lbl, hint = {'INVESTIGATE': ('Investigate', 'Inspect this pump'), 'WATCH': ('Watch', 'Capacity is dropping'),
+                     'SOURCE_OFFLINE': ('Source offline', 'No data from the station'),
+                     'INSUFFICIENT_EVIDENCE': ('Not enough data', 'Evidence too thin to judge')}[st]
+        o.append('<rect x="622" y="%d" width="%d" height="22" fill="%s"/>' % (tag_y + 48, 34 + 8 * len(lbl), C[st]))
         o.append('<polygon points="634,%d 641,%d 627,%d" fill="#FFFFFF"/>' % (tag_y + 53, tag_y + 65, tag_y + 65))
         o.append('<text x="647" y="%d" font-size="12" font-weight="700" fill="#FFFFFF">%s</text>' % (tag_y + 64, esc(lbl)))
-        o.append('<text x="622" y="%d" font-size="12" fill="#1B1F23">%s</text>' % (tag_y + 88, esc(line1)))
-        o.append('<text x="622" y="%d" font-size="12" font-weight="600" fill="#1B1F23">%s</text>' % (tag_y + 106, esc(line2)))
+        o.append('<text x="622" y="%d" font-size="12" font-weight="700" fill="#1B1F23">%s</text>' % (tag_y + 88, esc(hint)))
+        o.append('<text x="622" y="%d" font-size="12" fill="#1B1F23">%s</text>' % (tag_y + 104, esc(line1)))
+        o.append('<text x="622" y="%d" font-size="12" fill="#1B1F23">%s</text>' % (tag_y + 120, esc(line2)))
         o.append('<line x1="548" y1="%d" x2="610" y2="%d" stroke="#2D4A6B" stroke-width="2" stroke-dasharray="4 3"/>' % (y - 20, tag_y + 68))
-        tag_y += 118
+        tag_y += 134
 if not pumps:
     o.append('<text x="520" y="240" font-size="13" fill="#4A5560" text-anchor="middle">No pump data</text>')
 o.append('<text x="20" y="412" font-size="12" fill="#4A5560">Layout is illustrative. Pump tags use live Dragonfly results.</text></svg>')
@@ -240,16 +272,17 @@ drawing = {"type": "ia.display.image", "meta": {"name": "Drawing"}, "position": 
            "props": {"fit": {"mode": "contain"}, "style": {"backgroundColor": "#FFFFFF", "border": "1px solid " + LINE}},
            "propConfig": {"props.source": prop("view.custom.a", SVG)}}
 
-process = panel("Process", "Process view, as drawn in the utility's SCADA",
-                "Pump health tags are added by Dragonfly. Everything else is the utility's own screen.", [
+process = panel("Process", "Process view (mock-up of the utility's SCADA screen)",
+                "Mock-up of a process screen. Pump health tags are added by Dragonfly; everything else stands in for the utility's graphics.", [
     drawing,
     flex("Legend", [
         label("L1", "\u25ad  Existing SCADA, unchanged", {"fontSize": "13px", "color": "#3B434B"}),
         label("L2", "\u2505  Added by Early Warning, display only", {"fontSize": "13px", "color": ADD}),
     ], direction="row", style={"gap": "24px"}),
     label("Rain", "", {"fontSize": "13px", "color": "#3B434B"},
-          {"props.text": expr("'Rain: ' + numberFormat(coalesce(%s.rain.last_72h_mm}, 0), '0.0') + ' mm in the last 72 h. "
-                              "Pumping capacity is not affected by rain.'" % A)}),
+          {"props.text": expr("if(isNull(%s.rain.last_72h_mm}), 'Rain data incomplete.', 'Rain: ' + "
+                              "numberFormat(%s.rain.last_72h_mm}, '0.0') + ' mm in the last 72 h. "
+                              "This measure is not affected by rain.')" % (A, A))}),
 ], basis="720px", grow=2)
 
 alarms = panel("Alarms", "Alarm list", "SCADA-equivalent safety checks (high level, source silent). Never suppressed.", [
@@ -258,7 +291,9 @@ alarms = panel("Alarms", "Alarm list", "SCADA-equivalent safety checks (high lev
 
 warnings = panel("Warnings", "Early warnings", "Added by the layer. Shown beside alarms, never mixed into them.", [
     label("Empty", "", {"fontSize": "14px", "color": MUTED},
-          {"props.text": expr("if(len(%s.queue}) = 0, 'No pumps need attention as of ' + {view.custom.as_of} + '.', '')" % A),
+          {"props.text": expr("if(%s.quality} = 'SUFFICIENT', 'No pumps need attention as of ' + {view.custom.as_of} + '.', "
+                              "'Nothing flagged, but evidence is ' + if(%s.quality} = 'PARTIAL', 'Partial', 'Not enough data') + '.')"
+                              % (A, A)),
            "position.display": expr("len(%s.queue}) = 0" % A)}),
     repeater("Cards", "Cards/WarningCard", WARNINGS, "view.custom.a.queue"),
     label("Expl", "", {"fontSize": "13px", "color": "#3B434B"}, {"props.text": expr("coalesce(%s.explanation}, '')" % A)}),
@@ -300,7 +335,7 @@ main = view_doc(flex("root", [
     prop_config={"custom.a": expr("{view.custom.station} + '|' + {view.custom.as_of} + '|' + toStr(now(60000))", FETCH)})
 
 persp = root / "com.inductiveautomation.perspective"
-for name, doc in (("Dragonfly", main), ("Cards/PumpCard", pump_card), ("Cards/WarningCard", warning_card)):
+for name, doc in (("Dragonfly", main), ("Cards/WarningCard", warning_card), ("Cards/WorkOrder", work_order_view)):
     d = persp / "views" / name
     d.mkdir(parents=True, exist_ok=True)
     (d / "view.json").write_text(json.dumps(doc, indent=2))
