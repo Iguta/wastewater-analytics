@@ -1,55 +1,343 @@
 {
-  "f1_false_escalation_before_onset": 7,
-  "f1_false_escalation_before_onset_attributable": 0,
-  "f1_recall": {
-    "k": 122,
-    "n": 123,
-    "scope": "loss >= 20% and ramp >= 7 d",
-    "stations": 3,
-    "value": 0.9919,
+  "cases_dropped": {},
+  "f1_investigate_before_onset": {
+    "attributable": 0,
+    "raw": 0
+  },
+  "f1_recall_bins": [
+    {
+      "k": 9,
+      "loss": [
+        0.1,
+        0.2
+      ],
+      "n": 10,
+      "ramp_days": [
+        3,
+        7
+      ],
+      "shown": false,
+      "wilson95": [
+        0.595844,
+        0.982124
+      ]
+    },
+    {
+      "k": 12,
+      "loss": [
+        0.1,
+        0.2
+      ],
+      "n": 12,
+      "ramp_days": [
+        7,
+        14
+      ],
+      "shown": false,
+      "wilson95": [
+        0.757499,
+        1.0
+      ]
+    },
+    {
+      "k": 16,
+      "loss": [
+        0.1,
+        0.2
+      ],
+      "n": 16,
+      "ramp_days": [
+        14,
+        21
+      ],
+      "shown": false,
+      "wilson95": [
+        0.806387,
+        1.0
+      ]
+    },
+    {
+      "k": 13,
+      "loss": [
+        0.1,
+        0.2
+      ],
+      "n": 15,
+      "ramp_days": [
+        21,
+        30
+      ],
+      "shown": false,
+      "wilson95": [
+        0.621175,
+        0.96264
+      ]
+    },
+    {
+      "k": 15,
+      "loss": [
+        0.2,
+        0.3
+      ],
+      "n": 15,
+      "ramp_days": [
+        3,
+        7
+      ],
+      "shown": false,
+      "wilson95": [
+        0.796111,
+        1.0
+      ]
+    },
+    {
+      "k": 9,
+      "loss": [
+        0.2,
+        0.3
+      ],
+      "n": 9,
+      "ramp_days": [
+        7,
+        14
+      ],
+      "shown": false,
+      "wilson95": [
+        0.700847,
+        1.0
+      ]
+    },
+    {
+      "k": 13,
+      "loss": [
+        0.2,
+        0.3
+      ],
+      "n": 13,
+      "ramp_days": [
+        14,
+        21
+      ],
+      "shown": false,
+      "wilson95": [
+        0.771898,
+        1.0
+      ]
+    },
+    {
+      "k": 15,
+      "loss": [
+        0.2,
+        0.3
+      ],
+      "n": 15,
+      "ramp_days": [
+        21,
+        30
+      ],
+      "shown": false,
+      "wilson95": [
+        0.796111,
+        1.0
+      ]
+    },
+    {
+      "k": 7,
+      "loss": [
+        0.3,
+        0.4
+      ],
+      "n": 7,
+      "ramp_days": [
+        3,
+        7
+      ],
+      "shown": false,
+      "wilson95": [
+        0.645661,
+        1.0
+      ]
+    },
+    {
+      "k": 16,
+      "loss": [
+        0.3,
+        0.4
+      ],
+      "n": 17,
+      "ramp_days": [
+        7,
+        14
+      ],
+      "shown": false,
+      "wilson95": [
+        0.730175,
+        0.98954
+      ]
+    },
+    {
+      "k": 8,
+      "loss": [
+        0.3,
+        0.4
+      ],
+      "n": 8,
+      "ramp_days": [
+        14,
+        21
+      ],
+      "shown": false,
+      "wilson95": [
+        0.675584,
+        1.0
+      ]
+    },
+    {
+      "k": 19,
+      "loss": [
+        0.3,
+        0.4
+      ],
+      "n": 20,
+      "ramp_days": [
+        21,
+        30
+      ],
+      "shown": true,
+      "wilson95": [
+        0.763864,
+        0.991119
+      ]
+    },
+    {
+      "k": 11,
+      "loss": [
+        0.4,
+        0.5
+      ],
+      "n": 11,
+      "ramp_days": [
+        3,
+        7
+      ],
+      "shown": false,
+      "wilson95": [
+        0.74116,
+        1.0
+      ]
+    },
+    {
+      "k": 6,
+      "loss": [
+        0.4,
+        0.5
+      ],
+      "n": 6,
+      "ramp_days": [
+        7,
+        14
+      ],
+      "shown": false,
+      "wilson95": [
+        0.609657,
+        1.0
+      ]
+    },
+    {
+      "k": 14,
+      "loss": [
+        0.4,
+        0.5
+      ],
+      "n": 14,
+      "ramp_days": [
+        14,
+        21
+      ],
+      "shown": false,
+      "wilson95": [
+        0.784683,
+        1.0
+      ]
+    },
+    {
+      "k": 12,
+      "loss": [
+        0.4,
+        0.5
+      ],
+      "n": 12,
+      "ramp_days": [
+        21,
+        30
+      ],
+      "shown": false,
+      "wilson95": [
+        0.757499,
+        1.0
+      ]
+    }
+  ],
+  "f1_recall_loss20_ramp7": {
+    "k": 112,
+    "n": 114,
     "wilson95": [
-      0.9554,
-      0.9986
-    ],
-    "years": 1
+      0.938281,
+      0.995176
+    ]
   },
-  "f5_minutes_to_offline": {
-    "max": 9.0,
-    "median": 9.0
-  },
-  "f6_pass": "30/30",
+  "f5_minutes_to_offline_max": 9.0,
   "false_escalations": {
-    "F2": "7/30",
-    "F3": "7/30",
-    "F4": "6/30",
-    "F7": "21/30"
+    "duty_swap": {
+      "k": 10,
+      "n": 30
+    },
+    "station_shift": {
+      "k": 19,
+      "n": 30
+    },
+    "storm": {
+      "k": 0,
+      "n": 30
+    },
+    "transient": {
+      "k": 3,
+      "n": 30
+    }
   },
-  "false_escalations_attributable": {
-    "F2": "0/30",
-    "F3": "6/30",
-    "F4": "3/30",
-    "F7": "21/30"
-  },
-  "g6_investigate_opens_per_pump_per_180d": {
-    "44371": 0.493,
-    "45078": 0.0,
-    "45385": 0.986
+  "false_escalations_raw": {
+    "duty_swap": {
+      "k": 10,
+      "n": 30
+    },
+    "station_shift": {
+      "k": 19,
+      "n": 30
+    },
+    "storm": {
+      "k": 4,
+      "n": 30
+    },
+    "transient": {
+      "k": 3,
+      "n": 30
+    }
   },
   "gates": {
-    "G1": false,
+    "G1": true,
     "G2": true,
-    "G3": null,
-    "G4": null,
     "G5": false,
-    "G5_attributable": false,
-    "G6": true,
-    "G7": null
+    "G6": true
+  },
+  "gates_raw": {
+    "G1": true,
+    "G5": false
   },
   "lead_days": {
-    "median": 8.33,
+    "median": 8.416667,
     "misses_as_zero": true,
     "n": 200,
-    "p10": 1.83
+    "p10": 1.833333
   },
   "model_version": "dragonfly-ci-v1",
   "morningside_a_dev_lead_median_d": null,
@@ -62,8 +350,9 @@
     "k": 0.5,
     "min_effect": -8.0
   },
-  "runtime_s": 112.3,
-  "watch_lead_days": {
-    "median": 10.65
+  "real_2022_investigate_opens_per_pump_180d": {
+    "44371": 0.493151,
+    "45078": 0.0,
+    "45385": 0.986301
   }
 }

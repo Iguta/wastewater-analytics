@@ -85,8 +85,12 @@ def main(limit: int | None = None) -> None:
             res.append(r)
             if i % 50 == 0:
                 print(f"{i}/{len(combos)} combos, {time.time() - t0:.0f} s", flush=True)
-    g = pd.DataFrame(res).sort_values(
-        ["feasible", "recall", "lead_median", "real_watch_opens"], ascending=[False, False, False, True]
+    g = pd.DataFrame(res)
+    g["fe_total"] = g[[f"fe_{f}" for f in ("F2", "F3", "F4", "F7")]].sum(axis=1)
+    # §6.4: max recall subject to the gates; if nothing is feasible, fewest attributable false escalations first
+    g = g.sort_values(
+        ["feasible", "fe_total", "recall", "lead_median", "real_watch_opens"],
+        ascending=[False, True, False, False, True],
     )
     OUT.parent.mkdir(parents=True, exist_ok=True)
     g.to_csv(OUT, index=False)
