@@ -57,9 +57,7 @@
         "Check P2 amps and discharge pressure",
         "Pull and inspect P2 impeller if the drop persists"
       ]
-    }
-  ],
-  "safety": [
+    },
     {
       "alert_id": "REAL:44371:STATION:SENSOR_FAULT:2022-09-14",
       "type": "SENSOR_FAULT",
@@ -82,6 +80,7 @@
       ]
     }
   ],
+  "safety": [],
   "rain": {
     "today_mm": 0.0,
     "last_72h_mm": 1.2,
