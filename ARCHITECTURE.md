@@ -614,7 +614,7 @@ EvaluationReport: model_version, code_version, benchmarks: dict[Literal["A","B",
    backend/scripts/proxy_events.py; scratch-run numbers such as "16 of 117" never appear in the UI.)
 DevCase:         case_id, experiment: Literal["storm_test", "break_sensor", "cut_power", "one_bad_day"] | None
   (ScenariosResponse.dev_cases is list[DevCase].)
-ReplayResult additions: source_offline_after_min | None, sensor_fault_flagged: bool
+ReplayResult additions: source_offline_after_min | None, high_level_after_min | None (minutes from failure to the first SOURCE_SILENT or HIGH_LEVEL minute; the onset moment for B variants), sensor_fault_flagged: bool. Scenario markers (first WATCH, first INVESTIGATE, lead time) count only findings that open on or after failure − 30 d; a status already held then is the stand-in's own history.
 Feedback:        alert_id (alert-id pattern), verdict: Literal["found_issue", "checked_ok", "not_sure"], by (1–80 chars), note (≤500), at_utc
 ToolError:       code: ErrorCode, message, allowed: list[str]
 ```
