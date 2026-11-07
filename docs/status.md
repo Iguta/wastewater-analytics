@@ -41,6 +41,17 @@ Kept by Dhruv's agent. Updated at every merge or finding. Last update: 12:42 ET.
 5. **Fishers gallons saved** depend entirely on the assumed 180-minute discovery delay.
 6. **Rain invariance** holds on 9 of 11 pumps; 45078 P3 (a lag pump) shows a 1.20 wet/dry ratio.
 
+## Weak labels from the full dataset (all 24 stations, measured 13:00)
+
+Labels = a busy pump with 0 runs for 2+ days while a sibling keeps running ("taken out of service", not "failed"). Script and outputs live in the session scratchpad; to be moved into `backend/scripts/` if we keep it.
+
+- **117 episodes** across 18 of 24 stations. **44372 alone has 56** (median 2 days: likely duty rotation, not failure).
+- **Only 16 of 117 (14%) were preceded by a capacity drop.** The other 101 show no warning sign in the data: sudden, planned, or rotation. No detector on this data could warn on those.
+- **The detector warned on 7 of the 16 drop-type removals** (44%), and on 14 of 101 without a precursor.
+- **Proxy precision is low:** 2023, 21 untouched stations: 2 of 41 INVESTIGATE incidents were followed by a removal within 30 days (5%). Many alerts may be real problems nobody pulled a pump for; we can't tell without maintenance logs.
+- **Verdict:** too few clean labels to support "X of Y real failures caught" as a headline. Use it descriptively only.
+- Both 2023 rows are test-tier numbers, seen once and disclosed; nothing may be tuned on them.
+
 ## Overreaching (what we must not say)
 
 | Tempting claim | The truth | Say instead |
@@ -50,6 +61,8 @@ Kept by Dhruv's agent. Updated at every merge or finding. Last update: 12:42 ET.
 | "60% capacity loss detected" | On screen the measured change is about −31% (cap) | Show the measured number only |
 | "Detects failures days ahead" | Only gradual mechanical loss; power, controller and vandalism failures are detected at onset at best | "Days ahead for gradual wear; minutes for silence; never for sudden faults." |
 | "Rain-proof" | Rain-invariant on 9 of 11 pumps measured | "Barely moves with rain on the pumps we measured." |
+| "Predicts pump failures" | 86% of real pump removals in the data had no visible precursor | "Catches gradual capacity loss, the kind that gives warning. Most removals in this data gave none." |
+| "High precision on real data" | Proxy precision 5–19%; labels are removals, not failures | "Without maintenance logs, real-world precision is unmeasured; that's the pilot's first job." |
 | Accuracy % without interval | n is small and windows overlap | Wilson interval and "n cases, 3 stations, 1 year" |
 
 ## Recalibration actions
