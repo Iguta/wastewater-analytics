@@ -358,7 +358,7 @@ class Feedback(Contract):
 
     alert_id: str = Field(pattern=ALERT_ID_PATTERN)
     verdict: Literal["found_issue", "checked_ok", "not_sure"]
-    by: str = Field(min_length=1)
+    by: str = Field(min_length=1, max_length=80)
     note: str = Field(max_length=500)
     at_utc: UtcDatetime
 

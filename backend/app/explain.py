@@ -80,7 +80,7 @@ def priority_reason(f: Finding, rank: int, total: int, quality: str | None) -> s
     if f.change_pct is None:
         what = f.type.lower().replace("_", " ")
     else:
-        what = f"{'largest ' if rank == 1 else ''}capacity loss (\u2212{abs(f.change_pct):.0f}%)"
+        what = f"{'largest ' if rank == 1 and f.status == 'INVESTIGATE' else ''}capacity loss (\u2212{abs(f.change_pct):.0f}%)"
     parts = [what, f"{f.days_open} day{'s' * (f.days_open != 1)} open"]
     if quality:
         parts.append(f"evidence {quality.replace('_', ' ').capitalize()}")

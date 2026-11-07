@@ -144,3 +144,13 @@ def test_scenario_assessment_and_evidence_use_the_case_stream():
         and a.queue[0].alert_id.startswith(MORNINGSIDE_A)
     )
     assert assess.get_evidence(a.queue[0].alert_id, t).origin == "SIMULATED_INCIDENT"
+
+
+def test_priority_reason_says_largest_only_for_an_investigate_row():
+    f = assess.assess_station("44371", datetime(2022, 6, 3, tzinfo=timezone.utc)).queue[0]
+    assert "largest capacity loss" in explain.priority_reason(f, 1, 1, "SUFFICIENT")
+    watch = f.model_copy(update={"status": "WATCH", "days_open": 1})
+    assert (
+        explain.priority_reason(watch, 1, 1, None)
+        == f"Rank 1 of 1: capacity loss (−{abs(f.change_pct):.0f}%), 1 day open"
+    )
