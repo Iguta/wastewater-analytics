@@ -50,8 +50,6 @@ test('the A/B switch changes the replay', async ({ page }) => {
 });
 
 test('"Moved up: storm ahead" appears (§4.12)', async ({ page }) => {
-  // BACKEND GAP: assess.py always returns storm=None, so §4.12 never promotes a finding. The UI renders queue-moved-up from it.
-  test.fail();
   await incidents(page);
   await morningside(page).getByTestId('replay-variant-a').click();
   await expect(page.getByTestId('replay-banner')).toBeVisible();
