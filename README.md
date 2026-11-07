@@ -82,7 +82,7 @@ make serve      # http://127.0.0.1:8000 (API, plus the built UI at /)
 
 | Command | What it does |
 | --- | --- |
-| `make verify` | The one check (`tools/verify`, also run in CI). Steps: lint and pytest, `eval-smoke`, UI build, `mcp-smoke`, Playwright e2e and axe (e2e prints `SKIP` until `e2e/` lands). A step whose input files are missing prints `SKIP`. |
+| `make verify` | The one check (`tools/verify`, also run in CI). Steps: lint and pytest, `eval-smoke`, UI build, `mcp-smoke`, Playwright e2e and axe. A step whose input files are missing prints `SKIP`. |
 | `make eval-dev` | Evaluate the current params on the dev tier. |
 | `make mcp` / `make mcp-http` | MCP server over stdio / Streamable HTTP. |
 | `make agent-eval` | Grounding eval of the agent. Needs `ANTHROPIC_API_KEY`, otherwise it prints SKIP. |
@@ -100,7 +100,7 @@ The MCP server is read-only and exposes three tools: `assess_station`, `get_evid
 | Cursor (`.cursor/mcp.json`) | The same `mcpServers` block |
 | VS Code (`.vscode/mcp.json`) | `{"servers": {"dragonfly": {"type": "stdio", "command": "uv", "args": ["run", "--project", "<repo>/backend", "python", "-m", "backend.mcp_server"]}}}` |
 | Codex (`~/.codex/config.toml`) | `[mcp_servers.dragonfly]` with `command = "uv"` and `args = ["run", "--project", "<repo>/backend", "python", "-m", "backend.mcp_server"]` |
-| Remote (claude.ai custom connector, ChatGPT developer-mode connector) | `make mcp-http` plus `cloudflared tunnel --url http://127.0.0.1:8001` gives `https://<random>.trycloudflare.com/mcp`. |
+| Remote (claude.ai custom connector, ChatGPT developer-mode connector) | `make mcp-http` plus `make tunnel` gives `https://<random>.trycloudflare.com/mcp`. |
 
 Restart your agent after adding the server so it loads the tools.
 
