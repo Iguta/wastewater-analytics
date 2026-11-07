@@ -1,0 +1,20 @@
+/* Layout + components built on tokens.css. No green anywhere (section 10.7). */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+.header { background: var(--header); color: var(--text-on-header); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-4); }
+.brand { font-size: 18px; }
+.origin { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+.asof { margin-left: auto; font-size: 13px; }
+.banner { background: var(--investigate-fill); color: var(--investigate-on-fill); padding: var(--space-2) var(--space-4); font-weight: 600; }
+.tabs { display: flex; gap: var(--space-1); padding: 0 var(--space-4); border-bottom: 1px solid var(--border); background: var(--panel); }
+.tab { min-height: var(--tap-min); padding: 0 var(--space-4); background: none; border: 0; border-bottom: 3px solid transparent; font: inherit; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+.tab.active { color: var(--text); border-bottom-color: var(--primary); }
+.main { padding: var(--space-4); max-width: 1440px; margin: 0 auto; }
+.panel { background: var(--panel); border: 1px solid var(--border); padding: var(--space-4); }
+.skeleton { background: var(--hatch-a); padding: var(--space-6); color: var(--text); }
+.btn { min-height: var(--tap-min); padding: 0 var(--space-4); background: var(--primary); color: var(--primary-on); border: 0; font: inherit; font-weight: 600; cursor: pointer; }
+.status { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; font-size: 13px; font-weight: 600; background: var(--panel); border: 1px solid var(--border); color: var(--text); }
+.st-watch { background: var(--watch-fill); color: var(--watch-on-fill); border-color: var(--watch-fill); }
+.st-investigate { background: var(--investigate-fill); color: var(--investigate-on-fill); border-color: var(--investigate-fill); }
+.st-hatch { background: var(--panel); color: var(--text); border-style: dashed; } /* text sits on a solid chip, never on the hatch */
+@media (max-width: 767px) { .asof { margin-left: 0; } .main { padding: var(--space-3); } }
