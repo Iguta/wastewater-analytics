@@ -231,6 +231,7 @@ class ReplayResult(Contract):
     outcome: Outcome | None
     benchmarks: dict[str, BenchmarkRun]
     source_offline_after_min: float | None
+    high_level_after_min: float | None = None
     sensor_fault_flagged: bool
 
 

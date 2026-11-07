@@ -159,3 +159,8 @@ def test_scenario_markers_only_count_findings_opened_in_the_scored_window():
                 assert marker > start
                 opened = marker.date() - timedelta(days=1)
                 assert days[opened - timedelta(days=1)] != days[opened]  # a new finding, not one carried in
+
+
+def test_onset_variants_report_their_onset_minute():
+    assert assess.replay_case("fishers_bowline_2009_01_20:B").high_level_after_min is not None
+    assert assess.replay_case("fishers_bowline_2009_01_20:A").source_offline_after_min is not None

@@ -562,5 +562,5 @@ def replay_case(case_id: str) -> ReplayResult:
         case_id=case_id, origin=meta["origin"], family=case_id.split(":")[0] if ":" in case_id else case_id.split("-")[0],
         title=f"{case_id} on station {st.station_id}", truth={"transforms": truth}, timeline=tl, first_watch_at=watch,
         first_investigate_at=inv, failure_at=failure, lead_time_h=lead, outcome=out, benchmarks=bench,
-        source_offline_after_min=offline, sensor_fault_flagged=fault,
+        source_offline_after_min=offline, high_level_after_min=high, sensor_fault_flagged=fault,
     )  # fmt: skip
