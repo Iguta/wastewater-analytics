@@ -187,5 +187,6 @@
     }
   },
   "source_offline_after_min": null,
+  "high_level_after_min": null,
   "sensor_fault_flagged": false
 }
