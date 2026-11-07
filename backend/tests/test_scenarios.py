@@ -10,8 +10,14 @@ ROOT = Path(__file__).resolve().parents[2]
 SCENARIOS = sorted((ROOT / "fixtures" / "scenarios").glob("*.toml"))
 OUTCOMES = {"PREDICTABLE_DAYS_AHEAD", "DETECTABLE_AT_ONSET", "NOT_DETECTABLE"}
 VARIANT_FIELDS = [
-    "mechanism", "precursor_type", "precursor_onset_days_before", "capacity_lost_pct_at_failure",
-    "precursor_shape", "failure_timestamp_utc", "backup_failed", "expected_detector_outcome",
+    "mechanism",
+    "precursor_type",
+    "precursor_onset_days_before",
+    "capacity_lost_pct_at_failure",
+    "precursor_shape",
+    "failure_timestamp_utc",
+    "backup_failed",
+    "expected_detector_outcome",
 ]
 
 
@@ -34,7 +40,15 @@ def test_two_scenarios_exist():
 def test_scenario(path):
     s = tomllib.loads(path.read_text())
     assert s["id"] == path.stem and s["locked"] is True and s["version"]
-    for section in ["record", "mechanism", "variants", "conditions", "station_standin", "outcome", "expected"]:
+    for section in [
+        "record",
+        "mechanism",
+        "variants",
+        "conditions",
+        "station_standin",
+        "outcome",
+        "expected",
+    ]:
         assert section in s, section
     assert s["mechanism"]["primary_variant"] in s["variants"]
     for name, v in s["variants"].items():

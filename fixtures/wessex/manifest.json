@@ -1,0 +1,31 @@
+{
+  "filter": "signal_id prefix / Marketplace Site ID in stations; rows otherwise unmodified",
+  "rows_exported": {
+    "level": {
+      "44371": 977315,
+      "45078": 1037713,
+      "45385": 1049104
+    },
+    "rain": {
+      "44371": 17520,
+      "45078": 17520,
+      "45385": 17520
+    },
+    "runstop": {
+      "44371": 186017,
+      "45078": 357306,
+      "45385": 176528
+    }
+  },
+  "sources": {
+    "rising-main-diameter-and-key-to-telemetry-signals.csv": "9f87789c1c5544df539b3e322ab5825e6731332ddabbf40a180012cf41ecb935",
+    "sps-local-rainfall-data.csv": "775df41d5b2bee4468b2c3c2de2b72f31f6d22604dc1f97c31907c559a2c26b8",
+    "sps-run-stop-data.csv": "a630f8948e86acd9efacc378b260bd970de371fad40bc2ad871df38f40054f58",
+    "sps-wet-well-level-data.zip": "3f19794fb26909e95ac6c59f027b76279fd2eb69f8c56f011db6c23614a4c50e"
+  },
+  "stations": [
+    "44371",
+    "45385",
+    "45078"
+  ]
+}

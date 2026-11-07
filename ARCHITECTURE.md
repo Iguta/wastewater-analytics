@@ -184,12 +184,13 @@ For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, usin
 - **Update rule:** `S_d = max(0, S_{d−1} + clip(−u_d, −U, U) − k)`.
 - **When it updates:** only on `SUFFICIENT` days. `PARTIAL`, `INSUFFICIENT` and `SOURCE_OFFLINE` days hold `S` unchanged.
 - **Defaults:** `k = 0.5`, `U = 4`, `h_w = 3`, `h_i = 6`.
+- **Minimum effect size:** `min_effect = −8%`, tunable on dev over {−5, −8, −12}%. Without it, a pump with very low day-to-day scatter reached `INVESTIGATE` on a −4.3% change (two 2023 cases).
 - **Ceiling (David's D1):** `S` is capped at `S_max = 12`, so a closed fault clears in days, not months.
 
 | Condition | Pump status |
 | --- | --- |
 | Fewer than 30 baseline days | `INSUFFICIENT_EVIDENCE` |
-| `S ≥ h_i`, and at least 2 of the last 3 `SUFFICIENT` days have `u < −k` (persistence) | `INVESTIGATE` |
+| `S ≥ h_i`, at least 2 of the last 3 `SUFFICIENT` days have `u < −k` (persistence), and today's capacity change is at or below `min_effect` (default −8%) | `INVESTIGATE` |
 | `S ≥ h_w` | `WATCH` |
 | Was `INVESTIGATE` | Stays until `S < h_w`, then becomes `WATCH` |
 | Was `WATCH` | Stays until `S < 1.0`, then becomes `NORMAL` |
@@ -326,7 +327,7 @@ The scenario files are the source of truth for every incident parameter. This se
 
 | Transform | What it does |
 | --- | --- |
-| `capacity_loss(pump, onset, failure, loss_24h, shape)` | **Ramp:** for each of the pump's cycles from onset to `failure − 24 h`, infer inflow `I = 3600/fill`. Set `CI' = CI·(1 − loss(t))`, where `loss(t) = loss_24h·frac^p`, `frac` runs from 0 to 1 over that interval and is clamped at 1, and p = 1 for linear or 2 for accelerating. **Hold:** loss stays at `loss_24h` for the last 24 h. **Run time:** `run' = 3600/(CI' − I)`; when `CI' ≤ I`, the run continues until the next real stop of any pump. Every later station event shifts by the added seconds. Level stays real. Real noise and rain response are kept. |
+| `capacity_loss(pump, onset, failure, loss_24h, shape)` | **Ramp:** for each of the pump's cycles from onset to `failure − 24 h`, infer inflow `I = 3600/fill`. Set `CI' = CI·(1 − loss(t))`, where `loss(t) = loss_24h·frac^p`, `frac` runs from 0 to 1 over that interval and is clamped at 1, and p = 1 for linear or 2 for accelerating. **Hold:** loss stays at `loss_24h` for the last 24 h. **Run time:** `run' = min(3600/(CI' − I), 3600 s)`, and exactly 3,600 s when `CI' ≤ I` (the same cap as `LONG_RUN`). Without the cap the formula diverges as `CI'` approaches `I`; a literal implementation overflowed to about 2e27 s. At 44371, median inflow is 40% of P1's capacity, so a 60% loss hits the cap on about half the cycles, and the measured capacity change on screen reads about −31%, not −60%. **The UI shows the measured change, never the injected parameter.** Every later station event shifts by the added seconds. **Known effect:** by the trip the pump clock runs up to about 2 days behind the real clock (rain and level stay on real time), so a storm in the last days before the trip appears in rain but not yet in pump runs. The evidence notes the shift in hours. Level stays real. Real noise and rain response are kept. |
 | `station_trip(start, restore)` | **The visible failure.** Deletes every run/stop row from `start` to `restore`. Replaces level in that window with the §5.4 simulated trace (the level rises, then overflows). Level is simulated **only** in trip windows, labeled SIMULATED. Morningside A ends with a `station_trip` at failure (duty pump trips, standby fouled); Morningside B and both Fishers variants use only `station_trip`. Fishers A also deletes the level rows (power is lost, so the station goes silent); Fishers B keeps the simulated level (comms stay up). |
 | `transient(pump, day, loss)` | `capacity_loss` for one day, then normal |
 | `station_shift(onset, factor)` | Every pump's CI × factor from onset (a setpoint change) |
@@ -956,6 +957,50 @@ The labels `stream:data`, `stream:ui`, `stream:api` and `decision-change` must e
 
 When a secret is missing, the workflow exits 0 with a notice.
 
+### 11.6 Per-PR benchmark (the loop that runs on every change)
+
+Every PR is measured against `main` on the same cases, so nobody, human or agent, can merge a regression without seeing it.
+
+**What runs:** a second CI job, `bench`, on every PR that touches `backend/` or `fixtures/`. It runs only after `verify` passes.
+
+1. Run `make eval-dev` on the PR head; it writes `reports/dev/summary.json`.
+2. Check out the PR's base commit into a worktree and run the same command there. Both runs use the same dev seeds and the same fixtures, so the difference is the code.
+3. Run `tools/bench_diff base.json head.json`, which prints one table and exits with a code.
+
+**The table** (posted as one sticky PR comment, replaced on each push; CI log only when the comment can't be posted):
+
+| Metric | Source | Base | Head | Δ | Flag |
+| --- | --- | --- | --- | --- | --- |
+| F1 recall (loss ≥20%, ramp ≥7 d), with Wilson interval | §6.2 | | | | |
+| Median and P10 lead time (days) | §6.2 | | | | |
+| False escalations per family F2, F3, F4, F7 | §6.3 G5 | | | | |
+| Real 2022 INVESTIGATE opens per pump per 180 d, per station | §6.3 G6 | | | | |
+| G1–G7 pass/fail | §6.3 | | | | |
+| Morningside A dev-variant lead (median) | §5.1 | | | | |
+| Runtime of `eval-dev` (s) | — | | | | |
+
+**Flags and what they do:**
+
+| Flag | Rule | Effect |
+| --- | --- | --- |
+| `FAIL` | Any gate G1–G7 goes from pass to fail | Job fails; the PR cannot auto-merge |
+| `REGRESSION` | Recall drops more than 3 points, median lead drops more than 0.5 day, or a G6 station rises more than 0.25 | Job fails unless the PR has the `accept-regression` label **and** a `reports/decisions.md` row explaining why (code-owner approval, §11.3) |
+| `IMPROVED` | The same thresholds in the good direction | Noted in the comment |
+| `NOISE` | Anything smaller | Noted, no action |
+
+**"Flag for improvement":** the comment ends with the 5 worst dev cases on head (each F1 miss or false escalation with its §6.5 bucket: `too_small`, `too_slow`, `few_cycles`, `overlap_days`, `inhibition_cancelled`, `baseline_contaminated`, `qc`), so the next refinement step starts from evidence. It also lists any case that flipped between base and head.
+
+**Rules that keep it honest:**
+
+- It uses **dev** data only. The test tier never runs in CI (§6.5).
+- Thresholds live in `backend/app/gates.toml`, which is CODEOWNERS-protected. Changing a threshold is a `decision-change`.
+- `tools/bench_diff` never pipes or filters output (§11.1) and prints at most 30 lines.
+- A flaky result (head differs from itself on a rerun) is a bug in determinism and fails G3.
+
+**Other layers, already in `verify`** (each PR): MCP tool contract via Inspector, API contract tests, the agent grounding check when a key exists locally, and UI e2e plus axe. The bench adds the one thing those can't: whether the detector got better or worse.
+
+**Owner:** Dhruv builds `bench` and `tools/bench_diff` with the skeleton; David's `evaluate.py` must write `summary.json` with the fields above, keyed exactly as the table names them.
+
 ### 11.5 Merging
 
 - Every PR author's agent runs `gh pr merge --auto --squash`.
@@ -1124,7 +1169,9 @@ Rehearse both outcomes, with and without a warning before the trip. If it doesn'
 2. **0:20–1:20, it happened, it failed, we detected.**
    - The capacity line falls over the days before the storm.
    - "Moved up: storm ahead" appears from the forecast as it was issued then.
-   - `INVESTIGATE` lands {L} days before the trip.
+   - `INVESTIGATE` lands **about 3 days** before the trip. Measured with David's detector on 10 onsets across 2023 at 44371 P1 (6-day ramp, 60% loss): median lead 2.8 days, range 1.3–4.3, no misses. The locked replay itself gives 3.3 days.
+   - Sweep for the card: ramp 3 / 6 / 10 / 14 days gives median lead 1.3 / 2.8 / 5.3 / 7.8 days, 100% detected at each. With a 24 h repair the trip is avoided in 10/10 cases, with 48 h in 9/10, with 96 h in 1/10.
+   - The rain analog is strong: 2023-04-05..11 at 44371 matches Morningside's week with SSE 13% (well under the 50% weak-analog line).
    - The trip happens: pumps stop and the simulated level rises to overflow.
    - Read the "Simulated:" gallons at 24, 48 and 96 h.
    - Then switch to variant B: "If it was a sudden trip, we catch it at onset, the same as a working alarm." Say what the record does and does not tell us.
