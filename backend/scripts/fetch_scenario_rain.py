@@ -19,21 +19,32 @@ OUT_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "scenarios" / "rain
 # Window: 30 days before the failure date to 2 days after.
 SCENARIOS = {
     "bloomington_morningside_2024_04_11": {
-        "lat": 39.1673, "lon": -86.4720, "start": "2024-03-12", "end": "2024-04-13",
+        "lat": 39.1673,
+        "lon": -86.4720,
+        "start": "2024-03-12",
+        "end": "2024-04-13",
     },
     "fishers_bowline_2009_01_20": {
-        "lat": 39.9505, "lon": -85.8911, "start": "2008-12-21", "end": "2009-01-22",
+        "lat": 39.9505,
+        "lon": -85.8911,
+        "start": "2008-12-21",
+        "end": "2009-01-22",
     },
 }
 
 
 def fetch(sid: str, s: dict) -> Path:
-    q = urllib.parse.urlencode({
-        "latitude": s["lat"], "longitude": s["lon"],
-        "start_date": s["start"], "end_date": s["end"],
-        "hourly": "precipitation", "precipitation_unit": "inch",
-        "timezone": "GMT",
-    })
+    q = urllib.parse.urlencode(
+        {
+            "latitude": s["lat"],
+            "longitude": s["lon"],
+            "start_date": s["start"],
+            "end_date": s["end"],
+            "hourly": "precipitation",
+            "precipitation_unit": "inch",
+            "timezone": "GMT",
+        }
+    )
     url = f"{ARCHIVE}?{q}"
     req = urllib.request.Request(url, headers={"User-Agent": "wastewater-analytics"})
     with urllib.request.urlopen(req, timeout=60) as r:
@@ -47,8 +58,10 @@ def fetch(sid: str, s: dict) -> Path:
         for t, p in zip(hourly["time"], hourly["precipitation"]):
             w.writerow([t, "" if p is None else p])
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    print(f"{sid}: {len(hourly['time'])} rows, grid {data['latitude']},{data['longitude']}, "
-          f"tz {data['timezone']} ({data['timezone_abbreviation']}), sha256 {digest}")
+    print(
+        f"{sid}: {len(hourly['time'])} rows, grid {data['latitude']},{data['longitude']}, "
+        f"tz {data['timezone']} ({data['timezone_abbreviation']}), sha256 {digest}"
+    )
     print(f"  source: {url}")
     return path
 
