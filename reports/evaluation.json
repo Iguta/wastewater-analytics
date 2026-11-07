@@ -1,0 +1,245 @@
+{
+  "benchmarks": {
+    "A": {
+      "caught": {
+        "k": 111,
+        "n": 114
+      },
+      "false_duty": {
+        "k": 7,
+        "n": 30
+      },
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 30,
+        "n": 30
+      },
+      "median_lead_days": 5.25,
+      "real_alerts_per_pump_6mo": 4.575343
+    },
+    "B": {
+      "caught": {
+        "k": 109,
+        "n": 114
+      },
+      "false_duty": {
+        "k": 18,
+        "n": 30
+      },
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 29,
+        "n": 30
+      },
+      "median_lead_days": 9.708333,
+      "real_alerts_per_pump_6mo": 1.20548
+    },
+    "C": {
+      "caught": {
+        "k": 112,
+        "n": 114
+      },
+      "false_duty": {
+        "k": 10,
+        "n": 30
+      },
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 3,
+        "n": 30
+      },
+      "median_lead_days": 8.416667,
+      "real_alerts_per_pump_6mo": 0.493151
+    },
+    "C-inhibition": {
+      "caught": {
+        "k": 112,
+        "n": 114
+      },
+      "false_duty": {
+        "k": 0,
+        "n": 30
+      },
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 15,
+        "n": 30
+      },
+      "median_lead_days": 9.083333,
+      "real_alerts_per_pump_6mo": 0.493151
+    },
+    "C-persistence": {
+      "caught": {
+        "k": 109,
+        "n": 114
+      },
+      "false_duty": {
+        "k": 2,
+        "n": 30
+      },
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 30,
+        "n": 30
+      },
+      "median_lead_days": 8.083333,
+      "real_alerts_per_pump_6mo": 0.246575
+    },
+    "C-quality": {
+      "caught": {
+        "k": 112,
+        "n": 114
+      },
+      "false_duty": {
+        "k": 10,
+        "n": 30
+      },
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 3,
+        "n": 30
+      },
+      "median_lead_days": 8.25,
+      "real_alerts_per_pump_6mo": 0.493151
+    }
+  },
+  "code_version": "cdf509b",
+  "gates": {
+    "G1": true,
+    "G2": true,
+    "G5": false,
+    "G6": true
+  },
+  "heatmap": [
+    {
+      "k": 9,
+      "loss": 0.1,
+      "n": 10,
+      "ramp": 3
+    },
+    {
+      "k": 12,
+      "loss": 0.1,
+      "n": 12,
+      "ramp": 7
+    },
+    {
+      "k": 16,
+      "loss": 0.1,
+      "n": 16,
+      "ramp": 14
+    },
+    {
+      "k": 13,
+      "loss": 0.1,
+      "n": 15,
+      "ramp": 21
+    },
+    {
+      "k": 15,
+      "loss": 0.2,
+      "n": 15,
+      "ramp": 3
+    },
+    {
+      "k": 9,
+      "loss": 0.2,
+      "n": 9,
+      "ramp": 7
+    },
+    {
+      "k": 13,
+      "loss": 0.2,
+      "n": 13,
+      "ramp": 14
+    },
+    {
+      "k": 15,
+      "loss": 0.2,
+      "n": 15,
+      "ramp": 21
+    },
+    {
+      "k": 7,
+      "loss": 0.3,
+      "n": 7,
+      "ramp": 3
+    },
+    {
+      "k": 16,
+      "loss": 0.3,
+      "n": 17,
+      "ramp": 7
+    },
+    {
+      "k": 8,
+      "loss": 0.3,
+      "n": 8,
+      "ramp": 14
+    },
+    {
+      "k": 19,
+      "loss": 0.3,
+      "n": 20,
+      "ramp": 21
+    },
+    {
+      "k": 11,
+      "loss": 0.4,
+      "n": 11,
+      "ramp": 3
+    },
+    {
+      "k": 6,
+      "loss": 0.4,
+      "n": 6,
+      "ramp": 7
+    },
+    {
+      "k": 14,
+      "loss": 0.4,
+      "n": 14,
+      "ramp": 14
+    },
+    {
+      "k": 12,
+      "loss": 0.4,
+      "n": 12,
+      "ramp": 21
+    }
+  ],
+  "model_version": "dragonfly-ci-v1 (dev, untuned)",
+  "proxy": [
+    {
+      "episodes": 9,
+      "group": "demo_3",
+      "preceded": 5,
+      "tier": "dev"
+    },
+    {
+      "episodes": 30,
+      "group": "untouched_21",
+      "preceded": 19,
+      "tier": "dev"
+    }
+  ],
+  "test_scored": 0
+}

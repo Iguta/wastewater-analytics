@@ -7,8 +7,8 @@
 # Wessex telemetry is used only for station *hydraulics*; Indiana rain is never mixed into Wessex training.
 
 id = "bloomington_morningside_2024_04_11"
-version = "v4"
-changelog = ["v1 2026-11-07: initial lock", "v2 2026-11-07: add day-ahead forecast pin in [conditions] (Dhruv ask); no other field changed", "v3 2026-11-07: G7 fix (§5.4, inflow assumption only): dry_weather_inflow_gpm 35 -> 49. outcome.no_warning_run v1 at 35 gpm gave 9,951 gal (-30%, miss); at 49 gpm 14,532 gal (+1.6%). Analog Wessex 44371 2023-05-09.", "v4 2026-11-07: forecast re-pinned with all four previous-run fields (rain + gusts, day1 + day2) at fixtures/scenarios/forecast/<id>.json (Dhruv review of #5); no other field changed."]
+version = "v5"
+changelog = ["v1 2026-11-07: initial lock", "v2 2026-11-07: add day-ahead forecast pin in [conditions] (Dhruv ask); no other field changed", "v3 2026-11-07: G7 fix (§5.4, inflow assumption only): dry_weather_inflow_gpm 35 -> 49. outcome.no_warning_run v1 at 35 gpm gave 9,951 gal (-30%, miss); at 49 gpm 14,532 gal (+1.6%). Analog Wessex 44371 2023-05-09.", "v4 2026-11-07: forecast re-pinned with all four previous-run fields (rain + gusts, day1 + day2) at fixtures/scenarios/forecast/<id>.json (Dhruv review of #5); no other field changed.", "v5 2026-11-07: variant A gains a numeric loss_24h = 0.6 (the precursor loss held for the last 24 h, previously only in the capacity_lost note), so the simulator reads it from the file (Dhruv review of #13); no other value changed."]
 locked = true
 locked_at = "2026-11-07"
 author = "Iguta (David's Claude Code)"
@@ -80,6 +80,7 @@ evidence = [
 precursor_type = { value = "progressive_clog", status = "UNVERIFIED", confidence = 45 }
 precursor_onset_days_before = { value = 6, status = "UNVERIFIED", confidence = 30, note = "starts ~2024-04-05, before the 04-07 blockage was reported" }
 capacity_lost_pct_at_failure = { value = 100, status = "UNVERIFIED", confidence = 40, note = "duty pump 60% degraded 24 h before failure, then clogs/trips; standby assumed fouled too" }
+loss_24h = { value = 0.6, status = "UNVERIFIED", confidence = 30, note = "precursor loss held for the last 24 h before the trip (§5.2); the §5.1 sweep varies it over 0.4 / 0.6 / 0.8" }
 precursor_shape = { value = "accelerating", status = "UNVERIFIED", confidence = 50 }
 failure_timestamp_utc = { value = "2024-04-11T07:00:00Z", status = "UNVERIFIED", confidence = 30, note = "03:00 EDT, start of the second storm burst on the recorded date; record has no time" }
 backup_failed = { value = false, status = "UNVERIFIED", confidence = 50, note = "no backup power issue reported; alarm assumed to work (overflow ended same day)" }
