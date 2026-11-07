@@ -51,13 +51,13 @@ Versions and hashes:
 
 Each rung has a "does not prove" line. Read it.
 
-**1. Physics check** (real data, 11 pumps, 2022-2023; `docs/evidence/ci_rain_check.txt`)
-- Result: capacity-index wet/dry ratio 0.96-1.03 on 9 of 11 pumps vs 1.14-1.33 for raw run time. Day-to-day IQR/median 0.03-0.11 vs 0.14-0.33.
+**1. Physics check** (real data, 9 pumps at 4 stations, 2022 only for the ratios below; `docs/evidence/ci_rain_check.txt`)
+- Result: capacity-index wet/dry ratio 0.96-1.03 on 8 of 9 pumps (45078 P3, a lag pump, is 1.20) vs 1.09-1.33 for raw run time. Day-to-day IQR/median 0.03-0.11 vs 0.14-0.33.
 - Proves: the index barely moves with rain and is much less noisy than run time.
 - Does not prove: that it detects anything. 45078 P3 (a lag pump) has a wet/dry ratio of 1.20 (`docs/status.md`).
 
 **2. Planted faults** (synthetic injections into real streams; PR #30, David's harness, 2022 dev tier, 3 stations; dev tier, pending the harness fixes in PR #30; final numbers come from the frozen test run)
-- F1 capacity loss: recall 122/123, Wilson 95% [0.955, 0.999]; median lead 8.3 days, P10 1.8 days.
+- F1 capacity loss (cases with loss ≥20% and ramp ≥7 days, per A§6.2): recall 122/123, Wilson 95% [0.955, 0.999]; median lead 8.3 days, P10 1.8 days.
 - F5 power cut: detected in median 9 min. F6 sensor faults: 30/30 flagged.
 - Attributable false escalations: F2 storm 0/30, F3 duty swap 6/30, F4 transient 3/30, F7 station-wide shift 21/30.
 - Proves: the detector finds the faults we know how to plant and mostly ignores rain.
@@ -68,12 +68,12 @@ Each rung has a "does not prove" line. Read it.
 - Proves: a real, unplanted capacity drop is visible and flagged.
 - Does not prove: a rate. n = 1, we saw it while designing, and the removal may have been planned after operators saw the same thing.
 
-**4. Weak labels on 21 untouched stations** (measurement only, scratch run, not shown in the UI; A§6.8, `docs/status.md`)
+**4. Weak labels across the 24-station dataset** (2022-2023, so includes test-tier 2023 data seen once) ; measurement only, scratch run, not shown in the UI; A§6.8, `docs/status.md`
 - 117 out-of-service episodes in the 24-station dataset (18 stations had at least one); 16 preceded by a capacity drop; the detector warned on 7 of those 16; 101 showed no sign.
 - Proves: how much warning the data can contain at all (16 of 117).
 - Does not prove: precision or "X of Y failures caught". Labels mean taken out of service, not failed; they mix planned work and rotation (44372 alone has 56). Descriptive only. The split of these counts into the 21 untouched stations vs the 3 demo stations is not reported in any file on main.
 
-**5. Indiana what-ifs** (rebuilds on real Wessex telemetry; no Indiana telemetry exists)
+**5. Indiana what-ifs** (rebuilds on real Wessex telemetry; no Indiana telemetry exists; the Morningside runs use 2023 test-tier data, seen once and disclosed)
 - Morningside A (independent run with David's detector, 44371 stand-in, 10 onsets in 2023): median lead 2.8 days, 10/10 caught. Ramp sweep 3/6/10/14 d gives 1.3/2.8/5.3/7.8 d median lead. Locked replay 3.3 days. The 2023 data was seen by this verification run (disclosed).
 - Fishers silent-station (power failure, dead backup battery; A§2): scored against a 5-minute `SOURCE_SILENT` target, reported not gated (A§6.3 G1). No measured Fishers result is on main.
 - Proves: the detector behaves sensibly on the shape of two documented Indiana events.
@@ -81,8 +81,8 @@ Each rung has a "does not prove" line. Read it.
 
 **6. Stress tests and gates** (A§6.3; dev tier numbers as in rung 2)
 - Gates G1-G7 must pass before a version freezes. G6 real-data alert rate per pump per 180 days, limit 1.0: 0.49 / 0.99 / 0.00 (44371 / 45385 / 45078), dev tier. G3 (`test_no_lookahead`, `test_determinism`) and G4 are tests.
-- Learned baselines tested and not adopted (A§4.16): LightGBM with own lags 16/40 vs 23/40 for the rolling median; exogenous-only spread 0.67x, false opens 3 vs 1. Cycle-weighted z: no effect.
-- Proves: the rules hold on adversarial families, and a simple baseline beat the learned ones.
+- Learned baselines tested and not adopted: LightGBM with own lags 16/40 vs 23/40 for the rolling median (A§4.16); exogenous-only spread 0.67x, false opens 3 vs 1, and cycle-weighted z with no effect (board RESULT posts, 13:20, dev tier, scratch harness).
+- Proves: storms (F2) and sensor faults (F6) are handled, and the simple baseline beat the learned ones. **Not yet met:** G5 requires 0 attributable false escalations; duty swap (6/30), single bad day (3/30) and station-wide shift (21/30) still fail it.
 - Does not prove: the test-tier result. On the 2023 replay 45385 averaged 1.48 INVESTIGATE opens per pump per 180 days against the limit of 1.0; the test tier has been seen once and nothing may be tuned on it (`docs/status.md`).
 
 ## 5. Known limitations
@@ -93,7 +93,7 @@ Each rung has a "does not prove" line. Read it.
 - **Dual-pump wear looks station-wide:** both pumps wearing together look like a setpoint change, escalated on size alone at -30% for 3 days (A§4.7).
 - **VFD stations are out of scope** (A§4.1).
 - **UK telemetry stands in for Indiana** (A§2, `docs/status.md`).
-- **Expected run time is not yet computed** (A§4.13 specifies it; `docs/status.md` "Not built yet" does not list it as done).
+- **Expected run time is not yet computed**: A§4.13 specifies it, and the explanation says "expected run time not yet computed" (`backend/app/explain.py`).
 - **Test tier seen once** by our verification run; disclosed with every headline (`docs/status.md`).
 - **A loss lasting longer than W+G = 74 days is absorbed into the baseline** and clears (A§4.4).
 - **Real-world precision is unmeasured.** The 5-19% proxy figure uses removals, not failures (A§6.8, `docs/status.md`).
