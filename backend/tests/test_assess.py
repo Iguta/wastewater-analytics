@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from backend.app import assess, data, explain
+from backend.app import assess, data, explain, scenarios
 from backend.app.contracts import Finding, PumpState
 
 AS_OF = datetime(2022, 6, 3, tzinfo=timezone.utc)
@@ -49,11 +49,22 @@ def test_no_lookahead(monkeypatch):
     assert assess.assess_station("44371", AS_OF).model_dump() == full
 
 
-def test_scenario_blind():
-    # Scenario truth never reaches the detector: scenarios are refused until inject exists.
-    with pytest.raises(assess.AssessError) as err:
-        assess.assess_station("44371", AS_OF, "bloomington_morningside_2024_04_11:A")
-    assert err.value.error.code == "NOT_AVAILABLE"
+def test_scenario_blind(monkeypatch):
+    # A scenario id selects input data, never an outcome: two ids given the same stream answer the same.
+    sd = data.load("44371")
+    monkeypatch.setattr(
+        scenarios, "case_stream", lambda _id: (sd, [{"secret": 1}], {"origin": "SIMULATED_INCIDENT"})
+    )
+    assess._case.cache_clear()
+    ids = ("bloomington_morningside_2024_04_11:A", "bloomington_morningside_2024_04_11:B")
+    a, b = (assess.assess_station("44371", AS_OF, i).model_dump() for i in ids)
+    for x, i in ((a, ids[0]), (b, ids[1])):
+        assert x["scenario_id"] == i
+        x.pop("scenario_id")
+        x["queue"] = [{**f, "alert_id": f["alert_id"].replace(i, "ID")} for f in x["queue"]]
+        x["safety"] = []
+    assert a == b
+    assess._case.cache_clear()
 
 
 @pytest.mark.parametrize(
@@ -67,7 +78,7 @@ def test_scenario_blind():
         ),
         (lambda: assess.parse_time("2022-06-03T00:00:00"), "BAD_TIMESTAMP"),
         (lambda: assess.replay_case("F9-1"), "UNKNOWN_CASE"),
-        (lambda: assess.replay_case("F1-1003"), "NOT_AVAILABLE"),
+        (lambda: assess.replay_case("F1-500"), "UNKNOWN_CASE"),
     ],
 )
 def test_bad_input_carries_a_tool_error(call, code):
@@ -99,3 +110,36 @@ def test_explanation_has_no_banned_word_for_every_finding_type():
         texts = [explain.explanation("44371", "WATCH", f, p, ["x"]), explain.explanation("44371", "WATCH", f, None, []),
                  explain.explanation("44371", "NORMAL", None, None, []), " ".join(explain.work_order(f, "44371").checks)]  # fmt: skip
         assert not any(w in t.lower() for t in texts for w in BANNED)
+
+
+MORNINGSIDE_A = "bloomington_morningside_2024_04_11:A"
+
+
+def test_replay_morningside_a_warns_before_failure_with_three_repair_rows():
+    r = assess.replay_case(MORNINGSIDE_A)
+    assert r.first_investigate_at < r.failure_at and r.lead_time_h > 0
+    assert [s.label for s in r.outcome.sensitivity] == ["repair 24 h", "repair 48 h", "repair 96 h"]
+    assert r.outcome.no_warning_gal > 0 and r.truth["transforms"]
+
+
+def test_replay_fishers_a_goes_offline_fast_and_flags_stand_in_history():
+    r = assess.replay_case("fishers_bowline_2009_01_20:A")
+    assert r.source_offline_after_min <= 15
+    assert [s.label for s in r.outcome.sensitivity] == [
+        "discovery 60 min",
+        "discovery 180 min",
+        "discovery 360 min",
+    ]
+    assert r.outcome.with_dragonfly_gal < r.outcome.no_warning_gal
+    assert any("stand-in history" in a for a in r.outcome.assumptions)
+
+
+def test_scenario_assessment_and_evidence_use_the_case_stream():
+    t = datetime(2024, 4, 10, tzinfo=timezone.utc)
+    a = assess.assess_station("44371", t, MORNINGSIDE_A)
+    assert (
+        a.origin == "SIMULATED_INCIDENT"
+        and a.provenance.scenario_hash
+        and a.queue[0].alert_id.startswith(MORNINGSIDE_A)
+    )
+    assert assess.get_evidence(a.queue[0].alert_id, t).origin == "SIMULATED_INCIDENT"
