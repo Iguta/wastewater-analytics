@@ -11,19 +11,33 @@ CHECKLISTS = {
         "Air binding",
         "Drawdown test for actual pump rate",
         "Motor current vs nameplate if available",
+        "Bring: drawdown test kit, clamp ammeter, impeller-access tools, rag hook",
     ],
     "STATION_WIDE_CHANGE": [
         "Confirm level setpoints unchanged",
         "Force-main restriction or air",
         "Common discharge valves",
+        "Bring: pressure gauge, valve key, clamp ammeter",
     ],
-    "PUMP_NOT_RUNNING": ["Pump fail or overload alarm", "HOA switch position"],
+    "PUMP_NOT_RUNNING": [
+        "Pump fail or overload alarm",
+        "HOA switch position",
+        "Bring: clamp ammeter, multimeter, lockout tags",
+    ],
     "SOURCE_SILENT": [
         "Station power and RTU communications",
         "Dispatch if level is unknown in wet weather",
+        "Bring: portable generator, RTU battery",
     ],
-    "SENSOR_FAULT": ["Level transducer", "Rely on floats and SCADA alarms until fixed"],
-    "HIGH_LEVEL": ["Level against the SCADA high-level alarm (SCADA-equivalent; real setpoints unknown)"],
+    "SENSOR_FAULT": [
+        "Level transducer",
+        "Rely on floats and SCADA alarms until fixed",
+        "Bring: spare level transducer",
+    ],
+    "HIGH_LEVEL": [
+        "Level against the SCADA high-level alarm (SCADA-equivalent; real setpoints unknown)",
+        "Bring: sounding tape, portable pump",
+    ],
 }
 # The section 10.7 template ends "not a confirmed diagnosis", but section 10.7 also bans "confirmed".
 CAVEAT = "This is a draft from a detector, not a diagnosis."
@@ -59,6 +73,18 @@ def explanation(
         f"Rain is not used to excuse this finding. {gaps}. "
         f"Check: {'; '.join(CHECKLISTS[finding.type])}. {CAVEAT}"
     )
+
+
+def priority_reason(f: Finding, rank: int, total: int, quality: str | None) -> str:
+    """One line from fields the finding already has; says why it sits at this rank."""
+    if f.change_pct is None:
+        what = f.type.lower().replace("_", " ")
+    else:
+        what = f"{'largest ' if rank == 1 and f.status == 'INVESTIGATE' else ''}capacity loss (\u2212{abs(f.change_pct):.0f}%)"
+    parts = [what, f"{f.days_open} day{'s' * (f.days_open != 1)} open"]
+    if quality:
+        parts.append(f"evidence {quality.replace('_', ' ').capitalize()}")
+    return f"Rank {rank} of {total}: {', '.join(parts)}"
 
 
 def work_order(finding: Finding, station_id: str) -> WorkOrder:
