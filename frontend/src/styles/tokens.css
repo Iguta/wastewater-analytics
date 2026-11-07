@@ -1,0 +1,56 @@
+/* Dragonfly design tokens. ISA-101 style (ARCHITECTURE.md section 10.7):
+   grey by default, color only for abnormal states, no green anywhere.
+   Every text/background pair below was checked for WCAG 2.1 AA (4.5:1 text, 3:1 marks).
+   Ratios are in the comments. Owner: Praneetha (stream:ui). */
+:root {
+  /* Surfaces */
+  --bg: #D9DCDF;            /* page */
+  --panel: #F4F5F6;         /* cards, drawer */
+  --header: #3B434B;        /* top bar */
+  --border: #B8BEC4;
+  --hatch-a: #C9CED3;       /* "not enough data" / source offline hatch */
+  --hatch-b: #B8BEC4;
+
+  /* Text */
+  --text: #1B1F23;          /* 12.0 on bg, 15.2 on panel */
+  --text-muted: #4A5560;    /* 7.0 on panel */
+  --text-on-header: #FFFFFF;/* 10.1 on header */
+
+  /* Status. Color is never the only cue: each status also has a shape and words (section 10.2). */
+  --normal-mark: #4A5560;   /* grey dash, 7.0 on panel */
+  --watch-fill: #FFC53D;    /* chip fill */
+  --watch-on-fill: #3A2800; /* 9.0 on watch-fill */
+  --watch-text: #8A4B00;    /* 6.2 on panel, 5.9 on bg */
+  --watch-mark: #B45309;    /* chart marks, 4.6 on panel (3:1 needed) */
+  --investigate-fill: #B42318;
+  --investigate-on-fill: #FFFFFF; /* 6.6 on investigate-fill */
+  --investigate-text: #B42318;    /* 6.0 on panel */
+  --investigate-text-on-bg: #A31F15; /* 5.5 on bg */
+  --investigate-wash: #FBE3E0;    /* projection / highlight wash */
+
+  /* Charts: greyscale with dashed threshold lines (section 10.7) */
+  --chart-line: #1B1F23;
+  --chart-band: #C5D0DB;     /* "normal band" */
+  --chart-grid: #B8BEC4;
+  --chart-threshold: #4A5560; /* dashed */
+  --chart-rain: #8B95A0;
+
+  /* Interactive */
+  --primary: #1F4E8C;        /* 7.6 on panel, 8.3 with white text */
+  --primary-on: #FFFFFF;
+  --focus-ring: #1F4E8C;     /* 6.0 on bg; used as 3px outline + 2px offset */
+
+  /* Type and spacing */
+  --font: Inter, system-ui, sans-serif;
+  --font-tabular: "tnum" 1;  /* use with font-feature-settings; also set font-variant-numeric: tabular-nums */
+  --text-base: 15px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px;
+  --tap-min: 44px;           /* minimum touch target (mobile / field use) */
+}
+
+/* Rules that go with the tokens */
+body { background: var(--bg); color: var(--text); font: var(--text-base)/1.45 var(--font); font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.hatch { background: repeating-linear-gradient(135deg, var(--hatch-a) 0 6px, var(--hatch-b) 6px 8px); }
+/* Text never sits directly on a hatch: put it in a solid chip on --panel. */
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
