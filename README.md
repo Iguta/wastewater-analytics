@@ -56,6 +56,18 @@ Dashboard (operator alerts, planner station overview)
 - **Open-Meteo** historical weather archive: daily rainfall for Bloomington.
 - Simulated Fishers-style lift stations, with fictional names and approximate locations.
 
+## Dataset and exploration notebooks
+
+The raw data and our pre-hackathon exploration live in Google Drive, not in this repo, because the full telemetry files are too large for git (158 MB and 91 MB). Only small, trimmed per-station files will be committed here.
+
+| Resource | What it contains |
+| --- | --- |
+| [Dataset folder (Google Drive)](https://drive.google.com/drive/folders/1x6gIb-EptRJB1q5HUdvWV4wzom5nesct?usp=sharing) | `wessex/` with the Wessex Water telemetry, key and rainfall files; `Sanitary_Sewer_Overflows_20261102.csv` (Bloomington) |
+| [Wessex telemetry exploration (Colab)](https://colab.research.google.com/drive/1jbtOWFJ2bj38W74FqdsBRbqEo_zdHmNr?usp=sharing) | Signal lookup, station inventory and selection, pairing pump starts and stops into runs, one-day wet well sawtooth, baseline run times |
+| [Bloomington overflow analysis (Colab)](https://colab.research.google.com/drive/1RPnH1W6hpVb9hyLlsvKKX60hOnVOUIGL?usp=sharing) | Data cleaning, overflow causes by category, rainfall reliability, overflow risk by daily rainfall |
+
+These notebooks are exploration done before the event (planning and data study, which the rules allow). All application code in this repo is written during the hackathon.
+
 ## How to run
 
 _Coming soon._
