@@ -14,10 +14,15 @@ Naming: `kebab-case`. A repeated element gets an id plus a data attribute for it
 | `scrubber-date` | Date picker input |
 | `scrubber-live-date` | The `aria-live` region that announces the date |
 | `replay-toggle` | Replay 1 day/s |
+| `scrubber-end-note` | "End of data" note when Replay reaches the last day |
+| `scrubber-range-error` | "Pick a date between {min} and {max}" |
+| `scrubber-outage-marker` | Real-gap mark on the scrubber track (one per outage window) |
 | `skip-to-investigate` | "Skip to first Investigate" (scenarios only) |
 | `tab-stations` / `tab-incidents` / `tab-lab` | The three tabs |
 | `server-banner` | Persistent "Server not reachable" banner |
 | `state-loading` / `state-error` / `state-empty` | Per-screen states; `state-error` has a child `retry-button` |
+
+`scrubber-prev`, `scrubber-next` and `replay-toggle` use the `disabled` attribute at the range edges (and `replay-toggle` at the last day).
 
 ## Stations tab (section 10.3)
 
@@ -30,6 +35,7 @@ Naming: `kebab-case`. A repeated element gets an id plus a data attribute for it
 | `changes-since-yesterday` | Status changes line |
 | `storm-line` | Storm outlook line |
 | `safety-strip` | Safety strip; child `safety-empty` for the empty state |
+| `high-level-unknown` | "High-level check: unknown (level sensor faulty)" entry in the safety strip |
 | `attention-queue` | Queue container; child `queue-empty` for the empty state |
 | `queue-row` | One row (`data-alert-id`, `data-status`); accessible name includes the status |
 | `queue-tag` | "New today" / "Was Watch yesterday" |

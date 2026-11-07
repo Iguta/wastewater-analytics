@@ -299,6 +299,33 @@ That makes 324 combinations. The silence and high-level rules are fixed, not tun
 
 No ChatGPT head-to-head is run. A is labeled "simple rules", never "ChatGPT".
 
+### 4.16 Learned baseline (experiment, P1, gated)
+
+**Question:** can a model trained on normal behavior predict each pump's daily capacity more precisely than the rolling median, so real drops stand out more? It needs no failure labels: every healthy pump-day is training data.
+
+- **Model:** LightGBM regression of daily log CI on features known by the end of the previous day:
+  - the pump's own lags (1, 2, 3, 7, 14 and 28 days, plus the guarded 60-day median);
+  - the siblings' same-day median;
+  - rain (today, 3-day and 7-day);
+  - day of week and month;
+  - valid cycles and overlap share;
+  - station and pump ids.
+- **Training data:** 2022 only, from the 21 stations outside the demo set, excluding pump-days within ±21 days of a weak-label episode (§6.8). It is validated by early stopping on the last 2 months of 2022.
+- **Use:** the residual (actual − predicted) replaces `log ci − baseline median` in §4.4. Everything downstream (sibling rule, CUSUM, persistence, `min_effect`) is unchanged, so the two baselines are compared like for like.
+- **Adoption rule:** it becomes `baseline_mode = "learned"` only if all three hold on dev, and the decision is logged as a `decision-change`:
+  1. the residual spread is under 0.8× the rolling median's on the 3 demo stations, which it never saw;
+  2. F1 recall rises;
+  3. G6 false alarms do not rise.
+- **Dependency:** `lightgbm` is the one exception to §14's no-ML-dependency rule. It is allowed only if the adoption rule passes, with David's approval as model owner.
+- **Otherwise:** the rolling median stays, and the experiment's numbers go in the Lab as evidence that the simpler model held up.
+- **Result (13:10, dev data only): KEEP the rolling median.** Training took 2.4 s on 7,160 pump-days.
+  - **Spread:** tighter on 44371 and 45385 (0.44–0.79×), but much looser on 45078 (1.4–4.0×); pooled 1.39×.
+  - **Detection:** 16 of 40 injected faults caught vs 23 for the median, and a shorter median lead (1.9 d vs 5.5 d).
+  - **Without station id:** pooled spread 0.81×, 26 of 40 caught (within noise of 23 at n = 40), shorter lead (3.4 d), slightly more false alarms.
+  - **Why it lost:** yesterday's value carried 34–76% of the gain, so the model partly follows the decline it is meant to flag; and station offsets cannot be learned for an unseen station.
+  - The script lives in the session scratchpad. The Lab shows this table as evidence that a trained alternative was tested and the simpler model held.
+- **Compute:** trained locally on Dhruv's M5 Max with all cores. Training runs offline; nothing trains while a request is served (§1).
+
 ## 5. The situational experiment
 
 ### 5.1 The two locked incident scenarios (David, PR #3, v1)
@@ -504,6 +531,30 @@ Fixing the injector or simulator for realism is allowed only before G7 passes fo
 - any ChatGPT comparison presented as a result;
 - calling Morningside's mechanism known.
 
+### 6.8 Weak labels from the full dataset (measurement only)
+
+**Definition** (`backend/scripts/proxy_events.py`, David):
+
+- A pump whose prior 60-day median is at least 10 runs/day logs 0 runs for 2 or more days.
+- On every one of those days, a sibling logs at least 10 runs.
+- Episodes overlapping the 2023-08-17..20 gap, or a station silence of 6 h or more, are excluded.
+- **Rotation stations:** a station where more than half its episodes last exactly 2 days is flagged as one, currently 44372. It is reported separately, so duty rotation doesn't swamp the counts.
+
+**What the first run found** (all 24 stations, 13:00):
+
+- 117 episodes, 56 of them at 44372.
+- Only **16 (14%)** were preceded by a capacity drop of −10% or worse over the prior 14 days. The detector warned on **7 of those 16**, typically about 12 days ahead.
+- 101 showed no sign in the data, and no detector on this data could warn on them.
+- Proxy precision (INVESTIGATE followed by a removal within 30 days) is 5–19%.
+
+**Rules:**
+
+- These labels are **measurement only**. No parameter is ever tuned on them; once tuned on, they stop being evidence.
+- Results are always split into the 21 stations never used for any design choice and the 3 demo stations. The 21 are the out-of-sample check.
+- The labels mean "taken out of service", never "failed". They mix planned work, rotation, and operators acting on the same symptoms we detect.
+- The claim is descriptive only: "16 of 117 removals gave a warning sign in the data; we caught 7 of them." It is never a headline accuracy number.
+- **The real fix is real labels.** A pilot utility's maintenance records become ground truth. Each one enters as a labeled case in the §11.6 benchmark, and that is how the system improves from measured-on-planted-faults to measured-on-real-failures.
+
 ## 7. Contracts (`backend/app/contracts.py`, Pydantic v2)
 
 ```python
@@ -518,7 +569,7 @@ ErrorCode = Literal["UNKNOWN_STATION", "UNKNOWN_SCENARIO", "UNKNOWN_ALERT", "UNK
 Provenance:      source_hash, scenario_hash | None, model_version, code_version, signal_ids: list[str]
 PumpState:       pump_id, status, quality, ci_today | None, ci_baseline | None, capacity_change_pct | None,
                  cusum, valid_cycles, runs, run_median_s | None, expected_run_s | None
-Finding:         alert_id, type, pump_id | None, status, priority: int (1 = highest), opened_on: date,
+Finding:         alert_id, type, pump_id | None, status, priority: int (1 = highest), opened_on: date, since_utc: datetime (first minute or day the condition held),
                  days_open, observed | None, expected | None, units, change_pct | None, summary,
                  possible_causes: list[str], inspection: list[str]
 RainContext:     today_mm | None, last_72h_mm | None, source
@@ -695,7 +746,7 @@ The README "Use it from your agent" section carries these configurations, `cloud
 
 | State | What it shows |
 | --- | --- |
-| Loading | A skeleton plus "Loading…". After 10 s, it becomes an error. |
+| Loading | A skeleton plus "Loading…". After 10 s it becomes an error reading "Can't reach the Dragonfly server (no response in 10 s). Retry." |
 | Error | "Can't reach the Dragonfly server (HTTP {code}). Retry." While the API is down, a persistent top banner reads "Server not reachable". A screen is never blank. |
 | Empty queue | "No pumps need attention as of {date}." When evidence is below `SUFFICIENT`: "Nothing flagged, but evidence is {Partial / Not enough data}." Never "All clear". |
 | Empty safety strip | "No safety findings. SCADA-equivalent checks; real setpoints unknown." |
@@ -1190,3 +1241,26 @@ Rehearse both outcomes, with and without a warning before the trip. If it doesn'
 The "why not ChatGPT" answer lives in the Lab panel and in Q&A, not in the 5 minutes.
 
 **Pitch line:** "Not a chatbot that guesses what's wrong. A pipeline that measures each pump's capacity from data you already log, and knows when the evidence is strong enough to interrupt an operator."
+
+## 20. How this is judged, and where each criterion is met
+
+Every project is judged on The Build and against all three award categories. **Our plan, said in the first 20 seconds of the demo:** "We aimed at Community Impact, and built it like a Software Factory."
+
+| Criterion | What judges look for | Where we show it | Owner |
+| --- | --- | --- | --- |
+| **The Build: real and live** | Something judges can use, not slides | The Stations tab running on `make serve`; judges press the Lab buttons themselves; Claude Code asking our MCP server live | Praneetha; Dhruv |
+| **The Build: how AI shaped it** | The process, not just the output | Three humans each driving a coding agent; agents hand work to each other on the board; every PR reviewed by an agent and benchmarked against main (§11.6); **corrections real data forced on the plan**: the sibling rule (D2/D3), the 5→10-minute silence rule, the run-time cap, the weak-label finding that 86% of removals give no warning | Dhruv |
+| **The Build: know your why** | Why it works the way it does | The capacity index cancels rain by physics (§2), shown in one chart; why we didn't train a black box (no labels; it would learn our own planted faults); why it says "not enough data" | David |
+| **Community Impact** | A real Hoosier problem, and who is better off | Morningside (Bloomington, 14,310 gal, 2024) and Fishers (25,000 gal, dead backup battery, IDEM fine) rebuilt on screen; what failed, what we'd have flagged and when, simulated gallons. Who is better off: residents downstream, utility crews, and ratepayers who fund fines and cleanup. Read-only, so a city can try it without touching its control system. | All |
+| **Software Factory** | Makes building software faster or more reliable; would an engineer trust it | The agent board with headless agents that pick up tagged work; `make verify` as one oracle; per-PR benchmark with regression flags; gates and scenarios locked by CODEOWNERS so agents can't game them; the maker/checker split. Show one real PR comment table. | Dhruv |
+| **Wildcard** | Swing big, surprise | The dragonfly circuit: ignore the clutter (lateral inhibition), lock onto what keeps moving (trajectory facilitation), engineered structure instead of a trained black box | David |
+| **Aim high, rough edges fine** | Ambitious and mostly working | One philosophy for any machine that logs on/off: HVAC compressors, booster pumps, oilfield pumps, conveyors. Wastewater is the proof today. | All |
+| **How you'd improve it** | Asked in every demo | (1) Pilot maintenance logs become real labels (§6.8). (2) The learned baseline (§4.16) if it beats the median. (3) Swap Sonnet for a local model for fully in-house utilities. (4) An operator "was this right?" button feeding the benchmark. | All |
+
+**Rules for the five minutes** (from the judging guide):
+
+- Tell a story and show it working.
+- Keep deliberating to a minimum: no slides beyond the README.
+- Name the plan up front.
+- End with how we'd improve it.
+- Rough edges are fine; bluffing is not. The "Say instead" column in `docs/status.md` is the script for every number.

@@ -31,6 +31,8 @@ Every agent, every file, model code included. The goal is the smallest change th
 8. **Before a PR:** run `make verify`, then `/simplify` (Claude Code) or an equivalent pass that removes anything the diff does not need. Paste the last 10 lines of `make verify` in the PR body.
 9. **Never cut:** validation at the trust boundary (API and MCP inputs), error handling that prevents data loss, the read-only rule, and provenance fields.
 
+**Model experiments are announced, not just run.** Before any tuning run, parameter change, or model experiment (grid, new baseline, new feature, threshold sweep), post on the board starting with `EXPERIMENT:` stating the question, the data tier (dev only), and the decision rule that would adopt it. Post the result starting with `RESULT:` with the numbers, including when it lost, and add one row to `reports/decisions.md`. Nobody tunes on 2023 or on the weak labels.
+
 Claude Code users: `ponytail` is the house style and runs automatically; `/ponytail-review` before every PR.
 
 ## The board
