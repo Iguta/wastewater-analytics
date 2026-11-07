@@ -78,12 +78,27 @@ def run(daily: pd.DataFrame, params: Params, scope: str = "REAL") -> pd.DataFram
     d["capacity_change_pct"] = 100 * (np.exp(d["logci"] - d["base_median"]) - 1)
     d["standby"] = d["base_runs_median"] < STANDBY_RUNS_PER_DAY
 
-    # sibling inhibition (§4.5)
-    zc = d.dropna(subset=["z"]).groupby("day")["z"]
-    common = zc.median().where(zc.count() >= 2)
-    d["sibling_available"] = d["day"].map(common.notna()).fillna(False).astype(bool)
-    d["common"] = d["day"].map(common).fillna(0.0) if p.inhibition else 0.0
-    d["u"] = d["z"] - d["common"]
+    # sibling inhibition (§4.5, decision D2/D3): compare the capacity CHANGE (log CI minus own baseline) with
+    # the other sufficient pumps' changes, subtract only a shared drop, then scale by this pump's own spread.
+    d["dev"] = (d["logci"] - d["base_median"]).where(d["z"].notna())
+    ds = d.dropna(subset=["dev"])
+    others = []
+    for r in d[["pump_id", "day"]].itertuples(index=False):
+        o = ds[(ds["day"] == r.day) & (ds["pump_id"] != r.pump_id)]["dev"]
+        others.append(float(o.median()) if len(o) else np.nan)
+    oth = np.array(others, dtype=float)
+    d["sibling_available"] = ~np.isnan(oth)
+    oth = np.nan_to_num(oth, nan=0.0)
+    if p.sibling_mode == "down_only":  # only explain a drop the siblings share; never manufacture one
+        oth = np.minimum(oth, 0.0)
+    if not p.inhibition:
+        oth = np.zeros_like(oth)
+    d["common"] = oth / scale  # in this pump's z units, for the trace
+    d["u"] = ((d["dev"] - oth) / scale).clip(-10, 10)
+    zs = d.dropna(subset=["z"])
+    # station-wide signal c_d = max z over sufficient pumps (>= 2), negative only if every pump drops
+    zc = zs.groupby("day")["z"]
+    common = zc.max().where(zc.count() >= 2)
 
     # per-pump CUSUM + status (§4.6) and incidents (§4.11)
     parts = []
@@ -93,14 +108,16 @@ def run(daily: pd.DataFrame, params: Params, scope: str = "REAL") -> pd.DataFram
 
     # station-wide change (§4.7): same CUSUM on -c_d, WATCH at most
     st = common.dropna().sort_index()
-    s, scus = 0.0, {}
+    s, on, scus, son = 0.0, False, {}, {}
     for day, c in st.items():
-        s = max(0.0, s + float(np.clip(-c, -p.U, p.U)) - p.k)
-        scus[day] = s
+        s = min(p.S_max, max(0.0, s + float(np.clip(-c, -p.U, p.U)) - p.k))
+        on = s >= p.h_w or (on and s >= 1.0)  # opens at h_w, closes below 1.0 (same hysteresis as WATCH)
+        scus[day], son[day] = s, on
     days = pd.Series(sorted(d["day"].unique()))
     scs = pd.Series(scus, dtype=float).reindex(days).ffill().fillna(0.0)  # held on days without siblings
+    sow = pd.Series(son, dtype=object).reindex(days).ffill().fillna(False).astype(bool)
     d["station_cusum"] = d["day"].map(scs)
-    d["station_wide_change"] = d["station_cusum"] >= p.h_w
+    d["station_wide_change"] = d["day"].map(sow).astype(bool)
 
     # PUMP_NOT_RUNNING (§4.8): baseline runs/day median >= 10, today 0, a sibling >= 10 today
     sib_max = d.groupby("day")["runs"].transform("max")
@@ -108,7 +125,7 @@ def run(daily: pd.DataFrame, params: Params, scope: str = "REAL") -> pd.DataFram
         (d["base_runs_median"] >= NOT_RUNNING_MIN_RUNS) & (d["runs"] == 0) & (sib_max >= NOT_RUNNING_MIN_RUNS)
     )
 
-    keep = [c for c in d.columns if c not in ("day_idx", "logci", "sufficient")]
+    keep = [c for c in d.columns if c not in ("day_idx", "logci", "sufficient", "dev")]
     return d[keep].sort_values(["day", "pump_id"]).reset_index(drop=True)
 
 
@@ -130,7 +147,7 @@ def _pump_states(g: pd.DataFrame, pump: str, p: Params, scope: str) -> pd.DataFr
             new = prev if prev != "INSUFFICIENT_EVIDENCE" else "NORMAL"
         else:
             if p.persistence:
-                S = max(0.0, S + float(np.clip(-r.u, -p.U, p.U)) - p.k)
+                S = min(p.S_max, max(0.0, S + float(np.clip(-r.u, -p.U, p.U)) - p.k))
                 recent = (recent + [r.u])[-3:]
                 persist = sum(x < -p.k for x in recent) >= 2
                 if S >= p.h_i and persist:

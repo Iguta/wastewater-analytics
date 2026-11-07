@@ -21,6 +21,8 @@ class Params:
     min_valid_cycles: int = 20
     min_baseline_days: int = 30
     reopen_days: int = 7
+    S_max: float = 12.0
+    sibling_mode: str = "down_only"
     persistence: bool = True
     inhibition: bool = True
     quality_gate: bool = True
