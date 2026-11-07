@@ -539,6 +539,10 @@ Outcome:         no_warning_gal, with_dragonfly_gal, sensitivity: list[Sensitivi
 ReplayResult:    case_id, origin, family, title, truth: dict, timeline: list[TimelineDay],
                  first_watch_at | None, first_investigate_at | None, failure_at | None, lead_time_h | None,
                  outcome: Outcome | None, benchmarks: dict[str, {first_investigate_at, lead_time_h, incidents}]
+StationInfo:     station_id, display_name, pumps: list[str], origin, scenario_id | None,
+                 as_of_min: datetime, as_of_max: datetime, outage_windows: list[tuple[datetime, datetime]]
+                 (real data gaps to mark on the scrubber; the 2023-08-17..20 gap at least)
+StationsResponse: stations: list[StationInfo], source_hash, model_version
 ToolError:       code: ErrorCode, message, allowed: list[str]
 ```
 
