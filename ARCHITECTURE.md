@@ -76,7 +76,8 @@ Display names are `Wessex 44371`, `Wessex 45385` and `Wessex 45078`. No fictiona
 
 ### 3.3 Time and splits
 
-- **Timezone:** naive timestamps are read as UTC, as recorded. Days are UTC dates. The API takes and returns `as_of_utc` in ISO 8601 with `Z`.
+- **Timezone:** naive timestamps are read as UTC, as recorded. The source is UK local time, so UTC days are offset by up to an hour and the DST change nights (late March, late October) carry a repeated or missing hour. For daily medians this does not matter; a negative or near-zero fill on those nights is excluded by the fill range rule, and the data-quality report counts them.
+- **Historian compression:** the export logs state changes only. A dropped transition merges two runs into one long run, which is why repeated starts and stops are counted rather than invented, and why a long run is kept and capped instead of discarded. Days are UTC dates. The API takes and returns `as_of_utc` in ISO 8601 with `Z`.
 - **Warm-up:** the baseline needs 74 days of history. Real replay `as_of_utc` is therefore valid from `2022-03-16T00:00:00Z` to `2024-01-01T00:00:00Z`.
 - **Dev tier** (tuning allowed): 2022. **Test tier** (score only): 2023. Per-pump baselines are trailing (§4.4), so the split controls only hyperparameter tuning and case generation.
 
@@ -201,7 +202,8 @@ For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, usin
 ### 4.7 Station-wide change
 
 - The same CUSUM runs on `−c_d`.
-- At `S_station ≥ h_w`, it raises a `STATION_WIDE_CHANGE` finding at `WATCH`, never higher. It closes when `S_station < 1.0`, with the same `S_max = 12` ceiling.
+- At `S_station ≥ h_w`, it raises a `STATION_WIDE_CHANGE` finding at `WATCH`.
+- **Both pumps failing together** (same age, same rags) looks the same as a setpoint change on this index, so a large shared drop is escalated on size alone: if the station's shared capacity change is at or below −30% on each of the last 3 `SUFFICIENT` days, the finding becomes `INVESTIGATE` with the cause list "all pumps restricted, force-main restriction, or control change". A station that can pump 30% less than normal is serious whatever the cause. It closes when `S_station < 1.0`, with the same `S_max = 12` ceiling.
 - Possible causes listed: level setpoint change, force-main restriction, control change, common supply issue.
 
 ### 4.8 Other findings (minute resolution: evaluated at `as_of` and, in replays, at every minute of data)
@@ -791,6 +793,8 @@ After replay, the card shows one row per variant: first `WATCH`, first `INVESTIG
 5. **What the model cannot know:**
    - sudden power, controller or vandalism failures days ahead;
    - the physical cause;
+   - a failed check valve: backflow shortens the fill and lengthens the run, so the index can hide it or mis-size it;
+   - two pumps wearing out together at the same rate (shown only as a station-wide change, escalated by its size);
    - VFD stations;
    - stations with no telemetry;
    - real alarm setpoints.
