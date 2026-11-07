@@ -18,6 +18,7 @@ The detector decides. The agent only translates. Nothing below changes that rule
 
 ## Next (scoped, not built)
 
+0. **Harness: the Claude Agent SDK.** Replace the hand-written `tool_runner` loop in `agent.py` with the Agent SDK. The Dragonfly MCP server is declared as config; `allowed_tools` is exactly the three read-only tools, and every built-in tool (shell, files, web) is off. A post-turn hook runs the grounding check before anything reaches the operator. Sessions give conversation history (item 2). The model choice stays a single setting, so swapping Sonnet, Haiku or a local model behind a compatible endpoint is one line.
 1. **Fixed output structure.** The agent returns a typed object (`summary`, `what_changed`, `supports`, `contradicts`, `missing`, `inspect`, `alert_ids`) instead of free markdown, so the UI renders the same layout every time. The grounding check runs per field.
 2. **Conversation.** The drawer keeps a short history per alert, so an operator can ask follow-ups. Each turn still calls the tools; the history is never a source of numbers.
 3. **What-if requests become a report request, not an answer.** "What happens if inflow doubles?" gets: "I can't run new analyses. I've logged this question for the reliability team." The question goes to the same local log as `/api/feedback`.
