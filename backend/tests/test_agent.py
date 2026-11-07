@@ -9,6 +9,7 @@ from claude_agent_sdk import AssistantMessage, ResultMessage, ToolResultBlock, T
 from backend import agent
 
 ALERT = "REAL:44371:P1:CAPACITY_DROP:2022-06-01"
+ARGS = {"station_id": "44371", "as_of_utc": "2022-06-03T00:00:00Z"}
 TOOL_TEXT = json.dumps(
     {
         "status": "INVESTIGATE",
@@ -206,3 +207,81 @@ async def test_sessions_are_capped_oldest_first(fake, monkeypatch):
 def test_system_prompt_matches_the_locked_spec_verbatim():
     spec = (agent.ROOT / "ARCHITECTURE.md").read_text()
     assert agent.SYSTEM in spec
+
+
+@pytest.mark.anyio
+async def test_a_failed_tool_call_is_counted_but_never_grounds_an_answer(monkeypatch, fake):
+    err = "Error executing tool assess_station: " + json.dumps({"code": "UNKNOWN_SCENARIO"})
+
+    async def bad_then_good(*, prompt, options):
+        yield AssistantMessage(
+            content=[ToolUseBlock("e0", "mcp__dragonfly__assess_station", {"scenario_id": "none"})], model="m"
+        )
+        yield UserMessage(content=[ToolResultBlock("e0", err, is_error=True)])
+        yield AssistantMessage(
+            content=[ToolUseBlock("t0", "mcp__dragonfly__assess_station", ARGS)], model="m"
+        )
+        yield UserMessage(content=[ToolResultBlock("t0", TOOL_TEXT)])
+        yield ResultMessage(
+            subtype="success", duration_ms=0, duration_api_ms=0, is_error=False, num_turns=1,
+            session_id="sdk1", stop_reason="end_turn", structured_output=GOOD,
+        )  # fmt: skip
+
+    monkeypatch.setattr(agent, "query", bad_then_good)
+    r = await agent.ask("why?", {})
+    assert [c.ok for c in r.tool_calls] == [False, True] and not r.withheld
+
+
+@pytest.mark.anyio
+async def test_unicode_dashes_in_a_date_or_a_minus_do_not_break_grounding(fake):
+    fake(dict(GOOD, what_changed=["Capacity changed \u221231.2% on 2022\u201106\u201101."]))
+    assert not (await agent.ask("why?", {})).withheld
+
+
+@pytest.mark.anyio
+async def test_a_non_json_tool_result_marks_the_call_failed_and_never_crashes_grounding(monkeypatch, fake):
+    notice = "Error: result (184,454 characters) exceeds maximum allowed tokens. Output saved to a file."
+
+    async def oversize_then_good(*, prompt, options):
+        yield AssistantMessage(
+            content=[ToolUseBlock("e0", "mcp__dragonfly__get_evidence", {"alert_id": ALERT})], model="m"
+        )
+        yield UserMessage(content=[ToolResultBlock("e0", notice)])  # not flagged as an error by the CLI
+        yield AssistantMessage(
+            content=[ToolUseBlock("t0", "mcp__dragonfly__assess_station", ARGS)], model="m"
+        )
+        yield UserMessage(content=[ToolResultBlock("t0", TOOL_TEXT)])
+        yield ResultMessage(
+            subtype="success", duration_ms=0, duration_api_ms=0, is_error=False, num_turns=1,
+            session_id="sdk1", stop_reason="end_turn", structured_output=GOOD,
+        )  # fmt: skip
+
+    monkeypatch.setattr(agent, "query", oversize_then_good)
+    r = await agent.ask("why?", {})
+    assert [c.ok for c in r.tool_calls] == [False, True] and not r.withheld
+
+
+@pytest.mark.anyio
+async def test_a_tool_errors_allowed_values_and_the_users_own_numbers_can_be_cited(monkeypatch, fake):
+    err = 'Error executing tool assess_station: {"code": "UNKNOWN_STATION", "message": "unknown station", "allowed": ["44371", "45385"]}'
+    answer = dict(GOOD, summary="Station 99999 is not known.", supports=[], contradicts=[], alert_ids=[], what_changed=[], missing=["Valid stations are 44371 and 45385."], inspect=[])  # fmt: skip
+
+    async def unknown_station(*, prompt, options):
+        yield AssistantMessage(
+            content=[ToolUseBlock("e0", "mcp__dragonfly__assess_station", {"station_id": "99999"})], model="m"
+        )
+        yield UserMessage(content=[ToolResultBlock("e0", err, is_error=True)])
+        yield ResultMessage(
+            subtype="success", duration_ms=0, duration_api_ms=0, is_error=False, num_turns=1,
+            session_id="sdk1", stop_reason="end_turn", structured_output=answer,
+        )  # fmt: skip
+
+    monkeypatch.setattr(agent, "query", unknown_station)
+    r = await agent.ask("Assess station 99999 as of 2022-06-03.", {})
+    assert not r.withheld and [c.ok for c in r.tool_calls] == [False]
+
+
+@pytest.mark.anyio
+async def test_a_number_the_user_did_not_give_and_no_tool_returned_is_still_withheld(fake):
+    fake(dict(GOOD, supports=["Capacity fell 99%."]))
+    assert (await agent.ask("Subtract 5 from 10 for P1", {})).withheld

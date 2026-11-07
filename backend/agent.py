@@ -35,8 +35,10 @@ SYSTEM = (
     "You explain read-only lift-station assessments to utility operators. Call the tools to get facts; never answer "
     "from memory. On every turn, including follow-ups, call the tools again: earlier turns are never a source of "
     "numbers. Quote statuses, numbers, units and alert ids exactly as the tools return them, and only those. "
-    "Never estimate a missing reading, a failure probability, a failure date or a confirmed cause; say what is "
-    "missing instead. Never suggest operating, overriding or resetting equipment or alarms. When results are "
+    "Never estimate a missing reading, a failure date or a cause; say what is missing instead. Write a status only as the exact capitalised status the tools give for the thing you name, and never use "
+    "the words normal, watch or investigate in any other sense. Do not quote a window length such as the 72 in a rain "
+    "field name; say recent rain. Never write the "
+    "words probability, confirmed, guarantee, definitely or prevent, or the phrase will fail. Never suggest operating, overriding or resetting equipment or alarms. When results are "
     "SIMULATED or SYNTHETIC, say so. You cannot run new analyses, and you never add, subtract, compare or convert "
     "numbers. If a question is not about the tool results, say you only explain Dragonfly assessments. Work orders are "
     "drafted by the system, not by you. You may describe the drafted work order returned by get_evidence (its checks "
@@ -53,6 +55,7 @@ ACTED = r"(?:filed|sent|assigned|submitted|created|closed|opened|dispatched|sche
 WORK_ORDER_CLAIM = re.compile(
     rf"\b{ACTED}\b[^.\n]{{0,60}}work order|work order[^.\n]{{0,60}}\b{ACTED}\b", re.I
 )
+DASHES = {c: "-" for c in (*range(0x2010, 0x2016), 0x2212)}  # hyphens, dashes and the minus sign
 REFUSAL = "I can't run new analyses; I've logged this for the reliability team."
 # Sessions live in process memory, newest last; the oldest is evicted past MAX_SESSIONS, so a restart or eviction just starts a fresh conversation.
 SESSIONS: dict[tuple[str, str | None], tuple[str, int]] = {}  # (session_id, alert_id) -> (sdk session, turns)
@@ -71,7 +74,11 @@ def render(a: Answer) -> str:
 def check_answer(a: Answer, results: list[str]) -> Grounding:
     """Grounding per field; a cited alert id must appear verbatim in a tool result."""
     raw = "\n".join(results)
-    texts = [a.summary, *a.what_changed, *a.supports, *a.contradicts, *a.missing, *a.inspect]
+    # Some models write dates and minus signs with Unicode dashes; the checker reads ASCII "-".
+    texts = [
+        t.translate(DASHES)
+        for t in (a.summary, *a.what_changed, *a.supports, *a.contradicts, *a.missing, *a.inspect)
+    ]
     parts = [grounding.check(t, results) for t in texts]
     return Grounding(
         passed=all(p.passed for p in parts) and all(i in raw for i in a.alert_ids) and not any(WORK_ORDER_CLAIM.search(t) for t in texts),
@@ -79,6 +86,12 @@ def check_answer(a: Answer, results: list[str]) -> Grounding:
         forbidden_phrases=[f for p in parts for f in p.forbidden_phrases]
         + [m.group() for t in texts for m in WORK_ORDER_CLAIM.finditer(t)],
     )  # fmt: skip
+
+
+def asked(question: str, context: dict) -> str:
+    """The user's own words and numbers may be echoed ("station 99999", "2020-01-01"); the model still may not compute."""
+    text = f"{question} {json.dumps(context)}"
+    return json.dumps({"asked": text, "numbers": [float(n) for n in re.findall(r"\d+(?:\.\d+)?", text)]})
 
 
 def log_question(question: str, alert_id: str | None) -> None:
@@ -138,7 +151,14 @@ async def ask(question: str, context: dict, session_id: str | None = None) -> As
                     u = uses[b.tool_use_id]
                     calls.append(ToolCall(tool=u.name.removeprefix(PREFIX), args=u.input, ok=not b.is_error))
                     c = b.content or ""
-                    results.append(c if isinstance(c, str) else "".join(x.get("text", "") for x in c))
+                    text = c if isinstance(c, str) else "".join(x.get("text", "") for x in c)
+                    body = text[text.find("{") :] if b.is_error else text  # "Error executing tool X: {json}"
+                    try:  # an oversize or other plain-text notice is not JSON and not a fact
+                        json.loads(body)
+                    except ValueError:
+                        calls[-1].ok = False
+                    else:  # a tool error's own JSON (valid ids, allowed range) is the server's word too
+                        results.append(body)
             if isinstance(m, ResultMessage):
                 final = m
     answer = None
@@ -157,7 +177,7 @@ async def ask(question: str, context: dict, session_id: str | None = None) -> As
     g = (
         Grounding(passed=False, unmatched_numbers=[reason], forbidden_phrases=[])
         if reason
-        else check_answer(answer, results)
+        else check_answer(answer, [*results, asked(question, context)])
     )
     if g.passed and session_id and final:
         SESSIONS.pop(key, None)  # re-insert last: the dict stays oldest-first

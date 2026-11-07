@@ -79,7 +79,11 @@ def assess_station(station_id: StationId, as_of_utc: str, scenario_id: ScenarioI
 def get_evidence(alert_id: str, as_of_utc: str) -> dict:
     """Evidence behind one alert id from assess_station, as of an instant."""
     args = {"alert_id": alert_id, "as_of_utc": as_of_utc}
-    return _call("get_evidence", args, lambda: assess.get_evidence(alert_id, assess.parse_time(as_of_utc)))
+    out = _call("get_evidence", args, lambda: assess.get_evidence(alert_id, assess.parse_time(as_of_utc)))
+    # The chart and raw-data fields are for the UI: 1,440 level points alone are 115 KB, over a model's tool-result limit.
+    del out["level"], out["raw_events"]
+    out["trace"] = out["trace"][-14:]
+    return out
 
 
 @mcp.tool()
@@ -87,6 +91,9 @@ def replay_case(case_id: CaseId) -> dict:
     """Replay a locked scenario variant or a synthetic family case."""
     out = _call("replay_case", {"case_id": case_id}, lambda: assess.replay_case(case_id))
     out.pop("truth")  # the injected ground truth is for the evaluator and the UI's reveal, never for a model
+    out.pop(
+        "timeline"
+    )  # daily chart rows: 54 KB of 62, over a model's tool-result limit; the first_*/lead/outcome fields summarise it
     return out
 
 
