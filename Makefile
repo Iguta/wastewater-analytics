@@ -3,11 +3,12 @@ SHELL := bash
 
 UV := uv run --frozen --project backend
 
-.PHONY: setup test verify build-ui serve mcp mcp-http mcp-smoke eval-smoke eval-dev eval-test tune agent-eval
+.PHONY: setup test verify build-ui serve e2e mcp mcp-http mcp-smoke eval-smoke eval-dev eval-test tune agent-eval
 
 setup:
 	cd backend && uv sync --frozen
 	cd frontend && npm ci
+	cd e2e && npm ci && npx playwright install --with-deps chromium
 
 test:
 	$(UV) ruff check backend
@@ -22,6 +23,9 @@ build-ui:
 
 serve:
 	$(UV) uvicorn backend.api:app --host 127.0.0.1 --port 8000 --workers 1
+
+e2e:
+	cd e2e && npx playwright test
 
 mcp:
 	$(UV) python -m backend.mcp_server
