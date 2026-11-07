@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
-import type { BenchmarkKey, EvaluationReport, Experiment, Rate, ReplayResult } from "../types";
+import type { BenchmarkKey, DevCase, EvaluationReport, Experiment, HeatCell, ProxyRow, Rate, ReplayResult } from "../types";
 import { EmptyState, ErrorState, Loading } from "./ScreenState";
 
 const rate = (r: Rate) => `${r.k} of ${r.n}`;
@@ -21,7 +21,6 @@ const CANNOT_KNOW = [
   "Real alarm setpoints.",
 ];
 // Section 5.6: each live experiment uses the first dev seed of one family.
-const FAMILY: Record<Experiment, string> = { storm_test: "F2", break_sensor: "F6", cut_power: "F5", one_bad_day: "F4" };
 const EXPERIMENTS: { id: Experiment; label: string; testid: string; expect: string }[] = [
   { id: "storm_test", label: "Storm test", testid: "exp-storm-test", expect: "The simple rule fires in the storm; Dragonfly stays quiet." },
   { id: "break_sensor", label: "Break the level sensor", testid: "exp-break-sensor", expect: "Sensor fault is flagged and the high-level check reads unknown." },
@@ -83,7 +82,7 @@ function Report({ r }: { r: EvaluationReport }) {
       {r.benchmarks && <BenchTable id="lab-ablations" title="What each part of Dragonfly adds" keys={ABLATION} b={r.benchmarks} />}
       {r.metrics && <Metrics r={r} />}
       {r.heatmap && <Heatmap h={r.heatmap} />}
-      {(r.proxy || r.weak_labels) && <Proxy r={r} />}
+      {r.proxy && <Proxy rows={r.proxy} />}
       {r.caveats && r.caveats.length > 0 && (
         <section className="panel" data-testid="lab-caveats"><h2 className="section-title">Caveats</h2><ul>{r.caveats.map((c) => <li key={c}>{c}</li>)}</ul></section>
       )}
@@ -148,9 +147,11 @@ function BenchTable({ id, title, keys, b: all }: { id: string; title: string; ke
 }
 
 // Section 6.2: bins are shown only where n >= 20. Greyscale bar, never color alone.
-function Heatmap({ h }: { h: NonNullable<EvaluationReport["heatmap"]> }) {
+function Heatmap({ h }: { h: HeatCell[] }) {
   const [table, setTable] = useState(false);
-  const cell = (l: string, m: string) => h.cells.find((c) => c.loss === l && c.ramp === m);
+  const losses = [...new Set(h.map((c) => c.loss))].sort((a, b) => a - b);
+  const ramps = [...new Set(h.map((c) => c.ramp))].sort((a, b) => a - b);
+  const cell = (l: number, m: number) => h.find((c) => c.loss === l && c.ramp === m);
   return (
     <section className="panel">
       <div className="chart-head">
@@ -159,12 +160,12 @@ function Heatmap({ h }: { h: NonNullable<EvaluationReport["heatmap"]> }) {
       </div>
       <div data-testid={table ? "lab-heatmap-table" : "lab-heatmap"}>
         <table className="data-table heat">
-          <thead><tr><th scope="col">Loss \ ramp</th>{h.ramp_bins.map((m) => <th key={m} scope="col">{m}</th>)}</tr></thead>
+          <thead><tr><th scope="col">Loss \ ramp</th>{ramps.map((m) => <th key={m} scope="col">{m} d</th>)}</tr></thead>
           <tbody>
-            {h.loss_bins.map((l) => (
+            {losses.map((l) => (
               <tr key={l}>
-                <th scope="row">{l}</th>
-                {h.ramp_bins.map((m) => {
+                <th scope="row">{Math.round(l * 100)}%</th>
+                {ramps.map((m) => {
                   const c = cell(l, m);
                   if (!c || c.n < 20) return <td key={m}>{c ? `n/a (only ${c.n} cases)` : "n/a"}</td>;
                   return (
@@ -183,18 +184,15 @@ function Heatmap({ h }: { h: NonNullable<EvaluationReport["heatmap"]> }) {
   );
 }
 
-function Proxy({ r }: { r: EvaluationReport }) {
+function Proxy({ rows }: { rows: ProxyRow[] }) {
   return (
     <section className="panel" data-testid="lab-proxy-events">
       <h2 className="section-title">Real pump outages</h2>
-      {(r.proxy ?? []).map((p) => (
-        <p key={p.tier}>
-          Real pump outages preceded by a warning ({p.tier} tier): {p.episodes < 5 ? `n/a (only ${p.episodes} ${p.episodes === 1 ? "episode" : "episodes"})` : `${p.preceded} of ${p.episodes}`}
+      {rows.map((p) => (
+        <p key={`${p.tier}-${p.group}`}>
+          Real pump outages preceded by a warning ({p.tier} tier, {p.group === "demo_3" ? "3 demo stations" : "21 untouched stations"}): {p.episodes < 5 ? `n/a (only ${p.episodes} ${p.episodes === 1 ? "episode" : "episodes"})` : `${p.preceded} of ${p.episodes}`}
         </p>
       ))}
-      {r.weak_labels && (
-        <p>{r.weak_labels.with_precursor} of {r.weak_labels.episodes} removals gave a warning sign; we caught {r.weak_labels.warned} of them.</p>
-      )}
       <p className="meta">These are pumps taken out of service, not shown to be failures. The dev tier is 2022 data. Descriptive only: no maintenance records exist to measure real precision.</p>
     </section>
   );
@@ -215,7 +213,7 @@ function LearnedBaseline() {
 }
 
 function Experiments() {
-  const [cases, setCases] = useState<string[] | null>(null);
+  const [cases, setCases] = useState<DevCase[] | null>(null);
   const [err, setErr] = useState(false);
   useEffect(() => { api.scenarios().then((r) => setCases(r.dev_cases), () => setErr(true)); }, []);
   return (
@@ -224,7 +222,7 @@ function Experiments() {
       <p className="meta">Each one replays a fixed development case through the same API. Simulated, not real station data.</p>
       {err && <p>Can't load the experiment cases.</p>}
       <div className="experiments">
-        {EXPERIMENTS.map((e) => <Experiment key={e.id} e={e} dev={cases?.find((c) => c.startsWith(`${FAMILY[e.id]}-`)) ?? null} loaded={cases != null} />)}
+        {EXPERIMENTS.map((e) => <Experiment key={e.id} e={e} dev={cases?.find((c) => c.experiment === e.id)?.case_id ?? null} loaded={cases != null} />)}
       </div>
     </section>
   );

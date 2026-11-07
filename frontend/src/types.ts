@@ -74,7 +74,8 @@ export interface ScenarioCard {
   facts: ScenarioFact[]; outcome_facts: ScenarioFact[]; variants: ScenarioVariant[];
 }
 export type Experiment = "storm_test" | "break_sensor" | "cut_power" | "one_bad_day";
-export interface ScenariosResponse { scenarios: ScenarioCard[]; dev_cases: string[] } // dev_cases: the Lab's fixed dev case ids (section 5.6)
+export interface DevCase { case_id: string; experiment: Experiment | null }
+export interface ScenariosResponse { scenarios: ScenarioCard[]; dev_cases: DevCase[] } // the Lab's fixed dev cases (section 5.6)
 // PROPOSED shape for GET /api/evaluation (not in section 7 yet; asked on the board). Every count carries its denominator.
 export interface Rate { k: number; n: number }
 export type BenchmarkKey = "A" | "B" | "C" | "C-persistence" | "C-inhibition" | "C-quality";
@@ -82,6 +83,8 @@ export interface BenchmarkRow {
   caught: Rate; median_lead_days: number | null;
   false_storm: Rate; false_duty: Rate; false_transient: Rate; real_alerts_per_pump_6mo: number | null;
 }
+export interface HeatCell { loss: number; ramp: number; k: number; n: number }
+export interface ProxyRow { tier: "dev" | "test"; group: "demo_3" | "untouched_21"; episodes: number; preceded: number }
 // GET /api/evaluation. The required fields match fixtures/ui/evaluation.json; the optional ones are PROPOSED
 // (asked on the board) and each Lab panel renders only when its field is present.
 export interface EvaluationReport {
@@ -89,9 +92,8 @@ export interface EvaluationReport {
   metrics?: Record<string, Record<string, unknown>>; gates?: Record<string, boolean>; caveats?: string[];
   test_scored?: number;
   benchmarks?: Partial<Record<BenchmarkKey, BenchmarkRow>>;
-  heatmap?: { loss_bins: string[]; ramp_bins: string[]; cells: { loss: string; ramp: string; k: number; n: number }[] };
-  proxy?: { tier: string; episodes: number; preceded: number }[];
-  weak_labels?: { episodes: number; with_precursor: number; warned: number } | null;
+  heatmap?: HeatCell[];
+  proxy?: ProxyRow[];
 }
 export interface Sensitivity { label: string; simulated_gal: number }
 export interface Outcome { no_warning_gal: number; with_dragonfly_gal: number; sensitivity: Sensitivity[]; assumptions: string[] }

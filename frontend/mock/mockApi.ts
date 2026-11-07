@@ -96,14 +96,13 @@ export function mockApi(): Plugin {
         if (u.pathname === "/evaluation") {
           const r = (k: number, n: number) => ({ k, n });
           const row = (caught: number, lead: number, fs: number, fd: number, ft: number, alerts: number) => ({ caught: r(caught, 100), median_lead_days: lead, false_storm: r(fs, 30), false_duty: r(fd, 30), false_transient: r(ft, 30), real_alerts_per_pump_6mo: alerts });
-          const bins = { loss_bins: ["20-30%", "30-40%", "40-50%"], ramp_bins: ["7-14 d", "14-30 d"] };
           return send(200, { model_version: "dragonfly-ci-v1", code_version: "mock", test_scored: 1,
             benchmarks: { A: row(40, 1.0, 12, 9, 7, 3.1), B: row(70, 2.0, 6, 4, 5, 2.2), C: row(80, 3.0, 0, 0, 0, 0.5), "C-persistence": row(78, 3.0, 2, 1, 4, 1.1), "C-inhibition": row(80, 3.0, 0, 5, 0, 0.6), "C-quality": row(81, 3.0, 1, 0, 0, 0.9) },
-            heatmap: { ...bins, cells: bins.loss_bins.flatMap((l, i) => bins.ramp_bins.map((m, j) => ({ loss: l, ramp: m, k: 15 + i * 3 + j * 2, n: i === 2 && j === 0 ? 12 : 25 }))) },
-            proxy: [{ tier: "dev", episodes: 9, preceded: 5 }, { tier: "test", episodes: 3, preceded: 1 }],
-            weak_labels: { episodes: 117, with_precursor: 16, warned: 7 }, caveats: [] });
+            heatmap: [0.2, 0.3, 0.4].flatMap((l, i) => [7, 14].map((m, j) => ({ loss: l, ramp: m, k: 15 + i * 3 + j * 2, n: i === 2 && j === 0 ? 12 : 25 }))),
+            proxy: [{ tier: "dev", group: "demo_3", episodes: 9, preceded: 5 }, { tier: "dev", group: "untouched_21", episodes: 12, preceded: 6 }, { tier: "test", group: "demo_3", episodes: 3, preceded: 1 }],
+            caveats: [] });
         }
-        if (u.pathname === "/scenarios") return send(200, { scenarios: SCENARIOS, dev_cases: ["F2-0", "F6-0", "F5-0", "F4-3"] });
+        if (u.pathname === "/scenarios") return send(200, { scenarios: SCENARIOS, dev_cases: [{ case_id: "F2-0", experiment: "storm_test" }, { case_id: "F6-0", experiment: "break_sensor" }, { case_id: "F5-0", experiment: "cut_power" }, { case_id: "F4-3", experiment: "one_bad_day" }] });
         if (u.pathname === "/replay") {
           const id = q.get("case_id")!; const A = id.endsWith(":A");
           if (id.startsWith("fishers")) return send(200, { case_id: id, origin: "SIMULATED_INCIDENT", family: "incident", title: id, truth: { silence_start: "2009-01-20T10:30:00Z" }, timeline: [],
