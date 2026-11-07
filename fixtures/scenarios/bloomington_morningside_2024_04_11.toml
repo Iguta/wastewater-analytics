@@ -122,7 +122,7 @@ mean_event_inflow_gpm = { value = 120, status = "UNVERIFIED", confidence = 20 }
 forecast_source = "Open-Meteo previous-runs API (forecast issued 1 day / 2 days before each hour), UTC"
 forecast_query = "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=39.1673&longitude=-86.472&start_date=2024-03-12&end_date=2024-04-13&hourly=precipitation_previous_day1,wind_gusts_10m_previous_day2&precipitation_unit=inch&wind_speed_unit=mph&timezone=GMT"
 forecast_grid_point = [39.173813, -86.48419]
-forecast_file = "fixtures/scenarios/forecast/bloomington_morningside_2024_04_11.json"
+forecast_file = "fixtures/scenarios/bloomington_morningside_2024_04_11.forecast.json"
 forecast_file_sha256 = "f53a03f652da410346a025c0e6f970b3ea6881c85222f907fa4b4da3f813c1b3"
 forecast_rain_apr8_11_local_in = { value = 2.69, status = "VERIFIED", confidence = 85, note = "day-ahead forecast matched the observed 2.70 in: the storm was forecastable" }
 forecast_max_gust_apr10_11_mph = { value = 43.4, status = "VERIFIED", confidence = 80, note = "at 2024-04-11T22:00Z, 2-day-ahead forecast" }
