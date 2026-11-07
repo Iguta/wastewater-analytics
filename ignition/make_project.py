@@ -87,8 +87,10 @@ def view_doc(rootnode, params=None, custom=None, prop_config=None, size=(900, 13
 
 FETCH = (
     "\timport urllib\n"
-    "\tst, asof = value.split('|')[0], value.split('|')[1]\n"
+    "\tst, asof, sc = value.split('|')[0], value.split('|')[1], value.split('|')[2]\n"
     "\turl = '%s/api/assess?station_id=' + urllib.quote(st) + '&as_of_utc=' + urllib.quote(asof)\n"
+    "\tif sc:\n"
+    "\t\turl += '&scenario_id=' + urllib.quote(sc)\n"
     "\ttry:\n"
     "\t\treturn system.util.jsonDecode(system.net.httpGet(url, 5000, 15000))\n"
     "\texcept Exception as e:\n"
@@ -183,6 +185,18 @@ def counter(name, title, count_expr, border, color):
                              {"props.text": expr(count_expr)})],
                 style={"border": border, "padding": "5px 14px", "minWidth": "150px"})
 
+# (scenario_id, label, stand-in station, moment to land on); dates checked against the live API
+SCENARIOS = [("", "Real replay (Wessex)", "44371", "2022-06-05T00:00:00Z"),
+             ("bloomington_morningside_2024_04_11:A", "Morningside A: pump wears out (sim.)", "44371", "2024-04-10T00:00:00Z"),
+             ("bloomington_morningside_2024_04_11:B", "Morningside B: sudden trip (sim.)", "44371", "2024-04-11T08:00:00Z"),
+             ("fishers_bowline_2009_01_20:A", "Fishers A: power lost (sim.)", "45385", "2009-01-20T10:45:00Z"),
+             ("fishers_bowline_2009_01_20:B", "Fishers B: controller fault (sim.)", "45385", "2009-01-20T12:00:00Z")]
+JUMP = ("\tjump = %s\n"
+        "\tif currentValue is not None and currentValue.value in jump:\n"
+        "\t\tself.custom.station, self.custom.as_of = jump[currentValue.value]") % repr(dict((k, (st, t)) for k, _, st, t in SCENARIOS))
+scenario_dd = {"type": "ia.input.dropdown", "meta": {"name": "Scenario"}, "position": {"basis": "280px", "shrink": 0},
+               "props": {"options": [{"value": k, "label": l} for k, l, _, _ in SCENARIOS], "value": "", "showClearIcon": False},
+               "propConfig": {"props.value": prop("view.custom.scenario", bidirectional=True)}}
 station_dd = {"type": "ia.input.dropdown", "meta": {"name": "Station"}, "position": {"basis": "200px", "shrink": 0},
               "props": {"options": [{"value": s, "label": "Wessex " + s} for s in ("44371", "45385", "45078")],
                         "value": "44371", "showClearIcon": False},
@@ -196,9 +210,13 @@ header = flex("Header", [
         label("Name", "", {"fontSize": "20px", "fontWeight": "600", "color": "#FFFFFF"},
               {"props.text": expr("if(isNull(%s.error}), %s.display_name} + ' Lift Station', %s.error})" % (A, A, A))}),
         label("Data", "", {"fontSize": "12px", "color": "#D5DADF"},
-              {"props.text": expr("'REPLAY  ·  Wessex Water telemetry 2022-2023 (CC BY)  ·  not live data  ·  Data up to ' + {view.custom.as_of} + ' UTC'")}),
+              {"props.text": expr("if({view.custom.scenario} = '', 'REPLAY  ·  Wessex Water telemetry 2022-2023 (CC BY)  ·  not live data', "
+                                  "'SIMULATION  ·  ' + {view.custom.scenario} + ' on stand-in station  ·  not real station data') "
+                                  "+ '  ·  Data up to ' + {view.custom.as_of} + ' UTC'"),
+               "props.style.color": expr("if({view.custom.scenario} = '', '#D5DADF', '#FFD08A')")}),
     ]),
-    flex("Pick", [label("L1", "Station", {"color": "#D5DADF", "fontSize": "12px"}), station_dd,
+    flex("Pick", [label("L0", "Scenario", {"color": "#D5DADF", "fontSize": "12px"}), scenario_dd,
+                  label("L1", "Station", {"color": "#D5DADF", "fontSize": "12px"}), station_dd,
                   label("L2", "Data up to (UTC)", {"color": "#D5DADF", "fontSize": "12px"}), asof_tf],
          direction="row", alignItems="center", style={"gap": "8px"}),
     flex("Counts", [
@@ -331,8 +349,9 @@ main = view_doc(flex("root", [
     ], style={"padding": "20px 32px 16px", "gap": "24px"}),
     footer,
 ], style={"backgroundColor": "#D9DCDF", "fontFamily": "Inter, system-ui, sans-serif", "overflowY": "auto"}),
-    custom={"station": "44371", "as_of": "2022-06-05T00:00:00Z", "a": {}},
-    prop_config={"custom.a": expr("{view.custom.station} + '|' + {view.custom.as_of} + '|' + toStr(now(60000))", FETCH)})
+    custom={"station": "44371", "as_of": "2022-06-05T00:00:00Z", "scenario": "", "a": {}},
+    prop_config={"custom.a": expr("{view.custom.station} + '|' + {view.custom.as_of} + '|' + {view.custom.scenario} + '|' + toStr(now(60000))", FETCH),
+                 "custom.scenario": {"onChange": {"enabled": None, "script": JUMP}}})
 
 persp = root / "com.inductiveautomation.perspective"
 for name, doc in (("Dragonfly", main), ("Cards/WarningCard", warning_card), ("Cards/WorkOrder", work_order_view)):
