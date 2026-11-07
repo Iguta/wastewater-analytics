@@ -179,3 +179,13 @@ def test_large_shared_drop_escalates_station_on_size():
     # per-pump status stays inhibited until the baseline starts absorbing the shift (G = 14 days, §4.4 known limit)
     early = r[r.day.between("2022-05-01", "2022-05-14")]
     assert not (early.status == "INVESTIGATE").any()
+
+
+def test_min_effect_blocks_investigate_on_tiny_precise_drop():
+    rng = np.random.default_rng(3)
+    n = 160
+    base = 30 * np.exp(rng.normal(0, 0.003, (2, n)))  # very low scatter
+    base[0, 120:] *= 0.96  # -4%: statistically clear, practically small
+    r = detect.run(_daily({"P1": base[0], "P2": base[1]}), P)
+    p1 = r[(r.pump_id == "P1") & (r.day >= "2022-05-01")]
+    assert (p1.status == "WATCH").any() and not (p1.status == "INVESTIGATE").any()
