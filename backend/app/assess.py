@@ -275,8 +275,10 @@ def _findings(b: _Bundle, station_id: str, as_of: datetime) -> list[Finding]:
             -f.days_open,
         )
     )
+    quality = {r.pump_id: r.quality for r in d[d["day"] == d["day"].max()].itertuples()} if len(d) else {}
     for i, f in enumerate(out, 1):
         f.priority = i
+        f.priority_reason = explain.priority_reason(f, i, len(out), quality.get(f.pump_id))
     return out
 
 

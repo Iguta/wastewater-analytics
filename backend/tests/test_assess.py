@@ -207,3 +207,13 @@ def test_outage_then_recovery_holds_cusum_and_opens_nothing(monkeypatch):
     assert not any(p.status == "INVESTIGATE" for p in a.pumps)
     assess._bundle.cache_clear()
     assess.assess_station.cache_clear()
+
+
+def test_priority_reason_says_largest_only_for_an_investigate_row():
+    f = assess.assess_station("44371", datetime(2022, 6, 5, tzinfo=timezone.utc)).queue[0]
+    assert "largest capacity loss" in explain.priority_reason(f, 1, 1, "SUFFICIENT")
+    watch = f.model_copy(update={"status": "WATCH", "days_open": 1})
+    assert (
+        explain.priority_reason(watch, 1, 1, None)
+        == f"Rank 1 of 1: capacity loss (−{abs(f.change_pct):.0f}%), 1 day open"
+    )
