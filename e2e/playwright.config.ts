@@ -11,7 +11,7 @@ export default defineConfig({
   outputDir: 'test-results',
   webServer: {
     command: 'make -C .. build-ui serve',
-    url: 'http://127.0.0.1:8000/api/health',
+    url: 'http://127.0.0.1:8000/api/scenarios', // warm: the first scenarios call builds the cards and outran a 15 s expect in CI
     reuseExistingServer: true,
     timeout: 180_000,
     env: { ANTHROPIC_API_KEY: '' }, // the offline path is asserted
