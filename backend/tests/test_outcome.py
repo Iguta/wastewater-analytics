@@ -35,3 +35,10 @@ def test_g7_no_warning_run_reproduces_record(sid, variant):
     pre = run.level_frac[run.level_frac.index < d["failure"]]
     assert not np.any(pre.to_numpy() >= 1.0)
     assert d["failure"] <= run.overflow_start <= d["restore"]
+
+
+def test_precursor_loss_is_not_capped():
+    """The §5.1 sweep needs loss_24h = 0.8 to reach the simulator unchanged."""
+    _r60, _a, _d60 = outcome.no_warning_run(SCENARIOS[0], "A", loss_24h=0.6)
+    r80, _a, _d80 = outcome.no_warning_run(SCENARIOS[0], "A", loss_24h=0.8)
+    assert r80.overflow_gal >= _r60.overflow_gal
