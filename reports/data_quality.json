@@ -1,0 +1,143 @@
+{
+  "end_utc": "2024-01-01T00:00:00Z",
+  "stations": {
+    "44371": {
+      "events": 186017,
+      "level_flag_days": {
+        "LEVEL_GAP": 63
+      },
+      "level_samples": 977315,
+      "level_units": [
+        "%"
+      ],
+      "offline_hours_total": 5.71,
+      "pump_day_quality": {
+        "P1": {
+          "INSUFFICIENT": 46,
+          "PARTIAL": 13,
+          "SUFFICIENT": 671
+        },
+        "P2": {
+          "INSUFFICIENT": 35,
+          "PARTIAL": 24,
+          "SUFFICIENT": 671
+        }
+      },
+      "pumps": [
+        "P1",
+        "P2"
+      ],
+      "rule_counts": {
+        "BAD_TIMESTAMP": 0,
+        "BAD_VALUE": 0,
+        "DUPLICATE_ROW": 0,
+        "FILL_OUT_OF_RANGE": 915,
+        "LEVEL_BAD_ROW": 0,
+        "LEVEL_DUPLICATE_ROW": 0,
+        "LEVEL_OUT_OF_RANGE": 0,
+        "LONG_RUN": 215,
+        "OPEN_RUN": 1,
+        "OVERLAP": 332,
+        "RAIN_GAP": 0,
+        "REPEATED_START": 46,
+        "REPEATED_STOP": 28,
+        "RUN_OUT_OF_RANGE": 86
+      },
+      "source_hash": "5e9ef8086cc0de9590267b55a50706d4456a8a15b7b8867f9a28d44dbcb79cdf"
+    },
+    "45078": {
+      "events": 357306,
+      "level_flag_days": {
+        "LEVEL_GAP": 38
+      },
+      "level_samples": 1037713,
+      "level_units": [
+        "mm"
+      ],
+      "offline_hours_total": 14.1,
+      "pump_day_quality": {
+        "P1": {
+          "INSUFFICIENT": 22,
+          "PARTIAL": 61,
+          "SUFFICIENT": 647
+        },
+        "P2": {
+          "INSUFFICIENT": 31,
+          "PARTIAL": 57,
+          "SUFFICIENT": 642
+        },
+        "P3": {
+          "INSUFFICIENT": 28,
+          "PARTIAL": 56,
+          "SUFFICIENT": 646
+        }
+      },
+      "pumps": [
+        "P1",
+        "P2",
+        "P3"
+      ],
+      "rule_counts": {
+        "BAD_TIMESTAMP": 0,
+        "BAD_VALUE": 0,
+        "DUPLICATE_ROW": 0,
+        "FILL_OUT_OF_RANGE": 12045,
+        "LEADING_STOP": 1,
+        "LEVEL_BAD_ROW": 0,
+        "LEVEL_DUPLICATE_ROW": 0,
+        "LEVEL_OUT_OF_RANGE": 0,
+        "LONG_RUN": 556,
+        "OPEN_RUN": 1,
+        "OVERLAP": 4647,
+        "RAIN_GAP": 0,
+        "REPEATED_START": 157,
+        "REPEATED_STOP": 311,
+        "RUN_OUT_OF_RANGE": 0
+      },
+      "source_hash": "5e9ef8086cc0de9590267b55a50706d4456a8a15b7b8867f9a28d44dbcb79cdf"
+    },
+    "45385": {
+      "events": 176528,
+      "level_flag_days": {
+        "LEVEL_GAP": 32
+      },
+      "level_samples": 1049104,
+      "level_units": [
+        "%"
+      ],
+      "offline_hours_total": 5.73,
+      "pump_day_quality": {
+        "P1": {
+          "INSUFFICIENT": 84,
+          "PARTIAL": 27,
+          "SUFFICIENT": 619
+        },
+        "P2": {
+          "INSUFFICIENT": 11,
+          "PARTIAL": 11,
+          "SUFFICIENT": 708
+        }
+      },
+      "pumps": [
+        "P1",
+        "P2"
+      ],
+      "rule_counts": {
+        "BAD_TIMESTAMP": 0,
+        "BAD_VALUE": 0,
+        "DUPLICATE_ROW": 0,
+        "FILL_OUT_OF_RANGE": 1140,
+        "LEVEL_BAD_ROW": 0,
+        "LEVEL_DUPLICATE_ROW": 0,
+        "LEVEL_OUT_OF_RANGE": 0,
+        "LONG_RUN": 164,
+        "OVERLAP": 472,
+        "RAIN_GAP": 0,
+        "REPEATED_START": 44,
+        "REPEATED_STOP": 38,
+        "RUN_OUT_OF_RANGE": 1
+      },
+      "source_hash": "5e9ef8086cc0de9590267b55a50706d4456a8a15b7b8867f9a28d44dbcb79cdf"
+    }
+  }
+}

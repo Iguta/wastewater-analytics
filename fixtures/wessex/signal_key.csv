@@ -1,0 +1,4 @@
+Marketplace Site ID,Flow Signal ID (analogue),Pressure Signal ID (analogue),Wet well level Signal ID (analogue),Wet well level 2 Signal ID (analogue),Pump 1 Signal ID (digital),Pump 2 Signal ID (digital),Pump 3 Signal ID (digital),Pump 4 Signal ID (digital),Average pipe internal diameter (mm)
+44371,44371_PFFlow1_WASTE_E4766,44371_Pressure1_WASTE_E4765,44371_Wet_Well_Level_WASTE_E4762,-,44371_PFFPump1_WASTE_B24898,44371_PFFPump2_WASTE_B24899,-,-,250
+45078,45078_PFFlow1_WASTE_E8017,45078_Pressure1_WASTE_E7337,45078_Wet_Well_Level_WASTE_E29063,-,45078_PFFPump1_WASTE_B60248,45078_PFFPump2_WASTE_B60249,45078_PFFPump3_WASTE_B60250,-,600
+45385,45385_PFFlow1_WASTE_E6552,45385_Pressure1_WASTE_E6553,45385_Wet_Well_Level_WASTE_E33595,-,45385_PFFPump1_WASTE_B112396,45385_PFFPump2_WASTE_B112398,-,-,280
