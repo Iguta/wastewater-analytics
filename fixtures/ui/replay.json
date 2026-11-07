@@ -1,0 +1,189 @@
+{
+  "case_id": "bloomington_morningside_2024_04_11:A",
+  "origin": "SIMULATED_INCIDENT",
+  "family": "Morningside",
+  "title": "Morningside equipment failure, variant A",
+  "truth": {
+    "loss_24h": 0.3,
+    "shape": "ramp"
+  },
+  "timeline": [
+    {
+      "day": "2024-04-05",
+      "station_status": "NORMAL",
+      "pumps": [
+        {
+          "pump_id": "P1",
+          "status": "NORMAL",
+          "ci": 30.0,
+          "base_median": 30.0,
+          "cusum": 0.0
+        },
+        {
+          "pump_id": "P2",
+          "status": "NORMAL",
+          "ci": 30.0,
+          "base_median": 30.0,
+          "cusum": 0.0
+        }
+      ]
+    },
+    {
+      "day": "2024-04-06",
+      "station_status": "NORMAL",
+      "pumps": [
+        {
+          "pump_id": "P1",
+          "status": "NORMAL",
+          "ci": 30.0,
+          "base_median": 30.0,
+          "cusum": 0.0
+        },
+        {
+          "pump_id": "P2",
+          "status": "NORMAL",
+          "ci": 25.5,
+          "base_median": 30.0,
+          "cusum": 2.4
+        }
+      ]
+    },
+    {
+      "day": "2024-04-07",
+      "station_status": "WATCH",
+      "pumps": [
+        {
+          "pump_id": "P1",
+          "status": "NORMAL",
+          "ci": 30.0,
+          "base_median": 30.0,
+          "cusum": 0.0
+        },
+        {
+          "pump_id": "P2",
+          "status": "WATCH",
+          "ci": 21.0,
+          "base_median": 30.0,
+          "cusum": 4.8
+        }
+      ]
+    },
+    {
+      "day": "2024-04-08",
+      "station_status": "INVESTIGATE",
+      "pumps": [
+        {
+          "pump_id": "P1",
+          "status": "NORMAL",
+          "ci": 30.0,
+          "base_median": 30.0,
+          "cusum": 0.0
+        },
+        {
+          "pump_id": "P2",
+          "status": "INVESTIGATE",
+          "ci": 16.5,
+          "base_median": 30.0,
+          "cusum": 7.2
+        }
+      ]
+    },
+    {
+      "day": "2024-04-09",
+      "station_status": "INVESTIGATE",
+      "pumps": [
+        {
+          "pump_id": "P1",
+          "status": "NORMAL",
+          "ci": 30.0,
+          "base_median": 30.0,
+          "cusum": 0.0
+        },
+        {
+          "pump_id": "P2",
+          "status": "INVESTIGATE",
+          "ci": 12.0,
+          "base_median": 30.0,
+          "cusum": 9.6
+        }
+      ]
+    },
+    {
+      "day": "2024-04-10",
+      "station_status": "INVESTIGATE",
+      "pumps": [
+        {
+          "pump_id": "P1",
+          "status": "NORMAL",
+          "ci": 30.0,
+          "base_median": 30.0,
+          "cusum": 0.0
+        },
+        {
+          "pump_id": "P2",
+          "status": "INVESTIGATE",
+          "ci": 7.5,
+          "base_median": 30.0,
+          "cusum": 12.0
+        }
+      ]
+    },
+    {
+      "day": "2024-04-11",
+      "station_status": "INVESTIGATE",
+      "pumps": [
+        {
+          "pump_id": "P1",
+          "status": "NORMAL",
+          "ci": 30.0,
+          "base_median": 30.0,
+          "cusum": 0.0
+        },
+        {
+          "pump_id": "P2",
+          "status": "INVESTIGATE",
+          "ci": 3.0,
+          "base_median": 30.0,
+          "cusum": 14.4
+        }
+      ]
+    }
+  ],
+  "first_watch_at": "2024-04-07T12:00:00Z",
+  "first_investigate_at": "2024-04-08T06:48:00Z",
+  "failure_at": "2024-04-11T14:00:00Z",
+  "lead_time_h": 79.2,
+  "outcome": {
+    "no_warning_gal": 14532.0,
+    "with_dragonfly_gal": 2310.0,
+    "sensitivity": [
+      {
+        "label": "repair 24 h",
+        "simulated_gal": 1450.0
+      },
+      {
+        "label": "repair 48 h",
+        "simulated_gal": 2310.0
+      },
+      {
+        "label": "repair 96 h",
+        "simulated_gal": 4020.0
+      }
+    ],
+    "assumptions": [
+      "Simulated: inflow scaled from a Wessex analog day"
+    ]
+  },
+  "benchmarks": {
+    "A": {
+      "first_investigate_at": "2024-04-08T06:48:00Z",
+      "lead_time_h": 79.2,
+      "incident_opens": 1
+    },
+    "B": {
+      "first_investigate_at": null,
+      "lead_time_h": null,
+      "incident_opens": 0
+    }
+  }
+}

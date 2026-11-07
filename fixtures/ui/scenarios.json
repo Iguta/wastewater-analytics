@@ -1,0 +1,56 @@
+{
+  "scenarios": [
+    {
+      "id": "bloomington_morningside_2024_04_11",
+      "title": "Bloomington, Morningside Lift Station, 2024-04-11",
+      "version": "v4",
+      "scenario_hash": "9f87789c1c5544df539b3e322ab5825e6731332ddabbf40a180012cf41ecb935",
+      "facts": [
+        {
+          "label": "Reported volume",
+          "value": "14310 gal",
+          "status": "VERIFIED",
+          "confidence": 100,
+          "source": "kfaf-msfz gallons",
+          "source_url": "https://data.bloomington.in.gov/resource/kfaf-msfz.json"
+        }
+      ],
+      "outcome_facts": [
+        {
+          "label": "Cause",
+          "value": "Equipment failure",
+          "status": "VERIFIED",
+          "confidence": 100,
+          "source": "kfaf-msfz event",
+          "source_url": null
+        }
+      ],
+      "variants": [
+        {
+          "variant": "A",
+          "scenario_id": "bloomington_morningside_2024_04_11:A",
+          "name": "Gradual pump wear",
+          "confidence": 60,
+          "reason": "Equipment failure is consistent with a slow precursor.",
+          "detectability": "PREDICTABLE_DAYS_AHEAD",
+          "failure_at": "2024-04-11T14:00:00Z"
+        },
+        {
+          "variant": "B",
+          "scenario_id": "bloomington_morningside_2024_04_11:B",
+          "name": "Sudden failure",
+          "confidence": 40,
+          "reason": "No precursor in the record.",
+          "detectability": "NOT_DETECTABLE",
+          "failure_at": "2024-04-11T14:00:00Z"
+        }
+      ]
+    }
+  ],
+  "dev_cases": [
+    "F2-0",
+    "F5-0",
+    "F6-0",
+    "F4-0"
+  ]
+}

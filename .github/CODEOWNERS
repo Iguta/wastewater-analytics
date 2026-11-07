@@ -1,0 +1,11 @@
+/ARCHITECTURE.md @Iguta @dhruvbangera
+/AGENTS.md @Iguta @dhruvbangera
+/CLAUDE.md @Iguta @dhruvbangera
+/.github/ @Iguta @dhruvbangera
+/fixtures/scenarios/ @Iguta @dhruvbangera
+/fixtures/wessex/ @Iguta @dhruvbangera
+/backend/app/params.toml @Iguta @dhruvbangera
+/backend/app/gates.toml @Iguta @dhruvbangera
+/backend/tests/agent_eval.toml @Iguta @dhruvbangera
+/backend/tests/test_gates.py @Iguta @dhruvbangera
+/tools/verify @Iguta @dhruvbangera
