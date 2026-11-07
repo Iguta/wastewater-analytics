@@ -1,0 +1,126 @@
+# LOCKED BENCHMARK SCENARIO. Do not edit in place: any change gets a new `version`.
+# Tune on randomized variants, never on this exact scenario.
+#
+# Field convention: { value, status, confidence, source?, note? }
+#   status     = VERIFIED (read in the cited public record) | UNVERIFIED (assumption, inference,
+#                or only seen via search-engine summary of a source we could not open)
+#   confidence = 0-100
+
+id = "fishers_bowline_2009_01_20"
+version = "v1"
+locked = true
+locked_at = "2026-11-07"
+author = "Iguta (David's Claude Code)"
+title = "Fishers (HSE Utilities), Intracoastal at Geist: power + controller backup-battery failure, 2009-01-20"
+synthetic_simulation = true
+benchmark_kind = "silent_station"   # score minutes from telemetry loss to SOURCE_OFFLINE vs real discovery
+
+# 1. Record facts ------------------------------------------------------------
+[record]
+sources = [
+  "https://www.ibj.com/articles/42920-utility-fined-for-sewage-overflow-in-geist-neighborhood (IBJ, 2013-08-09)",
+  "https://in.gov/idem/oe/cause/AO/21374-W.htm (IDEM Agreed Order, case 2013-21374-W; page returned 404 to us, content seen only via search summaries)",
+]
+date = { value = "2009-01-20", status = "UNVERIFIED", confidence = 75, source = "IDEM Agreed Order 21374-W via search summary" }
+start_time_local = { value = "06:00 EST", status = "UNVERIFIED", confidence = 65, source = "IDEM AO via search summary" }
+utility = { value = "Hamilton-Southeastern Utilities Inc. (HSE), Fishers IN; O&M contractor SAMCO", status = "VERIFIED", confidence = 90, source = "IBJ 2013-08-09" }
+location = { value = "manhole MH-IC-2C-727.00, NW of Bowline Dr and Florida Rd, Intracoastal at Geist subdivision; lift station at 15195 Clove Hitch Ct", status = "UNVERIFIED", confidence = 70, source = "IDEM AO via search summary; subdivision VERIFIED in IBJ" }
+coordinates = { value = [39.951062, -85.892962], status = "VERIFIED", confidence = 85, source = "US Census geocoder, 15195 Clove Hitch Ct (the lift station address); overflow manhole is nearby" }
+reported_volume_gal = { value = 25000, status = "VERIFIED", confidence = 85, source = "IBJ: 'one incident released 25,000 gallons' (paraphrase; IBJ gives no date for it). Date link to 2009-01-20 is from the AO summary" }
+duration = { value = "not published (start 06:00 only)", status = "UNVERIFIED", confidence = 60 }
+cause_text = { value = "power failure caused a controller failure; the controller's backup battery did not work", status = "UNVERIFIED", confidence = 70, source = "IDEM AO via search summary" }
+receiving = { value = "to the ground and a storm sewer leading to Geist Reservoir", status = "UNVERIFIED", confidence = 65, source = "IDEM AO via search summary" }
+weather = { value = "dry: 0.14 in in the 7 days before (Open-Meteo); mid-winter", status = "VERIFIED", confidence = 85 }
+ibj_2013_04_17_article = { value = "not found", status = "UNVERIFIED", confidence = 0, note = "teammate cited it; our search surfaced only the 2013-08-09 article" }
+
+[[record.related_events]]
+date = "2012-12-22"
+event = "overflow at the same manhole; investigators suspected vandals broke a pump (IBJ) / pump and breaker failure (AO summary)"
+outcome = "$5,250 IDEM fine, agreement signed 2013-07-15 (IBJ VERIFIED)"
+discovered_by = "private citizen called IDEM spill line; odor strong enough that neighbors called the gas company (gas calls VERIFIED in IBJ)"
+reporting_failures = "station sign listed only an office number, no 24-h hotline; not reported within 2 h (IBJ VERIFIED)"
+gallons = "not confirmed (one summary says 2,500)"
+status = "PARTIAL"
+note = "IBJ: at least the 3rd overflow at that manhole since 2009"
+
+# 2. Failure mechanism --------------------------------------------------------
+[mechanism]
+primary_variant = "A"
+overall_note = "Single mechanism at 70%: below Dhruv's 80% bar because the AO text is second-hand, so a runner-up is included."
+
+[variants.A]
+name = "Utility power loss -> controller down; controller backup battery dead -> pumps and alarm/telemetry silent"
+mechanism = { value = "power failure + failed controller backup battery", status = "UNVERIFIED", confidence = 70 }
+evidence = [
+  "AO summary: power failure caused controller failure; backup battery did not work",
+  "VERIFIED (IBJ): no 24-h emergency line posted, so a dead alarm path left only residents to notice",
+]
+precursor_type = { value = "none", status = "UNVERIFIED", confidence = 80, note = "pump behaviour is normal until power drops; battery health was not telemetered" }
+precursor_onset_days_before = { value = 0, status = "UNVERIFIED", confidence = 80 }
+capacity_lost_pct_at_failure = { value = 100, status = "UNVERIFIED", confidence = 85 }
+precursor_shape = { value = "none (step)", status = "UNVERIFIED", confidence = 80 }
+failure_timestamp_utc = { value = "2009-01-20T10:30:00Z", status = "UNVERIFIED", confidence = 30, note = "05:30 EST: 06:00 overflow start minus ~30 min to fill wet-well storage at dry inflow" }
+backup_failed = { value = true, status = "UNVERIFIED", confidence = 70, note = "controller backup battery; no generator reported" }
+telemetry_after_failure = "none (controller and its comms unpowered)"
+expected_detector_outcome = { value = "DETECTABLE_AT_ONSET", status = "UNVERIFIED", confidence = 75, note = "as SOURCE_OFFLINE from heartbeat loss, not from pump data; NOT predictable days ahead" }
+
+[variants.B]
+name = "Controller/PLC fault without full power loss (pumps stop, comms may stay up)"
+mechanism = { value = "controller/PLC or breaker failure", status = "UNVERIFIED", confidence = 20, note = "one AO summary mentions 'PLC failure' and the 2012 event cites 'pump and breaker failure'" }
+precursor_type = { value = "none", status = "UNVERIFIED", confidence = 70 }
+precursor_onset_days_before = { value = 0, status = "UNVERIFIED", confidence = 70 }
+capacity_lost_pct_at_failure = { value = 100, status = "UNVERIFIED", confidence = 70 }
+precursor_shape = { value = "none (step)", status = "UNVERIFIED", confidence = 70 }
+failure_timestamp_utc = { value = "2009-01-20T10:30:00Z", status = "UNVERIFIED", confidence = 30 }
+backup_failed = { value = true, status = "UNVERIFIED", confidence = 50 }
+telemetry_after_failure = "pump states stop changing while level keeps rising (if level sensor still reports)"
+expected_detector_outcome = { value = "DETECTABLE_AT_ONSET", status = "UNVERIFIED", confidence = 65, note = "pumps not starting while level rises; or flatlined/stale pump signals" }
+
+# 4. Conditions -----------------------------------------------------------------
+[conditions]
+rain_source = "Open-Meteo historical archive (ERA5-based), hourly precipitation, inches, UTC"
+rain_query = "https://archive-api.open-meteo.com/v1/archive?latitude=39.9505&longitude=-85.8911&start_date=2008-12-21&end_date=2009-01-22&hourly=precipitation&precipitation_unit=inch&timezone=GMT"
+rain_grid_point = [39.964848, -85.85196]
+rain_query_note = "queried at the Bowline Rd centroid (39.9505,-85.8911); the Clove Hitch Ct station is 0.2 km away, same grid cell"
+rain_file = "fixtures/scenarios/rain/fishers_bowline_2009_01_20.csv"
+rain_file_sha256 = "83042256ce54ffd2ca574882ff59575edbb0a8bb058225a9f8dccb38a8e2d540"
+rain_window_utc = ["2008-12-21T00:00:00Z", "2009-01-22T23:00:00Z"]
+rain_total_in = { value = 2.01, status = "VERIFIED", confidence = 90, note = "mostly Dec 23-28; precipitation includes snow water equivalent" }
+rain_7d_before_in = { value = 0.14, status = "VERIFIED", confidence = 85 }
+dry_weather_inflow_gpm = { value = 50, status = "UNVERIFIED", confidence = 25, note = "~300 homes x 250 gpd ~ 52 gpm; early-morning flow is lower, morning peak higher" }
+
+# 5. Station stand-in ---------------------------------------------------------
+[station_standin]
+wessex_site = { value = "45385", status = "VERIFIED", confidence = 65, note = "one of the team's 3 model stations; audited 2026-11-07" }
+runstop_file = "Drive wessex/sps-run-stop-data.csv"
+runstop_file_sha256 = "a630f8948e86acd9efacc378b260bd970de371fad40bc2ad871df38f40054f58"
+measured_pumps = { value = 2, status = "VERIFIED", confidence = 100, note = "45385_PFFPump1_WASTE_B112396, 45385_PFFPump2_WASTE_B112398" }
+measured_median_run_s = { value = { pump1 = 168, pump2 = 190 }, status = "VERIFIED", confidence = 95 }
+measured_starts_per_day = { value = { pump1 = 39.5, pump2 = 81.7 }, status = "VERIFIED", confidence = 90 }
+measured_run_hours_per_day = { value = 7.78, status = "VERIFIED", confidence = 90 }
+why = "Two-pump residential-scale station with 1-min level data (per Dhruv; level file not audited by us). For a silent-station test the hydraulics only set how fast the wet well fills; the key input is telemetry cadence (pump events + 1-min level), which sets how fast heartbeat loss is noticeable. Using a different station from Bloomington keeps the two benchmarks independent."
+pump_capacity_gpm_each = { value = 150, status = "UNVERIFIED", confidence = 20 }
+wet_well_usable_storage_gal = { value = 1500, status = "UNVERIFIED", confidence = 20 }
+
+# 6. Outcome to reproduce -------------------------------------------------------
+[outcome]
+overflow_volume_gal = { value = 25000, status = "VERIFIED", confidence = 85 }
+overflow_volume_tolerance_pct = 20     # simulation must land in [20000, 30000] gal
+overflow_duration_min = { value = 500, status = "UNVERIFIED", confidence = 20, note = "25000 / 50 gpm dry inflow; ends ~14:20 EST when power/pumping restored" }
+outage_duration_min = { value = 530, status = "UNVERIFIED", confidence = 20 }
+early_warning = "none: alarm path dead with the battery"
+discovered_by = { value = "not published for 2009; assume residents (as in the 2012 event at the same manhole)", status = "UNVERIFIED", confidence = 30 }
+discovery_delay_min = { value = 180, status = "UNVERIFIED", confidence = 15, note = "assumption for scoring: residents notice ~09:00 EST; replace if the IDEM file gives a time" }
+affected = { value = "ground and storm sewer leading to Geist Reservoir", status = "UNVERIFIED", confidence = 65, note = "IBJ (2012 event): regulators said sewage did not threaten the reservoir" }
+
+# 7. Expected detector outcome --------------------------------------------------
+[expected]
+primary = "DETECTABLE_AT_ONSET"
+by_variant = { A = "DETECTABLE_AT_ONSET", B = "DETECTABLE_AT_ONSET" }
+days_ahead = "NOT_DETECTABLE"
+score = "minutes from failure_timestamp_utc to SOURCE_OFFLINE (A) or INVESTIGATE (B), compared with discovery_delay_min"
+target_minutes_to_source_offline = 5    # e.g. 5 missed 1-min level samples
+must_not = [
+  "report NORMAL or treat silence as 'no anomaly' while the source is offline",
+  "claim the spill would have been prevented; at best a crew is dispatched earlier",
+]
