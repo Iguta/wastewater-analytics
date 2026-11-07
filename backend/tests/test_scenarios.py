@@ -61,3 +61,6 @@ def test_scenario(path):
     rain = ROOT / s["conditions"]["rain_file"]
     assert hashlib.sha256(rain.read_bytes()).hexdigest() == s["conditions"]["rain_file_sha256"]
     assert s["outcome"]["overflow_volume_tolerance_pct"] == 20
+    if "forecast_file" in s["conditions"]:
+        fc = ROOT / s["conditions"]["forecast_file"]
+        assert hashlib.sha256(fc.read_bytes()).hexdigest() == s["conditions"]["forecast_file_sha256"]
