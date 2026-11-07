@@ -37,8 +37,8 @@ export function useStationData(stations: StationInfo[], day: string, scenarioId:
       (e: unknown) => live && setRes({
         state: "error",
         message: e instanceof ApiError
-          ? `Can't reach the Dragonfly server (HTTP ${e.status || "no response"}). ${e.message}`
-          : "Can't reach the Dragonfly server.",
+          ? `Can't reach the Dragonfly server (HTTP ${e.status || "no response"}).`
+          : "Can't reach the Dragonfly server (HTTP no response).",
       }),
     );
     return () => { live = false; };

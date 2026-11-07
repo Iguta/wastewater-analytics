@@ -4,7 +4,7 @@ import { buildQueue, changesLine, levelSensorLine, QUALITY_WORD, STATUS_WORD, st
 import type { QueueItem } from "../derive";
 import type { Finding } from "../types";
 import type { StationView } from "../useStationData";
-import { StatusBadge } from "./StatusBadge";
+import { HIGH_LEVEL_UNKNOWN, sourceOfflineText, StatusBadge } from "./StatusBadge";
 
 const TOP_N = 5;
 
@@ -14,13 +14,14 @@ export function StationsTab({ views, day, onOpen }: {
   const prev = addDays(day, -1);
   const queue = buildQueue(views);
   const safety = views.flatMap((v) => v.assessment.safety.map((f) => ({ f, v })));
+  const unknownHigh = views.filter((v) => v.assessment.queue.some((f) => f.type === "SENSOR_FAULT"));
   return (
     <div className="stations-grid">
       <section aria-label="Stations" className="tiles">
         {views.map((v) => <StationTile key={v.info.station_id} v={v} prev={prev} />)}
       </section>
       <div className="right-col">
-        <SafetyStrip items={safety} />
+        <SafetyStrip items={safety} unknownHigh={unknownHigh} />
         <AttentionQueue queue={queue} views={views} day={day} onOpen={onOpen} />
       </div>
     </div>
@@ -49,17 +50,22 @@ function StationTile({ v, prev }: { v: StationView; prev: string }) {
   );
 }
 
-function SafetyStrip({ items }: { items: { f: Finding; v: StationView }[] }) {
+function SafetyStrip({ items, unknownHigh }: { items: { f: Finding; v: StationView }[]; unknownHigh: StationView[] }) {
   return (
     <section className="panel" data-testid="safety-strip" aria-label="Safety strip">
       <h2 className="section-title">Safety (SCADA-equivalent checks)</h2>
-      {items.length === 0 ? (
+      {items.length === 0 && unknownHigh.length === 0 ? (
         <p data-testid="safety-empty">No safety findings. SCADA-equivalent checks; real setpoints unknown.</p>
       ) : (
         <ul className="plain-list">
+          {unknownHigh.map((v) => (
+            <li key={`unk-${v.info.station_id}`} className="safety-item" data-testid="high-level-unknown">
+              <StatusBadge status="INSUFFICIENT_EVIDENCE" text={HIGH_LEVEL_UNKNOWN} /> <span>{v.assessment.display_name}</span>
+            </li>
+          ))}
           {items.map(({ f, v }) => (
             <li key={f.alert_id} className="safety-item">
-              <StatusBadge status={f.status} text={f.type === "SOURCE_SILENT" ? `Source offline: ${f.summary}` : `Investigate: ${f.summary}`} />
+              <StatusBadge status={f.status} text={f.type === "SOURCE_SILENT" ? sourceOfflineText(f.opened_on) : `Investigate: ${f.summary}`} />
               <span> {v.assessment.display_name}{f.type === "HIGH_LEVEL" && " · SCADA-equivalent; real setpoints unknown."}</span>
             </li>
           ))}

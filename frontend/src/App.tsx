@@ -37,7 +37,7 @@ export default function App() {
       (data) => live && setBoot({ state: "ok", data }),
       (e: unknown) => live && setBoot({
         state: "error", down: !(e instanceof ApiError) || e.status === 0 || e.status >= 500,
-        message: `Can't reach the Dragonfly server${e instanceof ApiError && e.status ? ` (HTTP ${e.status})` : ""}.`,
+        message: `Can't reach the Dragonfly server (HTTP ${e instanceof ApiError && e.status ? e.status : "no response"}).`,
       }),
     );
     return () => { live = false; };
@@ -82,12 +82,12 @@ export default function App() {
       <main className="main">
         {tab === "stations" && (
           <>
-            {boot.state === "loading" && <Loading />}
+            {boot.state === "loading" && <Loading onRetry={retry} />}
             {boot.state === "error" && <ErrorState message={boot.message} onRetry={retry} />}
             {boot.state === "ok" && !stations?.length && <EmptyState>No stations are available.</EmptyState>}
             {boot.state === "ok" && !!stations?.length && day && (
               <>
-                {data.state === "loading" && <Loading />}
+                {data.state === "loading" && <Loading onRetry={retry} />}
                 {data.state === "error" && <ErrorState message={data.message} onRetry={retry} />}
                 {data.state === "ok" && (
                   <div className={open ? "with-drawer" : undefined}>
@@ -99,7 +99,7 @@ export default function App() {
           </>
         )}
         {tab === "incidents" && <EmptyState>Incidents tab: scenario cards and replay are built next.</EmptyState>}
-        {tab === "lab" && <EmptyState><span data-testid="lab-no-report">Evaluation not run yet.</span></EmptyState>}
+        {tab === "lab" && <EmptyState testId="lab-no-report">Evaluation not run yet.</EmptyState>}
       </main>
       {open && <Drawer item={open.item} returnTo={open.row} onClose={() => setOpen(null)} />}
     </>

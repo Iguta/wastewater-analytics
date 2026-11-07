@@ -70,7 +70,7 @@ export function Scrubber({ day, range, onChange, skipTo }: {
           onChange={(e) => { setNote(null); onChange(addDays(range.min, Number(e.target.value))); }}
         />
         {range.outages.map(([a, b]) => (
-          <span key={a} className="outage-mark" aria-hidden="true" title="Source offline (real gap in the data)"
+          <span key={a} className="outage-mark" data-testid="scrubber-outage-marker" aria-hidden="true" title="Source offline (real gap in the data)"
             style={{ left: `${(100 * Math.max(0, daysBetween(range.min, a))) / span}%`,
                      width: `${Math.max(0.6, (100 * (daysBetween(a, b) + 1)) / span)}%` }} />
         ))}
@@ -78,7 +78,7 @@ export function Scrubber({ day, range, onChange, skipTo }: {
       <div className="scrubber-note">
         <span data-testid="scrubber-live-date" aria-live="polite">{day}</span>
         {outage && <span> · Source offline (real gap in the data)</span>}
-        {note && <span role="status" data-testid="scrubber-note"> · {note}</span>}
+        {note && <span role="status" data-testid={note === "End of data" ? "scrubber-end-note" : "scrubber-range-error"}> · {note}</span>}
       </div>
     </div>
   );

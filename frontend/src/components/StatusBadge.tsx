@@ -9,6 +9,10 @@ const SPEC: Record<Status, { shape: string; text: string; cls: string }> = {
   SOURCE_OFFLINE: { shape: "", text: "Source offline", cls: "st-hatch" },
 };
 
+// Section 10.2 rows with their own wording.
+export const sourceOfflineText = (since: string) => `Source offline: no data since ${since}`;
+export const HIGH_LEVEL_UNKNOWN = "High-level check: unknown (level sensor faulty)";
+
 export function StatusBadge({ status, text }: { status: Status; text?: string }) {
   const s = SPEC[status];
   return (
