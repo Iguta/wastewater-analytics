@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "../api";
+import { api, errorText } from "../api";
 import type { QueueItem } from "../derive";
 import type { Evidence, PumpState, WorkOrder } from "../types";
 import { AskPanel } from "./drawer/AskPanel";
@@ -31,7 +31,7 @@ export function Drawer({ item, asOf, scenarioId, returnTo, onClose }: {
     setLoad({ s: "loading" });
     api.evidence(f.alert_id, asOf).then(
       (ev) => live && setLoad({ s: "ok", ev }),
-      (e: Error & { status?: number }) => live && setLoad({ s: "error", message: `Can't load the evidence (HTTP ${e.status || "no response"}).` }),
+      (e: unknown) => live && setLoad({ s: "error", message: errorText(e) }),
     );
     return () => { live = false; };
   }, [f.alert_id, asOf, attempt]);
@@ -60,6 +60,7 @@ function Body({ ev, item, pump, asOf, scenarioId }: {
 }) {
   const a = item.view.assessment;
   const [copied, setCopied] = useState(false);
+  const excluded = ev.trace[ev.trace.length - 1]?.excluded ?? {};
   const p = pump;
   const copy = async () => {
     try { await navigator.clipboard.writeText(workOrderText(ev.work_order)); setCopied(true); setTimeout(() => setCopied(false), 2000); }
@@ -80,11 +81,17 @@ function Body({ ev, item, pump, asOf, scenarioId }: {
           <div data-testid="drawer-storm-prep"><h3 className="sub-title">Storm prep</h3><p>{STORM_PREP}</p></div>
         )}
       </section>
-      <CapacityCharts trace={ev.trace} pump={p} />
+      <CapacityCharts trace={ev.trace} pump={p} thresholds={ev.thresholds} />
       <RawData ev={ev} />
       <section data-testid="drawer-quality">
         <h3 className="sub-title">Quality</h3>
         <p>{p ? `${p.valid_cycles} of ${p.runs} runs used for the capacity measure.` : "Cycle counts not available."}</p>
+        {Object.keys(excluded).length > 0 && (
+          <>
+            <h4 className="sub-sub">Cycles excluded today, by reason</h4>
+            <ul>{Object.entries(excluded).map(([k, n]) => <li key={k}>{k}: {n}</li>)}</ul>
+          </>
+        )}
         {ev.quality_flags.length ? <ul>{ev.quality_flags.map((q) => <li key={q}>{q}</li>)}</ul> : <p>No data-quality flags.</p>}
       </section>
       <section data-testid="drawer-evidence">

@@ -82,3 +82,34 @@ body { margin: 0; }
 .ask-row { display: flex; gap: var(--space-2); }
 .ask-input { flex: 1; min-height: 36px; font: inherit; padding: 0 var(--space-2); }
 .answer { white-space: pre-wrap; }
+
+/* Incidents */
+.cards { display: flex; flex-direction: column; gap: var(--space-4); }
+.fact { font-size: 14px; }
+.fact-label { font-weight: 600; }
+.variants { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.variant, .outcome { border: 1px solid var(--border); padding: var(--space-3); background: var(--bg); }
+.outcome { margin-bottom: var(--space-2); }
+.sens { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-2) 0; }
+.sens-cell { display: flex; flex-direction: column; border: 1px solid var(--border); padding: var(--space-2); background: var(--panel); }
+.replay-bar { margin-bottom: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+.replay-bar p { margin: 0; }
+.markers { display: flex; flex-wrap: wrap; gap: var(--space-2); min-height: 22px; }
+@media (max-width: 767px) { .variants { grid-template-columns: 1fr; } }
+
+/* Lab */
+.lab { display: flex; flex-direction: column; gap: var(--space-4); }
+.experiments { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3); }
+.experiment { border: 1px solid var(--border); padding: var(--space-3); background: var(--bg); }
+.heat-bar { height: 8px; background: var(--hatch-a); margin-top: 4px; }
+.heat-bar span { display: block; height: 100%; background: var(--chart-line); }
+
+/* Wide tables become labelled blocks on phones so no column is hidden */
+@media (max-width: 767px) {
+  .stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .stack, .stack tbody, .stack tr, .stack th, .stack td { display: block; }
+  .stack tr { border: 1px solid var(--border); margin-bottom: var(--space-2); padding: var(--space-2); background: var(--bg); }
+  .stack th[scope=row] { border: 0; font-size: 14px; }
+  .stack td { display: flex; justify-content: space-between; gap: var(--space-3); border: 0; }
+  .stack td::before { content: attr(data-label); color: var(--text-muted); }
+}

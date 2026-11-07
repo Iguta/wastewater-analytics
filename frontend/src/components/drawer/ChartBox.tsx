@@ -23,7 +23,10 @@ export function ChartBox({ title, id, columns, rows, children, note }: {
           </table>
         </div>
       ) : (
-        <div data-testid={id}>{children}</div>
+        <>
+          <p className="sr-only">Chart. Use "View as table" for the values.</p>
+          <div data-testid={id} aria-hidden="true">{children}</div>
+        </>
       )}
       {note && <p className="meta">{note}</p>}
     </section>
