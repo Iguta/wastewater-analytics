@@ -601,8 +601,19 @@ Fact:            label, value, status: Literal["VERIFIED", "UNVERIFIED"], confid
 VariantCard:     variant: Literal["A", "B"], scenario_id (e.g. "bloomington_morningside_2024_04_11:A"), name, confidence: int,
                  reason, detectability: Literal["PREDICTABLE_DAYS_AHEAD", "DETECTABLE_AT_ONSET", "NOT_DETECTABLE"], failure_at: datetime
 ScenarioCard:    id, title, version, scenario_hash, facts: list[Fact], outcome_facts: list[Fact], variants: list[VariantCard]
-ScenariosResponse: scenarios: list[ScenarioCard], dev_cases: list[str] (the Lab's fixed dev case ids, §5.6)
+ScenariosResponse: scenarios: list[ScenarioCard], dev_cases: list[DevCase] (the Lab's fixed dev cases, §5.6)
   (Shape proposed by Praneetha in frontend/src/types.ts and adopted as is.)
+BenchmarkRow:    caught: {k, n}, median_lead_days | None, false_storm: {k, n}, false_duty: {k, n}, false_transient: {k, n},
+                 real_alerts_per_pump_6mo
+HeatCell:        loss, ramp, k, n
+ProxyRow:        tier: Literal["dev", "test"], group: Literal["demo_3", "untouched_21"], episodes, preceded
+EvaluationReport: model_version, code_version, benchmarks: dict[Literal["A","B","C","C-persistence","C-inhibition","C-quality"], BenchmarkRow],
+                 heatmap: list[HeatCell], proxy: list[ProxyRow], test_scored: int, gates: dict[str, bool]
+  (Shape proposed by Praneetha in frontend/src/types.ts and adopted. The Lab's proxy panel shows ONLY ProxyRow data from
+   backend/scripts/proxy_events.py; scratch-run numbers such as "16 of 117" never appear in the UI.)
+DevCase:         case_id, experiment: Literal["storm_test", "break_sensor", "cut_power", "one_bad_day"] | None
+  (ScenariosResponse.dev_cases is list[DevCase].)
+ReplayResult additions: source_offline_after_min | None, sensor_fault_flagged: bool
 ToolError:       code: ErrorCode, message, allowed: list[str]
 ```
 
