@@ -145,3 +145,24 @@ def test_level_flatline_is_sensor_fault():
     ev, lv, as_of = _stream(3000, 1, v)
     out = detect.realtime(ev, lv, as_of, P)
     assert any(f["type"] == "SENSOR_FAULT" and "LEVEL_FLATLINE" in f["flags"] for f in out)
+
+
+def test_level_gap_with_pumps_running_is_sensor_fault_not_offline():
+    ev, lv, as_of = _stream(3000, 1)
+    lv = lv[lv.ts < lv.ts.max() - pd.Timedelta(minutes=30)]  # level silent 30 min, pumps keep cycling
+    out = detect.realtime(ev, lv, as_of, P)
+    types = {f["type"]: f for f in out}
+    assert "SOURCE_SILENT" not in types
+    assert "LEVEL_GAP" in types["SENSOR_FAULT"]["flags"]
+    assert types["HIGH_LEVEL"]["status"] == "UNKNOWN"
+
+
+def test_offline_hours_count_only_silent_time():
+    from backend.app import features
+
+    ts = pd.Series(pd.to_datetime(["2022-01-01 00:00", "2022-01-01 01:00", "2022-01-01 01:01"]))
+    off = features.offline_hours_by_day(
+        ts, pd.Timestamp("2022-01-01"), pd.Timestamp("2022-01-01 02:00"), pd.Timedelta(minutes=5)
+    )
+    # 00:05-01:00 silent (55 min) + 01:06-02:00 (54 min)
+    assert abs(off[pd.Timestamp("2022-01-01")] - (55 + 54) / 60) < 1e-9

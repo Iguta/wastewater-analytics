@@ -9,7 +9,7 @@ import pandas as pd
 
 from . import quality
 
-SILENCE = pd.Timedelta(minutes=15)
+SILENCE = pd.Timedelta(minutes=5)  # default: 5 missed 1-min level samples
 COLUMNS = [
     "station_id",
     "pump_id",
@@ -33,16 +33,18 @@ def to_naive_utc(t) -> pd.Timestamp:
     return t.tz_convert("UTC").tz_localize(None) if t.tzinfo else t
 
 
-def offline_hours_by_day(ts: pd.Series, start: pd.Timestamp, end: pd.Timestamp) -> pd.Series:
-    """Hours per day inside gaps >= SILENCE between consecutive station telemetry timestamps
-    (pump events and level samples together), including the stretch from the last sample to end."""
+def offline_hours_by_day(
+    ts: pd.Series, start: pd.Timestamp, end: pd.Timestamp, silence: pd.Timedelta = SILENCE
+) -> pd.Series:
+    """Hours per day during which SOURCE_SILENT held (§4.8): both streams silent, starting `silence`
+    (5 level cadences) after the last telemetry timestamp of either stream, until the next one."""
     t = pd.Series(sorted(ts[(ts >= start) & (ts < end)].unique()))
     edges = pd.concat([pd.Series([start]), t, pd.Series([end])], ignore_index=True)
     lo, hi = edges[:-1].to_numpy(), edges[1:].to_numpy()
-    big = (hi - lo) >= SILENCE.to_timedelta64()
+    big = (hi - lo) >= silence.to_timedelta64()
     out: dict = {}
     for a, b in zip(lo[big], hi[big]):
-        a, b = pd.Timestamp(a), pd.Timestamp(b)
+        a, b = pd.Timestamp(a) + silence, pd.Timestamp(b)
         d = a.floor("D")
         while d < b:
             seg = min(b, d + pd.Timedelta(days=1)) - max(a, d)
@@ -97,7 +99,8 @@ def daily_table(events, level, rain, end_utc, station_id: str | None = None, cou
     t[["runs", "valid_cycles"]] = t[["runs", "valid_cycles"]].fillna(0).astype(int)
     t[["overlap_share", "invalid_share"]] = t[["overlap_share", "invalid_share"]].fillna(0.0)
 
-    off = offline_hours_by_day(pd.concat([ev["ts"], lv["ts"]]), first_day, last_day)
+    cadence = lv["ts"].diff().median() if len(lv) >= 2 else pd.Timedelta(minutes=1)
+    off = offline_hours_by_day(pd.concat([ev["ts"], lv["ts"]]), first_day, last_day, 5 * cadence)
     t["offline_hours"] = t["day"].map(off).fillna(0.0)
 
     rn = rain[rain["ts_hour"] < last_day].assign(day=lambda x: x["ts_hour"].dt.floor("D"))

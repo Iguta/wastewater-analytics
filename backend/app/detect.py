@@ -198,72 +198,54 @@ def _reason(prev: str, new: str, S: float, r, p: Params) -> str:
 
 
 def realtime(events: pd.DataFrame, level: pd.DataFrame, as_of, params: Params) -> list[dict]:
-    """SOURCE_SILENT, HIGH_LEVEL, SENSOR_FAULT from data strictly before as_of (§4.8)."""
+    """SOURCE_SILENT, SENSOR_FAULT, HIGH_LEVEL from data strictly before as_of (§4.8, v2).
+
+    HIGH_LEVEL has no inhibition path: no context or sibling term is read here.
+    """
     end = to_naive_utc(as_of)
     ev = events[(events["ts"] < end) & (events["ts"] >= end - pd.Timedelta(days=60))]
     lv = level[(level["ts"] < end) & (level["ts"] >= end - pd.Timedelta(days=60))]
     out: list[dict] = []
+    last_ev = ev["ts"].max() if len(ev) else None
+    last_lv = lv["ts"].max() if len(lv) else None
+    cadence = float(lv["ts"].diff().dt.total_seconds().median()) if len(lv) >= 2 else 60.0
+    level_silent_s = (end - last_lv).total_seconds() if last_lv is not None else float("inf")
+    level_silent = level_silent_s >= 5 * cadence
+    starts = ev[ev["state"] == 1]["ts"].sort_values()
+    stops = ev[ev["state"] == 0]["ts"].sort_values()
+    fills = _fills(starts, stops)
+    T = max(20 * 60, 3 * float(np.percentile(fills, 99))) if len(fills) else 20 * 60
+    ev_silent_s = (end - last_ev).total_seconds() if last_ev is not None else float("inf")
 
-    # --- SOURCE_SILENT: level heartbeat (5 missed samples) or pump-event heartbeat (T)
-    reasons = []
-    if len(lv) >= 2:
-        cadence = lv["ts"].diff().dt.total_seconds().median()
-        since = (end - lv["ts"].max()).total_seconds()
-        if since >= 5 * cadence:
-            reasons.append(f"level: no sample for {since / 60:.0f} min (cadence {cadence:.0f} s)")
-    if len(ev) >= 2:
-        starts = ev[ev["state"] == 1].sort_values("ts")["ts"]
-        stops = ev[ev["state"] == 0].sort_values("ts")["ts"]
-        fills = _fills(starts, stops)
-        T = max(20 * 60, 3 * float(np.percentile(fills, 99))) if len(fills) else 20 * 60
-        since = (end - ev["ts"].max()).total_seconds()
-        if since >= T:
-            reasons.append(f"pump events: none for {since / 60:.0f} min (T = {T / 60:.0f} min)")
-    elif len(ev) == 0:
-        reasons.append("pump events: none in 60 days")
-    if reasons:
-        last = max(
-            [
-                x
-                for x in (ev["ts"].max() if len(ev) else None, lv["ts"].max() if len(lv) else None)
-                if x is not None
-            ],
-            default=None,
+    # --- SOURCE_SILENT: level missed 5 samples AND no pump event since the level went silent,
+    #     or no pump event for T while level is also silent. Clears when either stream resumes.
+    no_event_since_level = last_ev is None or (last_lv is not None and last_ev <= last_lv)
+    if level_silent and (no_event_since_level or ev_silent_s >= T):
+        since = max([t for t in (last_ev, last_lv) if t is not None], default=None)
+        out.append(
+            {
+                "type": "SOURCE_SILENT",
+                "status": "SOURCE_OFFLINE",
+                "since": since,
+                "reasons": [
+                    f"level: no sample for {level_silent_s / 60:.0f} min (cadence {cadence:.0f} s)",
+                    f"pump events: none for {ev_silent_s / 60:.0f} min (T = {T / 60:.0f} min)",
+                ],
+            }
         )
-        out.append({"type": "SOURCE_SILENT", "status": "SOURCE_OFFLINE", "since": last, "reasons": reasons})
+        return out  # nothing else can be judged while the source is silent
 
-    # --- HIGH_LEVEL: >= trailing 60-day P99.9 for 5 consecutive minutes in the last 24 h. Never inhibited.
-    good = lv[lv["in_range"]] if "in_range" in lv else lv
-    if len(good) > 100:
-        thr = float(np.percentile(good["value"], 99.9))
-        last24 = good[good["ts"] >= end - pd.Timedelta(hours=24)].sort_values("ts")
-        if len(last24):
-            above = last24["value"] >= thr
-            block = (above != above.shift()).cumsum()
-            for _, b in last24[above].groupby(block[above]):
-                if b["ts"].max() - b["ts"].min() >= pd.Timedelta(minutes=4):  # 5 consecutive 1-min samples
-                    out.append(
-                        {
-                            "type": "HIGH_LEVEL",
-                            "status": "INVESTIGATE",
-                            "threshold": thr,
-                            "at": b["ts"].min(),
-                            "peak": float(b["value"].max()),
-                            "note": "SCADA-equivalent; real setpoints unknown",
-                        }
-                    )
-                    break
-
-    # --- SENSOR_FAULT: level flags over the last 24 h
-    day = lv[lv["ts"] >= end - pd.Timedelta(hours=24)]
+    # --- SENSOR_FAULT: pump events arriving while level silent >= 15 min, or a §3.5 level flag (last 24 h)
     flags = []
+    if level_silent_s >= 15 * 60 and last_ev is not None and last_lv is not None and last_ev > last_lv:
+        flags.append("LEVEL_GAP")
+    day = lv[lv["ts"] >= end - pd.Timedelta(hours=24)]
     if len(day):
         if (~day["in_range"]).mean() > 0.01:
             flags.append("LEVEL_OUT_OF_RANGE")
         blk = (day["value"].diff() != 0).cumsum()
         span = day.groupby(blk)["ts"].agg(["min", "max"])
-        long = span[(span["max"] - span["min"]) >= pd.Timedelta(hours=6)]
-        for lo, hi in long.itertuples(index=False):
+        for lo, hi in span[(span["max"] - span["min"]) >= pd.Timedelta(hours=6)].itertuples(index=False):
             if ((ev["ts"] >= lo) & (ev["ts"] <= hi) & (ev["state"] == 1)).any():
                 flags.append("LEVEL_FLATLINE")
                 break
@@ -273,11 +255,35 @@ def realtime(events: pd.DataFrame, level: pd.DataFrame, as_of, params: Params) -
                 "type": "SENSOR_FAULT",
                 "status": "WATCH",
                 "flags": flags,
-                "effect": "HIGH_LEVEL check is UNKNOWN while the level sensor is faulty"
-                if "LEVEL_FLATLINE" in flags
-                else "station quality capped at PARTIAL",
+                "effect": "HIGH_LEVEL check is UNKNOWN; station quality capped at PARTIAL",
             }
         )
+
+    # --- HIGH_LEVEL: level >= trailing 60-day P99.9 for the 5 consecutive minutes before as_of
+    good = lv[lv["in_range"]] if "in_range" in lv else lv
+    if flags:
+        out.append(
+            {
+                "type": "HIGH_LEVEL",
+                "status": "UNKNOWN",
+                "reason": "level sensor fault",
+                "note": "SCADA-equivalent; real setpoints unknown",
+            }
+        )
+    elif len(good) > 100:
+        thr = float(np.percentile(good["value"], 99.9))
+        last5 = good[good["ts"] >= end - pd.Timedelta(minutes=5)]
+        if len(last5) >= max(1, round(300 / cadence)) and (last5["value"] >= thr).all():
+            out.append(
+                {
+                    "type": "HIGH_LEVEL",
+                    "status": "INVESTIGATE",
+                    "threshold": thr,
+                    "at": last5["ts"].min(),
+                    "peak": float(last5["value"].max()),
+                    "note": "SCADA-equivalent; real setpoints unknown",
+                }
+            )
     return out
 
 
