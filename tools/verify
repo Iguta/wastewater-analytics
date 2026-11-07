@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# The one oracle (ARCHITECTURE.md 11.1): same command locally and in CI.
+# A step whose precondition file is missing prints SKIP and continues; with .verify-strict present, a skip fails.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+step() { # step <name> <precondition file> <command...>
+  local name=$1 need=$2
+  shift 2
+  if [ ! -e "$need" ]; then
+    echo "SKIP: $name ($need)"
+    [ ! -e .verify-strict ] || { echo "FAIL: $name skipped under .verify-strict"; exit 1; }
+    return 0
+  fi
+  echo "== $name"
+  "$@"
+}
+
+step "lint and tests" fixtures/wessex/manifest.json make test
+step "eval-smoke" backend/scripts/evaluate.py make eval-smoke
+step "build-ui" frontend/package.json bash -c "cd frontend && npm ci && npm run build"
+step "mcp-smoke" backend/mcp_server.py make mcp-smoke
+step "e2e" e2e/package.json make e2e
+echo "verify: OK"

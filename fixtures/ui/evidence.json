@@ -1,0 +1,746 @@
+{
+  "alert_id": "REAL:44371:P2:CAPACITY_DROP:2022-09-02",
+  "station_id": "44371",
+  "pump_id": "P2",
+  "origin": "REAL_REPLAY",
+  "as_of_utc": "2022-09-14T12:00:00Z",
+  "finding": {
+    "alert_id": "REAL:44371:P2:CAPACITY_DROP:2022-09-02",
+    "type": "CAPACITY_DROP",
+    "pump_id": "P2",
+    "status": "INVESTIGATE",
+    "priority": 1,
+    "opened_on": "2022-09-02",
+    "since_utc": "2022-09-02T00:00:00Z",
+    "days_open": 12,
+    "observed": 16.2,
+    "expected": 30.0,
+    "units": "capacity index per hour",
+    "change_pct": -46.0,
+    "summary": "P2 capacity index is 16.2/h against a baseline of 30.0/h (-46%).",
+    "possible_causes": [
+      "Impeller wear or partial blockage",
+      "Suction-side restriction"
+    ],
+    "inspection": [
+      "Check P2 amps and discharge pressure",
+      "Pull and inspect P2 impeller if the drop persists"
+    ]
+  },
+  "rain": {
+    "today_mm": 0.0,
+    "last_72h_mm": 1.2,
+    "source": "Wessex local rain gauge"
+  },
+  "quality_flags": [],
+  "supporting": [
+    "P2 run time doubled",
+    "P1 unchanged"
+  ],
+  "contradictory": [
+    "No station-wide change"
+  ],
+  "unavailable": [],
+  "trace": [
+    {
+      "day": "2022-08-16",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {
+        "SHORT_RUN": 1
+      },
+      "ci": 29.6,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -0.27,
+      "common": 0.0,
+      "u": -0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 2.4,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-17",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 30.4,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": 0.27,
+      "common": 0.0,
+      "u": 0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-18",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 29.6,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -0.27,
+      "common": 0.0,
+      "u": -0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-19",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 30.4,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": 0.27,
+      "common": 0.0,
+      "u": 0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-20",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 29.6,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -0.27,
+      "common": 0.0,
+      "u": -0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-21",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 30.4,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": 0.27,
+      "common": 0.0,
+      "u": 0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 2.4,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-22",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 29.6,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -0.27,
+      "common": 0.0,
+      "u": -0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-23",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {
+        "SHORT_RUN": 1
+      },
+      "ci": 30.4,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": 0.27,
+      "common": 0.0,
+      "u": 0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-24",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 29.6,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -0.27,
+      "common": 0.0,
+      "u": -0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-25",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 30.4,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": 0.27,
+      "common": 0.0,
+      "u": 0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-26",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 29.6,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -0.27,
+      "common": 0.0,
+      "u": -0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 2.4,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-27",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 30.4,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": 0.27,
+      "common": 0.0,
+      "u": 0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-28",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 29.6,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -0.27,
+      "common": 0.0,
+      "u": -0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-29",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 30.4,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": 0.27,
+      "common": 0.0,
+      "u": 0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-30",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {
+        "SHORT_RUN": 1
+      },
+      "ci": 29.6,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -0.27,
+      "common": 0.0,
+      "u": -0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-08-31",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 30.4,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": 0.27,
+      "common": 0.0,
+      "u": 0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 2.4,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-01",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 29.6,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -0.27,
+      "common": 0.0,
+      "u": -0.27,
+      "cusum": 0.0,
+      "status": "NORMAL",
+      "rain_mm": 0.0,
+      "run_median_s": 120.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-02",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 28.9,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -0.73,
+      "common": 0.0,
+      "u": -0.73,
+      "cusum": 0.23,
+      "status": "WATCH",
+      "rain_mm": 0.0,
+      "run_median_s": 128.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-03",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 27.8,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -1.47,
+      "common": 0.0,
+      "u": -1.47,
+      "cusum": 1.2,
+      "status": "WATCH",
+      "rain_mm": 0.0,
+      "run_median_s": 136.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-04",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 26.7,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -2.2,
+      "common": 0.0,
+      "u": -2.2,
+      "cusum": 2.9,
+      "status": "INVESTIGATE",
+      "rain_mm": 0.0,
+      "run_median_s": 144.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-05",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 25.6,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -2.93,
+      "common": 0.0,
+      "u": -2.93,
+      "cusum": 5.33,
+      "status": "INVESTIGATE",
+      "rain_mm": 2.4,
+      "run_median_s": 152.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-06",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {
+        "SHORT_RUN": 1
+      },
+      "ci": 24.5,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -3.67,
+      "common": 0.0,
+      "u": -3.67,
+      "cusum": 8.5,
+      "status": "INVESTIGATE",
+      "rain_mm": 0.0,
+      "run_median_s": 160.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-07",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 23.4,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -4.4,
+      "common": 0.0,
+      "u": -4.4,
+      "cusum": 12.4,
+      "status": "INVESTIGATE",
+      "rain_mm": 0.0,
+      "run_median_s": 168.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-08",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 22.3,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -5.13,
+      "common": 0.0,
+      "u": -5.13,
+      "cusum": 17.03,
+      "status": "INVESTIGATE",
+      "rain_mm": 0.0,
+      "run_median_s": 176.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-09",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 21.2,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -5.87,
+      "common": 0.0,
+      "u": -5.87,
+      "cusum": 22.4,
+      "status": "INVESTIGATE",
+      "rain_mm": 0.0,
+      "run_median_s": 184.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-10",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 20.1,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -6.6,
+      "common": 0.0,
+      "u": -6.6,
+      "cusum": 28.5,
+      "status": "INVESTIGATE",
+      "rain_mm": 2.4,
+      "run_median_s": 192.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-11",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 19.0,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -7.33,
+      "common": 0.0,
+      "u": -7.33,
+      "cusum": 35.33,
+      "status": "INVESTIGATE",
+      "rain_mm": 0.0,
+      "run_median_s": 200.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-12",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 17.9,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -8.07,
+      "common": 0.0,
+      "u": -8.07,
+      "cusum": 42.9,
+      "status": "INVESTIGATE",
+      "rain_mm": 0.0,
+      "run_median_s": 208.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-13",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {
+        "SHORT_RUN": 1
+      },
+      "ci": 16.8,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -8.8,
+      "common": 0.0,
+      "u": -8.8,
+      "cusum": 51.2,
+      "status": "INVESTIGATE",
+      "rain_mm": 0.0,
+      "run_median_s": 216.0,
+      "expected_run_s": 120.0
+    },
+    {
+      "day": "2022-09-14",
+      "quality": "SUFFICIENT",
+      "valid_cycles": 40,
+      "excluded": {},
+      "ci": 16.2,
+      "base_median": 30.0,
+      "base_mad": 1.5,
+      "z": -9.2,
+      "common": 0.0,
+      "u": -9.2,
+      "cusum": 59.9,
+      "status": "INVESTIGATE",
+      "rain_mm": 0.0,
+      "run_median_s": 224.0,
+      "expected_run_s": 120.0
+    }
+  ],
+  "transitions": [
+    {
+      "on": "2022-09-02",
+      "from_status": "NORMAL",
+      "to_status": "WATCH",
+      "reason": "CUSUM above h_w"
+    },
+    {
+      "on": "2022-09-04",
+      "from_status": "WATCH",
+      "to_status": "INVESTIGATE",
+      "reason": "CUSUM above h_i"
+    }
+  ],
+  "raw_events": [
+    {
+      "ts": "2022-09-02T00:10:00Z",
+      "pump_id": "P2",
+      "state": "ON",
+      "signal_id": "44371-P2-RUNSTOP"
+    },
+    {
+      "ts": "2022-09-02T00:14:41Z",
+      "pump_id": "P2",
+      "state": "OFF",
+      "signal_id": "44371-P2-RUNSTOP"
+    }
+  ],
+  "level": [
+    {
+      "ts": "2022-09-02T00:00:00Z",
+      "value": 1.1,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T01:00:00Z",
+      "value": 1.16,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T02:00:00Z",
+      "value": 1.22,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T03:00:00Z",
+      "value": 1.28,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T04:00:00Z",
+      "value": 1.34,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T05:00:00Z",
+      "value": 1.4,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T06:00:00Z",
+      "value": 1.1,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T07:00:00Z",
+      "value": 1.16,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T08:00:00Z",
+      "value": 1.22,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T09:00:00Z",
+      "value": 1.28,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T10:00:00Z",
+      "value": 1.34,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T11:00:00Z",
+      "value": 1.4,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T12:00:00Z",
+      "value": 1.1,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T13:00:00Z",
+      "value": 1.16,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T14:00:00Z",
+      "value": 1.22,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T15:00:00Z",
+      "value": 1.28,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T16:00:00Z",
+      "value": 1.34,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T17:00:00Z",
+      "value": 1.4,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T18:00:00Z",
+      "value": 1.1,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T19:00:00Z",
+      "value": 1.16,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T20:00:00Z",
+      "value": 1.22,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T21:00:00Z",
+      "value": 1.28,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T22:00:00Z",
+      "value": 1.34,
+      "units": "m"
+    },
+    {
+      "ts": "2022-09-02T23:00:00Z",
+      "value": 1.4,
+      "units": "m"
+    }
+  ],
+  "level_signal_id": "44371-LEVEL",
+  "thresholds": {
+    "h_w": 4.0,
+    "h_i": 8.0,
+    "min_effect": 0.15
+  },
+  "work_order": {
+    "title": "Inspect P2 at Station 44371",
+    "station_id": "44371",
+    "pump_id": "P2",
+    "priority": "High",
+    "requested_by": "Dragonfly draft - needs human review",
+    "checks": [
+      "Check P2 amps and discharge pressure"
+    ],
+    "evidence_alert_id": "REAL:44371:P2:CAPACITY_DROP:2022-09-02",
+    "caveats": [
+      "Cause is not confirmed"
+    ]
+  },
+  "provenance": {
+    "source_hash": "9f87789c1c5544df539b3e322ab5825e6731332ddabbf40a180012cf41ecb935",
+    "scenario_hash": null,
+    "model_version": "v1.0",
+    "code_version": "abc1234",
+    "signal_ids": [
+      "44371-P2-RUNSTOP",
+      "44371-LEVEL"
+    ]
+  }
+}
