@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import cache
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,10 +16,12 @@ from pydantic import BaseModel, Field
 from backend import agent
 from backend.app import assess, data, evaluate, params, scenarios
 from backend.app.contracts import (
+    ALERT_ID_PATTERN,
     AskResult,
     DevCase,
     EvaluationReport,
     Fact,
+    Feedback,
     ScenarioCard,
     ScenariosResponse,
     StationInfo,
@@ -42,6 +44,9 @@ PARAM_CODE = {
     "alert_id": "UNKNOWN_ALERT",
     "case_id": "UNKNOWN_CASE",
     "question": "BAD_QUESTION",
+    "verdict": "BAD_FEEDBACK",
+    "by": "BAD_FEEDBACK",
+    "note": "BAD_FEEDBACK",
 }
 
 app = FastAPI(title="Dragonfly")
@@ -87,7 +92,7 @@ def stations(scenario_id: str | None = None) -> StationsResponse:
         sd, _, meta = assess._case(scenario_id)
         info = StationInfo(
             station_id=sd.station_id, display_name=f"Wessex {sd.station_id}", pumps=sd.pumps, origin=meta["origin"],
-            scenario_id=scenario_id, as_of_min=assess._utc(sd.events["ts"].min()), as_of_max=assess._utc(sd.events["ts"].max()),
+            scenario_id=scenario_id, as_of_min=assess._utc(meta["failure_at"]) - timedelta(days=30), as_of_max=assess._utc(sd.events["ts"].max()),
             outage_windows=[],
         )  # fmt: skip
         return StationsResponse(stations=[info], source_hash=source_hash, model_version=model_version)
@@ -207,6 +212,22 @@ async def ask(req: AskRequest) -> AskResult:
         if is_timeout(e):
             return tool_error("AGENT_TIMEOUT", "no answer in 60 s")
         return tool_error("AGENT_ERROR", f"agent failed: {type(e).__name__}")
+
+
+@app.post("/api/feedback")
+def post_feedback(fb: Feedback) -> Feedback:
+    path = ROOT / "logs" / "feedback.jsonl"
+    path.parent.mkdir(exist_ok=True)
+    with path.open("a") as f:
+        f.write(fb.model_dump_json() + "\n")
+    return fb
+
+
+@app.get("/api/feedback")
+def get_feedback(alert_id: str = Query(pattern=ALERT_ID_PATTERN)) -> list[Feedback]:
+    path = ROOT / "logs" / "feedback.jsonl"
+    rows = [Feedback.model_validate_json(x) for x in path.read_text().splitlines()] if path.exists() else []
+    return [r for r in rows if r.alert_id == alert_id]
 
 
 if (ROOT / "frontend" / "dist").is_dir():  # last, so it never shadows /api

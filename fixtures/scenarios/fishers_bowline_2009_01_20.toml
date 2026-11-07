@@ -7,8 +7,8 @@
 #   confidence = 0-100
 
 id = "fishers_bowline_2009_01_20"
-version = "v2"
-changelog = ["v1 2026-11-07: initial lock", "v2 2026-11-07: G7 fix (§5.4, inflow assumption only): dry_weather_inflow_gpm 50 -> 70. outcome.no_warning_run v1 at 50 gpm gave 17,751 gal (-29%, miss); at 70 gpm 25,452 gal (+1.8%). Analog Wessex 45385 2023-01-24."]
+version = "v3"
+changelog = ["v1 2026-11-07: initial lock", "v2 2026-11-07: G7 fix (§5.4, inflow assumption only): dry_weather_inflow_gpm 50 -> 70. outcome.no_warning_run v1 at 50 gpm gave 17,751 gal (-29%, miss); at 70 gpm 25,452 gal (+1.8%). Analog Wessex 45385 2023-01-24.", "v3 2026-11-07: wording only: a §10.7 banned word replaced with 'not verified'; no value changed."]
 locked = true
 locked_at = "2026-11-07"
 author = "Iguta (David's Claude Code)"
@@ -40,7 +40,7 @@ event = "overflow at the same manhole; investigators suspected vandals broke a p
 outcome = "$5,250 IDEM fine, agreement signed 2013-07-15 (IBJ VERIFIED)"
 discovered_by = "private citizen called IDEM spill line; odor strong enough that neighbors called the gas company (gas calls VERIFIED in IBJ)"
 reporting_failures = "station sign listed only an office number, no 24-h hotline; not reported within 2 h (IBJ VERIFIED)"
-gallons = "not confirmed (one summary says 2,500)"
+gallons = "not verified (one summary says 2,500)"
 status = "PARTIAL"
 note = "IBJ: at least the 3rd overflow at that manhole since 2009"
 
