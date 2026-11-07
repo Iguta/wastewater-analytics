@@ -22,8 +22,6 @@ test('copy scan: incidents tab, banned words except "confirmed", and gallons lab
 });
 
 test('copy scan: no "confirmed" in the facts', async ({ page }) => {
-  // UI BUG: record facts from fixtures/scenarios say "not confirmed" and "unconfirmed", which the §10.7 scan rejects.
-  test.fail();
   await incidents(page);
   await bannedWords(page, 'confirmed');
 });
