@@ -690,7 +690,7 @@ The README "Use it from your agent" section carries these configurations, `cloud
 | Empty safety strip | "No safety findings. SCADA-equivalent checks; real setpoints unknown." |
 | Lab with no evaluation report | "Evaluation not run yet." |
 
-**Mobile (under 768 px):** tiles stack above the queue, queue rows become cards, the header wraps to two rows, the drawer is full-screen, and there is no horizontal scroll.
+**Mobile (under 768 px):** this is a layout, not a separate role view, and it gets no special name. tiles stack above the queue, queue rows become cards, the header wraps to two rows, the drawer is full-screen, and there is no horizontal scroll.
 
 ### 10.2 Status presentation (fixed)
 
@@ -798,7 +798,7 @@ After replay, the card shows one row per variant: first `WATCH`, first `INVESTIG
 
 - Grey background and panels, dark grey text.
 - Color only for abnormal states (§10.2). **No green anywhere.**
-- Charts are greyscale with dashed threshold lines.
+- Charts are greyscale with dashed threshold lines. Abnormal segments may use amber or red, always together with a marker shape or label.
 - Tabular numerals.
 - WCAG 2.1 AA: amber and red text and the grey hatch each meet 4.5:1 contrast; color is never the only cue; full keyboard navigation; visible focus.
 
@@ -1054,6 +1054,14 @@ Lunch is 12:30–13:00 per PLAN.md. Board watchers keep agents working through i
 
 - If the 14:30 milestone slips past 15:00: drop F7, storm readiness, Ignition and `agent-eval` in CI; keep G1–G6.
 - If the 15:00 milestone slips past 15:45: Incidents replays show detection timing only, with no gallons, and the card says so.
+
+- **UI** (proposed by Praneetha 12:28; Dhruv set the order): if the UI is not running on the live API by 15:00, cut in this order, top first:
+  1. The Ignition view (§10.8).
+  2. Ask Dragonfly: show the standard explanation only.
+  3. Lab: the recall heatmap and the ablations table.
+  4. Lab: the live experiments other than "Storm test" and "Cut the power".
+
+  The UI never cuts the Incidents replay (the demo opens on it), the Stations tab, the drawer's capacity chart, explanation and work order, the origin badge, or the four states.
 
 Provenance, no-lookahead, quality handling and honest labels are never cut.
 
