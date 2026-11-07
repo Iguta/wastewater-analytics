@@ -185,5 +185,7 @@
       "lead_time_h": null,
       "incident_opens": 0
     }
-  }
+  },
+  "source_offline_after_min": null,
+  "sensor_fault_flagged": false
 }
