@@ -207,3 +207,27 @@ def case_stream(case_id: str, lookback_days: int = 120):
         raise data.UnknownScenario(case_id)
     b = E.build(case, keep_stream=True)
     return b["stream"], [b["truth"]], {"origin": "SYNTHETIC_INJECTION", "case": case}
+
+
+def first_realtime(case_id: str, finding: str, max_minutes: int = 180, step_min: int = 1):
+    """Minutes from the case's failure to the first minute `finding` (SOURCE_SILENT, HIGH_LEVEL, SENSOR_FAULT)
+    holds in detect.realtime, probing every `step_min` minutes up to `max_minutes`. None if it never holds.
+    For replay cards: Fishers A -> SOURCE_SILENT; Morningside B / Fishers B -> HIGH_LEVEL."""
+    from . import detect, params
+
+    st, _truth, meta = case_stream(case_id)
+    P = params.load()
+    f = meta["failure_at"]
+    for m in range(step_min, max_minutes + 1, step_min):
+        if any(
+            x["type"] == finding and x.get("status") != "UNKNOWN"
+            for x in detect.realtime(st.events, st.level, f + pd.Timedelta(minutes=m), P)
+        ):
+            return {"minutes_after_failure": m, "at": (f + pd.Timedelta(minutes=m)).isoformat() + "Z"}
+    return None
+
+
+def marker_window(meta: dict) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """Replay markers and lead time are scored only in [failure - 30 d, restore] (§7 as_of_min); earlier
+    alerts are the stand-in station's own history, not the simulated incident."""
+    return meta["failure_at"] - pd.Timedelta(days=30), meta.get("restore_at", meta["failure_at"])

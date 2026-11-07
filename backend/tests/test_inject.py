@@ -111,3 +111,11 @@ def test_fishers_a_replay_goes_silent_within_10_minutes():
     assert truth[-1]["transform"] == "station_trip" and truth[-1]["level"] == "deleted"
     out = detect.realtime(st.events, st.level, f + pd.Timedelta(minutes=10), params.load())
     assert any(x["type"] == "SOURCE_SILENT" for x in out)
+
+
+def test_first_realtime_minutes_for_onset_variants():
+    from backend.app import scenarios
+
+    fa = scenarios.first_realtime("fishers_bowline_2009_01_20:A", "SOURCE_SILENT", max_minutes=30)
+    assert fa is not None and fa["minutes_after_failure"] <= 10
+    assert scenarios.first_realtime("fishers_bowline_2009_01_20:A", "HIGH_LEVEL", max_minutes=20) is None
