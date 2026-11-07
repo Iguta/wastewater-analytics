@@ -3,11 +3,12 @@ SHELL := bash
 
 UV := uv run --frozen --project backend
 
-.PHONY: setup test verify build-ui serve mcp mcp-http mcp-smoke eval-smoke eval-dev eval-test tune agent-eval
+.PHONY: setup test verify build-ui serve e2e mcp mcp-http mcp-smoke eval-smoke eval-dev eval-test tune agent-eval tunnel
 
 setup:
 	cd backend && uv sync --frozen
 	cd frontend && npm ci
+	cd e2e && npm ci && npx playwright install --with-deps chromium
 
 test:
 	$(UV) ruff check backend
@@ -23,6 +24,9 @@ build-ui:
 serve:
 	$(UV) uvicorn backend.api:app --host 127.0.0.1 --port 8000 --workers 1
 
+e2e:
+	cd e2e && npx playwright test
+
 mcp:
 	$(UV) python -m backend.mcp_server
 
@@ -32,10 +36,10 @@ mcp-http:
 agent-eval:
 	$(UV) python -m backend.agent_eval
 
-# Lists the tools, then calls assess_station and checks 44371 on 2022-06-03 reports INVESTIGATE (the known precursor).
+# Lists the tools, then calls assess_station and checks 44371 on 2022-06-05 reports INVESTIGATE (the known precursor; true under v1 and v2).
 mcp-smoke:
 	npx --yes @modelcontextprotocol/inspector@2.12.0 --cli $(UV) python -m backend.mcp_server --method tools/list | grep -q assess_station
-	npx --yes @modelcontextprotocol/inspector@2.12.0 --cli $(UV) python -m backend.mcp_server --method tools/call --tool-name assess_station --tool-arg 'station_id="44371"' --tool-arg as_of_utc=2022-06-03T00:00:00Z | grep -q INVESTIGATE
+	npx --yes @modelcontextprotocol/inspector@2.12.0 --cli $(UV) python -m backend.mcp_server --method tools/call --tool-name assess_station --tool-arg 'station_id="44371"' --tool-arg as_of_utc=2022-06-05T00:00:00Z | grep -q INVESTIGATE
 
 # David's evaluation harness (ARCHITECTURE.md §6). Dev only, except eval-test (once per frozen version).
 eval-smoke:
@@ -49,3 +53,6 @@ eval-test:
 
 tune:
 	$(UV) python -m backend.scripts.tune
+
+tunnel:
+	cloudflared tunnel --url http://127.0.0.1:8001

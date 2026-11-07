@@ -6,6 +6,7 @@ Inputs are cut at as_of BEFORE features are computed; results are cached on the 
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from dataclasses import dataclass, replace
@@ -31,6 +32,7 @@ from .contracts import (
     ReplayResult,
     Sensitivity,
     StationAssessment,
+    StormOutlook,
     Thresholds,
     TimelineDay,
     TimelinePump,
@@ -309,6 +311,54 @@ def _pumps(b: _Bundle) -> list[PumpState]:
     return out
 
 
+@lru_cache(maxsize=2)
+def _forecast(scenario_id: str) -> pd.DataFrame | None:
+    p = scenarios.SCEN / "forecast" / f"{scenario_id.split(':')[0]}.json"
+    if not p.exists():
+        return None
+    return pd.DataFrame(json.loads(p.read_text())["hourly"]).assign(time=lambda f: pd.to_datetime(f["time"]))
+
+
+def _storm(scenario_id: str | None, as_of: datetime) -> tuple[StormOutlook, date] | None:
+    """Section 4.12: forecasts issued before as_of (previous_day1 for the first 24 h, previous_day2 for the next)."""
+    f = _forecast(scenario_id) if scenario_id else None
+    if f is None:
+        return None
+    t0 = features.to_naive_utc(as_of)
+    h = np.ceil((f["time"] - t0) / pd.Timedelta(hours=1)).astype(int)
+    w = f[(h >= 0) & (h < 48)]
+    day1 = (h[w.index] < 24).to_numpy()
+    rain = np.where(day1, w["precipitation_previous_day1"], w["precipitation_previous_day2"])
+    gust = np.where(day1, w["wind_gusts_10m_previous_day1"], w["wind_gusts_10m_previous_day2"])
+    wet = w["time"][rain > 0]
+    when = (wet.iloc[0] if len(wet) else t0 + pd.Timedelta(days=1)).date()
+    rain_in, max_gust = float(np.nansum(rain)), float(np.nanmax(gust)) if len(gust) else 0.0
+    out = StormOutlook(
+        issued_on=as_of.date(), forecast_rain_48h_in=round(rain_in, 2), max_gust_48h_mph=max_gust,
+        storm_ahead=rain_in >= 0.5 or max_gust >= 45,
+    )  # fmt: skip
+    return out, when
+
+
+def _promote(queue: list[Finding], when: date) -> None:
+    """Move each WATCH/INVESTIGATE finding up one place within its own status, never above a safety finding."""
+    moved = set()
+    for i in range(1, len(queue)):
+        f, above = queue[i], queue[i - 1]
+        if (
+            f.status in ("WATCH", "INVESTIGATE")
+            and f.status == above.status
+            and above.type not in SAFETY
+            and above.alert_id not in moved
+        ):
+            queue[i - 1], queue[i] = f, above
+            moved.add(f.alert_id)
+    for i, f in enumerate(queue, 1):
+        f.priority = i
+        if f.status in ("WATCH", "INVESTIGATE") and f.type not in SAFETY:
+            f.inspection = [*f.inspection, f"Inspect before {when:%Y-%m-%d} (storm ahead)"]
+
+
 def _rain(b: _Bundle, as_of: datetime) -> RainContext:
     d, rain = b.daily, b.sd.rain
     today = _f(d["rain_mm"].iloc[-1]) if len(d) else None
@@ -327,6 +377,9 @@ def assess_station(station_id: str, as_of_utc: datetime, scenario_id: str | None
     check(station_id, scenario_id, as_of)
     b = _bundle(station_id, as_of, scenario_id)
     queue = _findings(b, station_id, as_of)
+    outlook, when = _storm(scenario_id, as_of) or (None, None)
+    if outlook and outlook.storm_ahead:
+        _promote(queue, when)
     pumps = _pumps(b)
     d = b.daily
     rows = d[d["day"] == d["day"].max()] if len(d) else d
@@ -342,14 +395,17 @@ def assess_station(station_id: str, as_of_utc: datetime, scenario_id: str | None
     ]
     missing += ["no complete day of pump data before as_of"] * (not len(d))
     missing += [f"{p.pump_id}: evidence {p.quality}" for p in pumps if p.quality != "SUFFICIENT"]
-    missing += ["storm outlook: not available for real replay stations"]
+    if not scenario_id:
+        missing += ["storm outlook: not available for real replay stations"]
+    elif not outlook:
+        missing += ["storm outlook: no archived forecast before 2016"]
     top = queue[0] if queue else None
     pump = next((p for p in pumps if top and p.pump_id == top.pump_id), None)
     order = explain.work_order(top, station_id) if top else None
     return StationAssessment(
         station_id=station_id, display_name=f"Wessex {station_id}", as_of_utc=as_of, origin=b.meta["origin"],
         scenario_id=scenario_id, status=status, quality=quality, pumps=pumps, queue=queue,
-        safety=[f for f in queue if f.type in SAFETY], rain=_rain(b, as_of), storm=None, missing_evidence=missing,
+        safety=[f for f in queue if f.type in SAFETY], rain=_rain(b, as_of), storm=outlook, missing_evidence=missing,
         explanation=explain.explanation(station_id, status, top, pump, missing),
         recommended_action=f"{order.title}. First check: {order.checks[0]}." if order else "No action from the detector.",
         provenance=Provenance(
@@ -510,8 +566,6 @@ def replay_case(case_id: str) -> ReplayResult:
         st.station_id, case_id, _utc(min(st.events["ts"].min(), st.level["ts"].min()).ceil("D")), end
     )
     daily = _bundle(st.station_id, end, case_id).daily
-    watch = _first_day(tl, lambda d: d.station_status in ("WATCH", "INVESTIGATE"))
-    inv = _first_day(tl, lambda d: d.station_status == "INVESTIGATE")
     onset = (
         ":" in case_id
         and scenarios.v(scenarios.load(case_id.split(":")[0])[0]["variants"][case_id[-1]]["precursor_type"])
@@ -520,6 +574,20 @@ def replay_case(case_id: str) -> ReplayResult:
     spec = meta["case"].spec if "case" in meta else {}
     t0 = meta.get("failure_at", spec.get("failure", spec.get("start")))
     failure = _utc(t0)
+    history = _first_day(tl, lambda d: d.station_status in ("WATCH", "INVESTIGATE"))
+    if ":" in case_id:
+        # §7: score a scenario from failure - 30 d, counting only findings that open inside it;
+        # a status already held at window start is the stand-in's own history
+        start = (failure - timedelta(days=30)).date()
+        scored = [b for a, b in zip(tl, tl[1:]) if b.day >= start]
+        before = {b.day: a.station_status for a, b in zip(tl, tl[1:])}
+    else:
+        scored, before = tl, {}
+
+    def opened(levels):
+        return _first_day(scored, lambda d: d.station_status in levels and before.get(d.day) not in levels)
+
+    watch, inv = opened(("WATCH", "INVESTIGATE")), opened(("INVESTIGATE",))
     offline, high, fault = _minute_scan(st, t0, p) if t0 is not None else (None, None, False)
     lead = (
         None
@@ -531,14 +599,10 @@ def replay_case(case_id: str) -> ReplayResult:
         out = _outcome(
             case_id, meta, inv, t0, min((m for m in (offline, high) if m is not None), default=None)
         )
-        if (
-            watch is not None
-            and watch <= failure
-            and (onset or inv is None or watch < inv - pd.Timedelta(days=30))
-        ):
+        if history is not None and history < failure - timedelta(days=30):
             out.assumptions.append(
-                f"stand-in history: the {st.station_id} stand-in carries real findings before the simulated failure "
-                f"(first WATCH {watch:%Y-%m-%d}), unrelated to this scenario; lead time is not computed"
+                f"stand-in history: the {st.station_id} stand-in carries real findings before the scored window "
+                f"(first WATCH {history:%Y-%m-%d}), unrelated to this scenario; they are not counted as warnings"
             )
     bench = {}
     for k, r in {"A": evaluate.bench_a(daily, p), "B": evaluate.bench_b(daily, p), "C": daily}.items():
@@ -556,5 +620,5 @@ def replay_case(case_id: str) -> ReplayResult:
         case_id=case_id, origin=meta["origin"], family=case_id.split(":")[0] if ":" in case_id else case_id.split("-")[0],
         title=f"{case_id} on station {st.station_id}", truth={"transforms": truth}, timeline=tl, first_watch_at=watch,
         first_investigate_at=inv, failure_at=failure, lead_time_h=lead, outcome=out, benchmarks=bench,
-        source_offline_after_min=offline, sensor_fault_flagged=fault,
+        source_offline_after_min=offline, high_level_after_min=high, sensor_fault_flagged=fault,
     )  # fmt: skip
