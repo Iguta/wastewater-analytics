@@ -81,7 +81,7 @@ def stations(scenario_id: str | None = None) -> StationsResponse:
     outage = (datetime(2023, 8, 17, tzinfo=timezone.utc), datetime(2023, 8, 20, tzinfo=timezone.utc))
     infos = [
         StationInfo(
-            station_id=s, display_name=f"Station {s}", pumps=data.load(s).pumps, origin="REAL_REPLAY",
+            station_id=s, display_name=f"Wessex {s}", pumps=data.load(s).pumps, origin="REAL_REPLAY",
             scenario_id=None, as_of_min=assess.REAL_MIN, as_of_max=assess.REAL_MAX, outage_windows=[outage],
         )
         for s in data.STATIONS

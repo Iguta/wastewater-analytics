@@ -29,6 +29,15 @@ CHECKLISTS = {
 CAVEAT = "This is a draft from a detector, not a diagnosis."
 
 
+def _expected(seconds):
+    # shortcut: expected run time is not computed yet (needs per-cycle data); say so rather than print "unknown s".
+    return (
+        "expected run time not yet computed"
+        if seconds is None
+        else f"vs {seconds:.0f} s expected at today's inflow"
+    )
+
+
 def _num(x, nd=1):
     return "unknown" if x is None else f"{x:.{nd}f}"
 
@@ -39,15 +48,15 @@ def explanation(
     """Section 10.7 template. Without a finding, state only the status and what is missing."""
     gaps = f"Missing evidence: {'; '.join(missing)}" if missing else "No evidence is missing"
     if finding is None:
-        return f"Station {station}: {status}. {gaps}. {CAVEAT}"
+        return f"Wessex {station}: {status}. {gaps}. {CAVEAT}"
     if pump is None:
-        return f"Station {station}: {status}. {finding.summary}. {gaps}. Check: {'; '.join(CHECKLISTS[finding.type])}. {CAVEAT}"
+        return f"Wessex {station}: {status}. {finding.summary}. {gaps}. Check: {'; '.join(CHECKLISTS[finding.type])}. {CAVEAT}"
     change = "unknown" if pump.capacity_change_pct is None else f"{abs(pump.capacity_change_pct):.0f}"
     return (
-        f"Station {station} {pump.pump_id}: {status}. Pumping capacity is {change}% below this pump's normal "
+        f"Wessex {station} {pump.pump_id}: {status}. Pumping capacity is {change}% below this pump's normal "
         f"for {finding.days_open} days ({_num(pump.ci_today)} vs {_num(pump.ci_baseline)} per hour; "
-        f"run time {_num(pump.run_median_s, 0)} s vs {_num(pump.expected_run_s, 0)} s expected at today's "
-        f"inflow). Rain is not used to excuse this finding. {gaps}. "
+        f"run time {_num(pump.run_median_s, 0)} s, {_expected(pump.expected_run_s)}). "
+        f"Rain is not used to excuse this finding. {gaps}. "
         f"Check: {'; '.join(CHECKLISTS[finding.type])}. {CAVEAT}"
     )
 
