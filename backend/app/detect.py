@@ -89,7 +89,7 @@ def run(daily: pd.DataFrame, params: Params, scope: str = "REAL") -> pd.DataFram
     oth = np.array(others, dtype=float)
     d["sibling_available"] = ~np.isnan(oth)
     oth = np.nan_to_num(oth, nan=0.0)
-    if p.sibling_mode == "down_only":  # only explain a drop the siblings share; never manufacture one
+    if p.sibling_mode == "shared_drop":  # only explain a drop the siblings share; never manufacture one
         oth = np.minimum(oth, 0.0)
     if not p.inhibition:
         oth = np.zeros_like(oth)

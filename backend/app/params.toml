@@ -10,7 +10,7 @@ min_valid_cycles = 20   # fixed, not tuned
 min_baseline_days = 30  # fixed
 reopen_days = 7         # fixed: recurrence within 7 days of closing reopens the incident
 S_max = 12.0            # fixed: CUSUM ceiling = 2*h_i default; see reports/decisions.md D1
-sibling_mode = "down_only"  # fixed: "down_only" or "spec"; see reports/decisions.md D2
+sibling_mode = "shared_drop"  # fixed: "shared_drop" or "spec"; see reports/decisions.md D2
 
 # Ablation switches (§4.15). The shipped model has all three on.
 persistence = true
