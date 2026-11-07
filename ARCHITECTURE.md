@@ -318,6 +318,12 @@ No ChatGPT head-to-head is run. A is labeled "simple rules", never "ChatGPT".
   3. G6 false alarms do not rise.
 - **Dependency:** `lightgbm` is the one exception to §14's no-ML-dependency rule. It is allowed only if the adoption rule passes, with David's approval as model owner.
 - **Otherwise:** the rolling median stays, and the experiment's numbers go in the Lab as evidence that the simpler model held up.
+- **Result (13:10, dev data only): KEEP the rolling median.** Training took 2.4 s on 7,160 pump-days.
+  - **Spread:** tighter on 44371 and 45385 (0.44–0.79×), but much looser on 45078 (1.4–4.0×); pooled 1.39×.
+  - **Detection:** 16 of 40 injected faults caught vs 23 for the median, and a shorter median lead (1.9 d vs 5.5 d).
+  - **Without station id:** pooled spread 0.81×, 26 of 40 caught (within noise of 23 at n = 40), shorter lead (3.4 d), slightly more false alarms.
+  - **Why it lost:** yesterday's value carried 34–76% of the gain, so the model partly follows the decline it is meant to flag; and station offsets cannot be learned for an unseen station.
+  - The script lives in the session scratchpad. The Lab shows this table as evidence that a trained alternative was tested and the simpler model held.
 - **Compute:** trained locally on Dhruv's M5 Max with all cores. Training runs offline; nothing trains while a request is served (§1).
 
 ## 5. The situational experiment
