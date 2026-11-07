@@ -165,7 +165,7 @@ What is computed from data:
 
 ### 4.4 Baseline
 
-For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, using only `SUFFICIENT` days. The window is truncated at the start of the data. The defaults are `W = 60` and `G = 14`. The 14-day guard keeps a developing fault out of its own baseline.
+For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, using only `SUFFICIENT` days. The window is truncated at the start of the data. The v1 defaults are `W = 60` and `G = 14` (frozen v2 values in §4.14). The guard keeps a developing fault out of its own baseline.
 
 - If fewer than 30 baseline days are available, the pump status is `INSUFFICIENT_EVIDENCE` with the reason "warming up".
 - `z_d = (log ci_d − median) / max(1.4826·MAD, 0.01)`, clipped to [−10, 10].
@@ -183,14 +183,14 @@ For decision day `d`, the baseline window is days `[d−G−W, d−G−1]`, usin
 
 - **Update rule:** `S_d = max(0, S_{d−1} + clip(−u_d, −U, U) − k)`.
 - **When it updates:** only on `SUFFICIENT` days. `PARTIAL`, `INSUFFICIENT` and `SOURCE_OFFLINE` days hold `S` unchanged.
-- **Defaults:** `k = 0.5`, `U = 4`, `h_w = 3`, `h_i = 6`.
-- **Minimum effect size:** `min_effect = −8%`, tunable on dev over {−5, −8, −12}%. Without it, a pump with very low day-to-day scatter reached `INVESTIGATE` on a −4.3% change (two 2023 cases).
+- **v1 defaults:** `k = 0.5`, `U = 4`, `h_w = 3`, `h_i = 6` (frozen v2 values in §4.14).
+- **Minimum effect size:** `min_effect` was −8% in v1 and is −12% in frozen v2 (§4.14); tuned on dev over {−8, −12}% (−5% dropped for time). Without it, a pump with very low day-to-day scatter reached `INVESTIGATE` on a −4.3% change (two 2023 cases).
 - **Ceiling (David's D1):** `S` is capped at `S_max = 12`, so a closed fault clears in days, not months.
 
 | Condition | Pump status |
 | --- | --- |
 | Fewer than 30 baseline days | `INSUFFICIENT_EVIDENCE` |
-| `S ≥ h_i`, at least 2 of the last 3 `SUFFICIENT` days have `u < −k` (persistence), and today's capacity change is at or below `min_effect` (default −8%) | `INVESTIGATE` |
+| `S ≥ h_i`, at least 2 of the last 3 `SUFFICIENT` days have `u < −k` (persistence), and today's capacity change is at or below `min_effect` (v1 default −8%; frozen v2 −12%, §4.14) | `INVESTIGATE` |
 | `S ≥ h_w` | `WATCH` |
 | Was `INVESTIGATE` | Stays until `S < h_w`, then becomes `WATCH` |
 | Was `WATCH` | Stays until `S < 1.0`, then becomes `NORMAL` |
@@ -268,7 +268,7 @@ The insect-vision analogy is a design analogy only. Each stage below is plain co
 
 ### 4.14 Parameters
 
-`backend/app/params.toml` holds `version` (`dragonfly-ci-v1`, …), the defaults below, and `min_valid_cycles = 20`, which is fixed.
+`backend/app/params.toml` holds `version` (`dragonfly-ci-v1`, …), the v1 defaults below, and `min_valid_cycles = 20`, which is fixed.
 
 | Param | Default | Tuning grid |
 | --- | --- | --- |
@@ -279,7 +279,9 @@ The insect-vision analogy is a design analogy only. Each stage below is plain co
 | `W` (baseline days) | 60 | 45, 60, 90 |
 | `G` (guard days) | 14 | 7, 14 |
 
-That makes 324 combinations. The silence and high-level rules are fixed, not tuned, so they cannot be fitted to their own gates.
+That makes 324 combinations, crossed with `min_effect` ∈ {−8, −12}% for 648 (−5% dropped for time). The silence and high-level rules are fixed, not tuned, so they cannot be fitted to their own gates.
+
+**Frozen v2 (`dragonfly-ci-v2-tuned`, `reports/decisions.md` D6):** `k` 1.0, `U` 4, `h_w` 4, `h_i` 8, `W` 45, `G` 7, `min_effect` −12%, picked from the 648 combinations on dev 2022 only. `W`, `G` and `min_effect` sit on the grid edge, so a wider grid is next. The v1 defaults in the table stay as the historical baseline.
 
 ### 4.15 Benchmarks, all on identical cases
 
@@ -469,7 +471,7 @@ Each family has dev seeds `0..n−1` (2022 windows) and test seeds `1000..1000+n
 
 ### 6.3 Gates
 
-A version cannot freeze unless every gate passes. Gates live in `backend/app/gates.toml`.
+A version cannot freeze unless every gate passes, **except** under D6: if no combination passes a gate, freeze the best by (fewest attributable false escalations, then recall), publish the failing gate with its counts, and do not tune further. Frozen v2 uses D6 for G5 (test: station shift 10/30). Gates live in `backend/app/gates.toml`.
 
 | Gate | Requirement |
 | --- | --- |
@@ -483,9 +485,9 @@ A version cannot freeze unless every gate passes. Gates live in `backend/app/gat
 
 ### 6.4 Objective and tuning
 
-- **Maximize** F1 dev recall on cases with loss ≥20% and ramp ≥7 days, subject to G1–G7.
+- **Maximize** F1 dev recall on cases with loss ≥20% and ramp ≥7 days, subject to G1–G7. If no combination passes a gate, the D6 fallback in §6.3 applies.
 - **Tie-breaks:** higher median lead time, then fewer real dev `WATCH` opens.
-- **`make tune`** runs all 324 combinations (plus the A and B grids) in parallel on cached dev cases and writes `reports/dev/grid.csv`. It refuses to overwrite an existing grid for the same `version` unless `FORCE=1`.
+- **`make tune`** runs all 648 combinations (324 × `min_effect` {−8, −12}%) (plus the A and B grids) in parallel on cached dev cases and writes `reports/dev/grid.csv`. It refuses to overwrite an existing grid for the same `version` unless `FORCE=1`.
 - **`make eval-dev`** runs the current params in about a minute. It prints at most 20 lines, ending with greppable `ERROR <reason>` lines, and writes details to `reports/dev/*.log`.
 
 ### 6.5 The refinement loop
@@ -741,7 +743,7 @@ All of these run from a clone of the repo after `make setup`. Replace `<repo>` w
 The README "Use it from your agent" section carries these configurations, `cloudflared` as a prerequisite, a restart line, and three example questions:
 
 - "Which stations need attention as of 2023-03-01?"
-- "Why is 44371 pump 1 flagged on 2022-06-03? Show the evidence."
+- "Why is 44371 pump 1 flagged on 2022-06-05? Show the evidence."
 - "Replay the Morningside scenario and tell me how early it warned."
 
 ## 10. User experience
@@ -1242,18 +1244,19 @@ Rehearse both outcomes, with and without a warning before the trip. If it doesn'
 2. **0:20–1:20, it happened, it failed, we detected.**
    - The capacity line falls over the days before the storm.
    - "Moved up: storm ahead" appears from the forecast as it was issued then.
-   - `INVESTIGATE` lands **about 3 days** before the trip. Measured with David's detector on 10 onsets across 2023 at 44371 P1 (6-day ramp, 60% loss): median lead 2.8 days, range 1.3–4.3, no misses. The locked replay itself gives 3.3 days.
-   - Sweep for the card: ramp 3 / 6 / 10 / 14 days gives median lead 1.3 / 2.8 / 5.3 / 7.8 days, 100% detected at each. With a 24 h repair the trip is avoided in 10/10 cases, with 48 h in 9/10, with 96 h in 1/10.
+   - On frozen v2 the first `INVESTIGATE` is raised 2024-04-10 00:00Z, about 31 h before the simulated trip at 04-11 07:00Z. The earlier onset sweep (ramp 3 / 6 / 10 / 14 days) and the 2.8-day lead are v1 measurements, not re-run on v2.
+   - Locked claim: "first INVESTIGATE about 31 h before the simulated trip; with a 24 h response, simulated overflow falls from 14,532 to 0 gal." Simulated gallons by repair time: 24 h 0, 48 h 14,532, 96 h 14,532 (no-warning 14,532; record 14,310).
+   - Variant B: no `INVESTIGATE`; `HIGH_LEVEL` 18 min after failure.
    - The rain analog is strong: 2023-04-05..11 at 44371 matches Morningside's week with SSE 13% (well under the 50% weak-analog line).
    - The trip happens: pumps stop and the simulated level rises to overflow.
-   - Read the "Simulated:" gallons at 24, 48 and 96 h.
+   - Read the "Simulated:" gallons at 24, 48 and 96 h (above).
    - Then switch to variant B: "If it was a sudden trip, we catch it at onset, the same as a working alarm." Say what the record does and does not tell us.
 3. **1:20–2:10, attack it (Lab).**
    - **Storm test:** the simple rule fires; Dragonfly stays quiet.
    - **Break the level sensor:** "High-level check: unknown"; it doesn't bluff.
-   - **Cut the power:** `SOURCE_OFFLINE` in about 5 minutes. That is the Fishers 2009 failure, where a dead backup battery meant nobody was alerted; the Fishers card shows simulated gallons at 60, 180 and 360 min of discovery delay.
+   - **Cut the power:** `SOURCE_OFFLINE` in about 9 minutes (Fishers A on v2). That is the Fishers 2009 failure, where a dead backup battery meant nobody was alerted; the Fishers card shows simulated gallons at 60, 180 and 360 min of discovery delay are 22,912 / 17,049 / 8,068. Fishers B: `HIGH_LEVEL` at 34 min.
 4. **2:10–3:00, open the evidence.** Raw pump timestamps, the rain line, the sibling pump normal, provenance hash, draft work order, and one grounded "Ask Dragonfly" answer.
-5. **3:00–3:40, real data.** The 44371 pump caught 10 days before a real outage (dev data, labeled). The test-tier numbers with their 95% intervals and denominators.
+5. **3:00–3:40, real data.** The 44371 pump: INVESTIGATE on day 2022-06-03 (raised 06-04 00:00Z), about 8 days before the pump was taken out of service on 06-11 (dev data, labeled). Test tier, scored 1 time: caught 125/125 (Wilson 95% 97.0–100%), median lead 4.8 d; false escalations storm/duty/transient/station-shift 0/0/0/10 of 30; real INVESTIGATE opens per pump per 180 d 0.00/0.16/0.74. G5 fails (station shift 10/30) and is published as failing (D6). Trade-off line: "v2 cut false alarms (duty swap 10→1, station shift 19→3 of 30, dev) at the cost of about a day of warning."
 6. **3:40–4:30, engineering.**
    - CI with `verify` green, the gates and the CODEOWNERS-locked benchmark.
    - Agents on the board, and Claude Code querying our MCP server.
