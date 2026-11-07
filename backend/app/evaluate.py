@@ -2,7 +2,7 @@
 
 `python -m backend.app.evaluate dev` writes reports/dev/summary.json (§11.6 keys) and reports/dev/cases.csv.
 Daily feature tables are param-independent, so they are built once per case and cached in memory for tuning.
-The test tier is scored only at freeze: `evaluate test` refuses to run without FREEZE=1.
+The test tier is scored once per frozen params version; every run appends one line to reports/test_runs.jsonl.
 """
 
 from __future__ import annotations
@@ -381,6 +381,32 @@ def g6(P: params.Params, year: int, runner=None) -> dict:
     return out
 
 
+@cache
+def static_gates() -> dict:
+    """G3, G4, G7 measured directly so evaluation.json carries all seven gates (they are also unit tests)."""
+    import inspect
+
+    from . import outcome
+
+    P = params.load()
+    s = station("44371")
+    cut = pd.Timestamp("2022-07-01")
+    a = features.daily_table(s.events, s.level, s.rain, cut, "44371")
+    b = features.daily_table(s.events[s.events.ts < cut], s.level[s.level.ts < cut], s.rain, cut, "44371")
+    g3 = a.equals(b) and detect.run(a, P).equals(detect.run(a.copy(), P))
+    src = inspect.getsource(detect.realtime)
+    g4 = (
+        "rain" not in src and "common" not in src
+    )  # same check as test_high_level_fires_and_has_no_inhibition_path
+    g7 = True
+    for sid in ("bloomington_morningside_2024_04_11", "fishers_bowline_2009_01_20"):
+        for var in ("A", "B"):
+            run, _a, d = outcome.no_warning_run(sid, var)
+            tol = d["tolerance_pct"] / 100
+            g7 &= d["target_gal"] * (1 - tol) <= run.overflow_gal <= d["target_gal"] * (1 + tol)
+    return {"G3": bool(g3), "G4": bool(g4), "G7": bool(g7)}
+
+
 LOSS_BINS = [0.10, 0.20, 0.30, 0.40, 0.50]
 RAMP_BINS = [3, 7, 14, 21, 30]
 
@@ -433,13 +459,13 @@ def summarize(rows: list[dict], P: params.Params, tier: str, runner=None) -> dic
             "attributable": int(f1.false_escalation_attributable.sum()),
             "raw": int(f1.false_escalation.sum()),
         },
-        "real_2022_investigate_opens_per_pump_180d": g6v,
+        "real_investigate_opens_per_pump_180d": g6v,
         "gates": {
             "G1": bool(f5.passed_attributable.all()),
             "G2": bool(f6.passed.all()),
             "G5": all(v["k"] == 0 for v in fe_attr.values()),
             "G6": all(v <= 1.0 for v in g6v.values()),
-            # G3, G4, G7 are asserted by tests (no-lookahead/determinism, HIGH_LEVEL inhibition, G7 sim)
+            **static_gates(),
         },
         "gates_raw": {
             "G1": bool(f5.passed.all()),
@@ -471,7 +497,7 @@ def evaluation_report(results: dict, P: params.Params) -> dict:
             "false_duty": kn("F3"),
             "false_transient": kn("F4"),
             "real_alerts_per_pump_6mo": round(
-                float(np.mean(list(s["real_2022_investigate_opens_per_pump_180d"].values()))), 6
+                float(np.mean(list(s["real_investigate_opens_per_pump_180d"].values()))), 6
             ),
         }
     c = results["C"][1]
@@ -490,7 +516,7 @@ def evaluation_report(results: dict, P: params.Params) -> dict:
             for b in c["f1_recall_bins"]
         ],
         "proxy": rows,
-        "test_scored": len(json.loads(TEST_LOCK.read_text())) if TEST_LOCK.exists() else 0,
+        "test_scored": len(_test_runs()),
         "gates": c["gates"],
     }
 
@@ -518,14 +544,19 @@ def _build_one(c: Case):
     return c, build(c)
 
 
-TEST_LOCK = ROOT / "reports" / "test" / "scored.json"
+TEST_RUNS = ROOT / "reports" / "test_runs.jsonl"  # §6.5 step 7: append-only, one line per eval-test run
+
+
+def _test_runs() -> list[dict]:
+    return (
+        [json.loads(x) for x in TEST_RUNS.read_text().splitlines() if x.strip()] if TEST_RUNS.exists() else []
+    )
 
 
 def run(tier: str = "dev", P: params.Params | None = None, workers: int | None = None, families=FAMILIES):
     P = P or params.load()
     if tier == "test":  # §6.5: once per frozen params version, aggregates only
-        scored = json.loads(TEST_LOCK.read_text()) if TEST_LOCK.exists() else {}
-        if P.version in scored and os.environ.get("FORCE") != "1":
+        if any(r["model_version"] == P.version for r in _test_runs()) and os.environ.get("FORCE") != "1":
             raise SystemExit(f"test tier already scored for {P.version}; FORCE=1 overrides (§6.5)")
     cases = make_cases(tier, families)
     with ProcessPoolExecutor(max_workers=workers) as ex:
@@ -547,7 +578,22 @@ def run(tier: str = "dev", P: params.Params | None = None, workers: int | None =
             json.dumps(report, indent=2, sort_keys=True, default=_jsonable) + "\n"
         )
     else:
-        scored = json.loads(TEST_LOCK.read_text()) if TEST_LOCK.exists() else {}
-        scored[P.version] = pd.Timestamp.now(tz="UTC").isoformat()
-        TEST_LOCK.write_text(json.dumps(scored, indent=2, sort_keys=True) + "\n")
+        line = {
+            "model_version": P.version,
+            "scored_at": pd.Timestamp.now(tz="UTC").isoformat(),
+            "forced": os.environ.get("FORCE") == "1",
+            "code_version": _code_version(),
+            **{
+                k: summary[k]
+                for k in (
+                    "f1_recall_loss20_ramp7",
+                    "lead_days",
+                    "false_escalations",
+                    "real_investigate_opens_per_pump_180d",
+                    "gates",
+                )
+            },
+        }
+        with TEST_RUNS.open("a") as f:  # append only: earlier runs are never rewritten
+            f.write(json.dumps(line, sort_keys=True, default=_jsonable) + "\n")
     return summary, results, built

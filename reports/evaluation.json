@@ -6,7 +6,7 @@
         "n": 114
       },
       "false_duty": {
-        "k": 7,
+        "k": 5,
         "n": 30
       },
       "false_storm": {
@@ -18,75 +18,15 @@
         "n": 30
       },
       "median_lead_days": 5.25,
-      "real_alerts_per_pump_6mo": 4.575343
+      "real_alerts_per_pump_6mo": 4.958904
     },
     "B": {
       "caught": {
-        "k": 109,
+        "k": 111,
         "n": 114
       },
       "false_duty": {
-        "k": 18,
-        "n": 30
-      },
-      "false_storm": {
-        "k": 0,
-        "n": 30
-      },
-      "false_transient": {
-        "k": 29,
-        "n": 30
-      },
-      "median_lead_days": 9.708333,
-      "real_alerts_per_pump_6mo": 1.20548
-    },
-    "C": {
-      "caught": {
-        "k": 112,
-        "n": 114
-      },
-      "false_duty": {
-        "k": 10,
-        "n": 30
-      },
-      "false_storm": {
-        "k": 0,
-        "n": 30
-      },
-      "false_transient": {
-        "k": 3,
-        "n": 30
-      },
-      "median_lead_days": 8.416667,
-      "real_alerts_per_pump_6mo": 0.493151
-    },
-    "C-inhibition": {
-      "caught": {
-        "k": 112,
-        "n": 114
-      },
-      "false_duty": {
-        "k": 0,
-        "n": 30
-      },
-      "false_storm": {
-        "k": 0,
-        "n": 30
-      },
-      "false_transient": {
-        "k": 15,
-        "n": 30
-      },
-      "median_lead_days": 9.083333,
-      "real_alerts_per_pump_6mo": 0.493151
-    },
-    "C-persistence": {
-      "caught": {
-        "k": 109,
-        "n": 114
-      },
-      "false_duty": {
-        "k": 2,
+        "k": 19,
         "n": 30
       },
       "false_storm": {
@@ -97,7 +37,67 @@
         "k": 30,
         "n": 30
       },
-      "median_lead_days": 8.083333,
+      "median_lead_days": 9.541667,
+      "real_alerts_per_pump_6mo": 1.013699
+    },
+    "C": {
+      "caught": {
+        "k": 112,
+        "n": 114
+      },
+      "false_duty": {
+        "k": 1,
+        "n": 30
+      },
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 0,
+        "n": 30
+      },
+      "median_lead_days": 6.291667,
+      "real_alerts_per_pump_6mo": 0.246575
+    },
+    "C-inhibition": {
+      "caught": {
+        "k": 112,
+        "n": 114
+      },
+      "false_duty": {
+        "k": 3,
+        "n": 30
+      },
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 7,
+        "n": 30
+      },
+      "median_lead_days": 6.520833,
+      "real_alerts_per_pump_6mo": 0.328767
+    },
+    "C-persistence": {
+      "caught": {
+        "k": 110,
+        "n": 114
+      },
+      "false_duty": {
+        "k": 4,
+        "n": 30
+      },
+      "false_storm": {
+        "k": 0,
+        "n": 30
+      },
+      "false_transient": {
+        "k": 30,
+        "n": 30
+      },
+      "median_lead_days": 8.041667,
       "real_alerts_per_pump_6mo": 0.246575
     },
     "C-quality": {
@@ -106,7 +106,7 @@
         "n": 114
       },
       "false_duty": {
-        "k": 10,
+        "k": 0,
         "n": 30
       },
       "false_storm": {
@@ -114,23 +114,26 @@
         "n": 30
       },
       "false_transient": {
-        "k": 3,
+        "k": 0,
         "n": 30
       },
-      "median_lead_days": 8.25,
-      "real_alerts_per_pump_6mo": 0.493151
+      "median_lead_days": 6.291667,
+      "real_alerts_per_pump_6mo": 0.246575
     }
   },
-  "code_version": "cdf509b",
+  "code_version": "d3bc4ff-dirty",
   "gates": {
     "G1": true,
     "G2": true,
+    "G3": true,
+    "G4": true,
     "G5": false,
-    "G6": true
+    "G6": true,
+    "G7": true
   },
   "heatmap": [
     {
-      "k": 9,
+      "k": 6,
       "loss": 0.1,
       "n": 10,
       "ramp": 3
@@ -142,19 +145,19 @@
       "ramp": 7
     },
     {
-      "k": 16,
+      "k": 15,
       "loss": 0.1,
       "n": 16,
       "ramp": 14
     },
     {
-      "k": 13,
+      "k": 10,
       "loss": 0.1,
       "n": 15,
       "ramp": 21
     },
     {
-      "k": 15,
+      "k": 11,
       "loss": 0.2,
       "n": 15,
       "ramp": 3
@@ -202,7 +205,7 @@
       "ramp": 21
     },
     {
-      "k": 11,
+      "k": 10,
       "loss": 0.4,
       "n": 11,
       "ramp": 3
@@ -226,7 +229,7 @@
       "ramp": 21
     }
   ],
-  "model_version": "dragonfly-ci-v1 (dev, untuned)",
+  "model_version": "dragonfly-ci-v2-tuned",
   "proxy": [
     {
       "episodes": 9,
@@ -241,5 +244,5 @@
       "tier": "dev"
     }
   ],
-  "test_scored": 0
+  "test_scored": 1
 }

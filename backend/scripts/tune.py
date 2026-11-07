@@ -24,7 +24,7 @@ GRID = {
     "h_i": [5, 6, 8],
     "W": [45, 60, 90],
     "G": [7, 14],
-    "min_effect": [-5.0, -8.0, -12.0],
+    "min_effect": [-8.0, -12.0],  # -5 dropped for time: it lost on 2022 G6 (decisions.md D4)
 }
 OUT = Path(__file__).resolve().parents[2] / "reports" / "dev" / "grid.csv"
 BUILT: list = []

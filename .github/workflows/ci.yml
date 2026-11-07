@@ -21,4 +21,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
+      - run: make setup
       - run: make verify
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: e2e/test-results
