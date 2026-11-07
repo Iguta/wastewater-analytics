@@ -147,7 +147,7 @@ def test_scenario_assessment_and_evidence_use_the_case_stream():
 
 
 def test_priority_reason_says_largest_only_for_an_investigate_row():
-    f = assess.assess_station("44371", datetime(2022, 6, 3, tzinfo=timezone.utc)).queue[0]
+    f = assess.assess_station("44371", datetime(2022, 6, 4, tzinfo=timezone.utc)).queue[0]
     assert "largest capacity loss" in explain.priority_reason(f, 1, 1, "SUFFICIENT")
     watch = f.model_copy(update={"status": "WATCH", "days_open": 1})
     assert (

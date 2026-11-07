@@ -56,7 +56,7 @@ Labels = a busy pump with 0 runs for 2+ days while a sibling keeps running ("tak
 
 | Tempting claim | The truth | Say instead |
 | --- | --- | --- |
-| "Caught a real pump failure days early" | 44371 P1 went out of service for 4 days; cause unknown; may have been planned after operators saw the same thing | "A real pump's capacity fell 46% and stayed down; INVESTIGATE opened on 2022-06-04, about a week before it was taken out of service on 06-11." |
+| "Caught a real pump failure days early" | 44371 P1 went out of service for 4 days; cause unknown; may have been planned after operators saw the same thing | "A real pump's capacity fell 46% and stayed down; INVESTIGATE on day 2022-06-03 (raised 06-04 00:00Z), about 8 days before it was taken out of service on 06-11." |
 | "Would have prevented the Morningside spill" | Mechanism unknown (clog vs sudden trip, tied at 40%); telemetry is a UK stand-in | "If it was a clog like the one reported upstream that week, a warning about 31 h ahead (first INVESTIGATE before the simulated trip) was possible in our rebuild." |
 | "60% capacity loss detected" | On screen the measured change is about −31% (cap) | Show the measured number only |
 | "Detects failures days ahead" | Only gradual mechanical loss; power, controller and vandalism failures are detected at onset at best | "Days ahead for gradual wear; minutes for silence; never for sudden faults." |

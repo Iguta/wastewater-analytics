@@ -64,7 +64,7 @@ Each rung has a "does not prove" line. Read it.
 - Does not prove: performance on real failures. We wrote the injector, so these are the faults we thought of. Station shift (F7) is the known open flaw (section 5).
 
 **3. Real precursor** (one event; dev data, seen during design; `docs/evidence/ci_rain_check.txt`, `reports/decisions.md` D3)
-- 44371 P1 capacity fell 46% and stayed down; on v2, INVESTIGATE opens on 2022-06-04, about a week before the pump was taken out of service on 06-11 (out of service 06-11 to 06-15, cause unknown). On v1 it was 06-02.
+- 44371 P1 capacity fell 46% and stayed down; on v2, INVESTIGATE on day 2022-06-03 (raised 06-04 00:00Z), about 8 days before the pump was taken out of service on 06-11 (out of service 06-11 to 06-15, cause unknown). On v1 it was 06-02.
 - Proves: a real, unplanted capacity drop is visible and flagged.
 - Does not prove: a rate. n = 1, we saw it while designing, and the removal may have been planned after operators saw the same thing.
 
