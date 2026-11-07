@@ -397,10 +397,11 @@ def timeline(station_id: str, scenario_id: str | None, start: datetime, end: dat
     check(station_id, scenario_id, start)
     if end < start or (end - start).days > 400:
         raise AssessError("BAD_TIMESTAMP", "end must be on or after start and at most 400 days after it")
-    d = _bundle(station_id, end + timedelta(days=1)).daily
+    # Only days complete before `end` (the as_of of the last frame): no data after `end` is read.
+    d = _bundle(station_id, end).daily
     d = d[
         (d["day"] >= features.to_naive_utc(start).floor("D"))
-        & (d["day"] <= features.to_naive_utc(end).floor("D"))
+        & (d["day"] < features.to_naive_utc(end).floor("D"))
     ]
     return [
         TimelineDay(

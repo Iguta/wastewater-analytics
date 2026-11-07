@@ -80,8 +80,9 @@ def test_timeline_days():
     t = assess.timeline(
         "44371", None, datetime(2022, 6, 1, tzinfo=timezone.utc), datetime(2022, 6, 3, tzinfo=timezone.utc)
     )
-    assert [d.day.isoformat() for d in t] == ["2022-06-01", "2022-06-02", "2022-06-03"][: len(t)]
-    assert t and t[-1].station_status in ("WATCH", "INVESTIGATE")
+    # Only days completed before `end`: 06-03 itself is not over at 06-03T00:00, so it must not appear.
+    assert [d.day.isoformat() for d in t] == ["2022-06-01", "2022-06-02"]
+    assert t[-1].station_status in ("WATCH", "INVESTIGATE")
 
 
 def test_explanation_has_no_banned_word_for_every_finding_type():

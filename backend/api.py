@@ -25,7 +25,7 @@ from backend.app.contracts import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-STATUS = {"UNKNOWN": 404, "NO_REPORT": 404, "NOT_AVAILABLE": 501}  # by code prefix; anything else is 422
+STATUS = {"NO_REPORT": 404}  # §8.2: only a missing report is 404; every other ToolError is 422
 # The Lab's fixed dev cases (5.6). F4's seed is a placeholder until David picks the first one with loss >= 0.4.
 DEV_CASES = [
     DevCase(case_id="F2-0", experiment="storm_test"),

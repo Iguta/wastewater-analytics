@@ -38,11 +38,11 @@ def test_assess_then_evidence_then_timeline():
 @pytest.mark.parametrize(
     "path, params, status, code",
     [
-        ("/api/assess", {"station_id": "1", "as_of_utc": AS_OF}, 404, "UNKNOWN_STATION"),
+        ("/api/assess", {"station_id": "1", "as_of_utc": AS_OF}, 422, "UNKNOWN_STATION"),
         ("/api/assess", {"station_id": "44371"}, 422, "BAD_TIMESTAMP"),
         ("/api/assess", {"station_id": "44371", "as_of_utc": "2022-06-03"}, 422, "BAD_TIMESTAMP"),
-        ("/api/replay", {"case_id": "F1-1003"}, 501, "NOT_AVAILABLE"),
-        ("/api/replay", {"case_id": "bad"}, 404, "UNKNOWN_CASE"),
+        ("/api/replay", {"case_id": "F1-1003"}, 422, "NOT_AVAILABLE"),
+        ("/api/replay", {"case_id": "bad"}, 422, "UNKNOWN_CASE"),
     ],
 )
 def test_errors_are_tool_errors(path, params, status, code):
