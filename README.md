@@ -78,5 +78,6 @@ _Updated through the day: stack, how AI shaped the build, and where it needed co
 
 ## Team
 
-- David Iguta Ndung'u: data, model, pipeline
-- Sai Praneetha Chimalamarri: UI/UX
+- David Iguta Ndung'u: data, features, risk model, LLM explanations
+- Sai Praneetha Chimalamarri: UI/UX, operator and planner dashboard
+- Dhruv Bangera: API, CI/CD, deployment, security, Ignition integration

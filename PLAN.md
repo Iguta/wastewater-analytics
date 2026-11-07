@@ -12,8 +12,9 @@ A **live, working** lift station early warning tool, built for **Community Impac
 
 | Person | Owns |
 | --- | --- |
-| David | Data loading, features, risk model, API, LLM explanations, tests, CI |
-| Praneetha | Operator and planner screens, design system, accessibility, demo story, architecture diagram |
+| David | Data loading, features, risk model, LLM explanations, model tests and fault-injection evaluation |
+| Praneetha | Operator and planner screens, ISA-101 design system, accessibility, demo story, architecture diagram |
+| Dhruv | API serving scores and alerts, repo structure, CI (lint, tests, secret scan), deployment, Ignition stretch screen |
 | Shared | Decisions log, README, Devpost submission, demo rehearsal |
 
 ## Milestones
