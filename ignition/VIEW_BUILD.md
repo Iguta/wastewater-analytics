@@ -2,7 +2,7 @@
 
 Design and rationale: [DESIGN.md](DESIGN.md). This file is the click-by-click build. Read-only throughout: memory tags only, no device or OPC writes.
 
-**Status:** the tag file and the gateway script's logic are tested against the real API (`python3 ignition/tests/test_poll.py`, 10 tests). Nothing here has been run inside Ignition. Steps 3 to 5 can only be done in the Designer, so treat their bindings as a first draft to check on the gateway.
+**Status:** the tag file and the gateway script's logic are tested against the real API (`python3 ignition/tests/test_poll.py`, 11 tests). The script's logic was also run under Ignition 8.3.10's own Jython 2.7.4 (from the `inductiveautomation/ignition:8.3` image) against the live API and produced the same 106 tag values; that run found and fixed a non-ASCII-source error that Python 3 could not show. The tag import, the gateway timer and the Perspective view have **not** been run in a gateway. Steps 3 to 5 can only be done in the Designer, so treat their bindings as a first draft to check on the gateway.
 
 ## 0. Before you start
 

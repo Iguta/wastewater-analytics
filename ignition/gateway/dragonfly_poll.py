@@ -17,9 +17,9 @@ STATUS_TEXT = {"NORMAL": "Normal", "WATCH": "Watch: capacity is dropping", "INVE
 QUALITY_WORD = {"SUFFICIENT": "Sufficient", "PARTIAL": "Partial", "INSUFFICIENT": "Not enough", "SOURCE_OFFLINE": "Source offline"}
 QUALITY_RANK = ["SUFFICIENT", "PARTIAL", "INSUFFICIENT", "SOURCE_OFFLINE"]
 ORIGIN_TEXT = {
-    "REAL_REPLAY": u"REPLAY · Wessex Water telemetry 2022–2023 (CC BY) · not live data",
-    "SYNTHETIC_INJECTION": u"SIMULATION · synthetic fault in real telemetry · not real station data",
-    "SIMULATED_INCIDENT": u"SIMULATION · scenario · not real station data",
+    "REAL_REPLAY": u"REPLAY \u00b7 Wessex Water telemetry 2022\u20132023 (CC BY) \u00b7 not live data",
+    "SYNTHETIC_INJECTION": u"SIMULATION \u00b7 synthetic fault in real telemetry \u00b7 not real station data",
+    "SIMULATED_INCIDENT": u"SIMULATION \u00b7 scenario \u00b7 not real station data",
 }
 
 

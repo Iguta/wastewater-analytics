@@ -114,6 +114,11 @@ class TagFile(unittest.TestCase):
             on_disk = json.load(f)
         self.assertEqual(on_disk, gen_tags.build())
 
+    def test_script_is_ascii_for_jython(self):
+        # Jython 2.7 refuses non-ASCII source without an encoding line; found by running it in the real gateway image.
+        with open(os.path.join(HERE, "..", "gateway", "dragonfly_poll.py"), "rb") as f:
+            f.read().decode("ascii")
+
     def test_script_has_no_device_writes(self):
         with open(os.path.join(HERE, "..", "gateway", "dragonfly_poll.py")) as f:
             src = f.read()
