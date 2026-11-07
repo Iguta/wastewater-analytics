@@ -64,13 +64,13 @@ def no_warning_run(
     variant: str | None = None,
     year: int = 2023,
     rank: int = 0,
-    loss_24h: float = 0.6,
+    loss_24h: float | None = None,
 ):
     """The scenario's no-warning outcome: capacity follows the variant's precursor, 0 from failure until
     outage_duration_min later. Returns (OutcomeRun, analog, details).
 
-    loss_24h is the precursor loss held for the last 24 h (§5.2). The default 0.6 is the Morningside A note
-    ("duty pump 60% degraded 24 h before failure"); the §5.1 sweep passes 0.4 / 0.6 / 0.8. The variant's
+    loss_24h is the precursor loss held for the last 24 h (§5.2), read from the variant's loss_24h field unless
+    the §5.1 sweep passes 0.4 / 0.6 / 0.8. The variant's
     capacity_lost_pct_at_failure (100) is the trip itself, applied from failure_timestamp_utc."""
     from . import data
 
@@ -85,6 +85,8 @@ def no_warning_run(
     pump_cap = float(v(s["station_standin"]["pump_capacity_gpm_each"]))
     if v(var["precursor_type"]) == "none":
         loss_24h = 0.0
+    elif loss_24h is None:  # the locked file's value; the §5.1 sweep passes its own
+        loss_24h = float(v(var["loss_24h"]))
     onset = failure - pd.Timedelta(days=float(v(var["precursor_onset_days_before"])))
     t = inflow.index
     duty = pump_cap * (1 - scenarios.loss_at(t, onset, failure, loss_24h, v(var["precursor_shape"])))

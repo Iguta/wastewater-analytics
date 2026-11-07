@@ -77,6 +77,11 @@ def daily_table(events, level, rain, end_utc, station_id: str | None = None, cou
     end = to_naive_utc(end_utc)
     last_day = end.floor("D")  # days < last_day are complete
     ev = events[events["ts"] < end]
+    dup = ev.duplicated(
+        ["signal_id", "ts", "state"]
+    )  # duplicates can arrive after load (e.g. from a fault transform)
+    counts["DUPLICATE_ROW"] = counts.get("DUPLICATE_ROW", 0) + int(dup.sum())
+    ev = ev[~dup]
     lv = level[level["ts"] < end]
     station_id = station_id or (ev["signal_id"].iloc[0].split("_")[0] if len(ev) else None)
     pumps = sorted(events["pump_id"].unique())
