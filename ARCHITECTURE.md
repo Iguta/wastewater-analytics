@@ -920,7 +920,7 @@ After replay, the card shows one row per variant: first `WATCH`, first `INVESTIG
   - It writes the JSON into **memory tags** under `[default]Dragonfly/<station>/…`.
   - The view binds to those tags. The data comes from the same API, so there is one inference.
 - **Never** writes to any device or OPC tag.
-- **Gateway:** the native 8.3.10 gateway on David's laptop (`localhost:8088`), with the Docker image `inductiveautomation/ignition:8.3` as the fallback. The project is exported to `ignition/` (Praneetha).
+- **Gateway and owner (David, 13:48):** Praneetha owns the Ignition demo on **her own laptop**, running both the gateway and the API there (`make setup`, then `make serve` from the public repo and committed fixtures). Because the API binds 127.0.0.1, the gateway calls `http://127.0.0.1:8000` (native install) or `http://host.docker.internal:8000` (Docker image `inductiveautomation/ignition:8.3`). The main demo, React UI plus MCP, runs on Dhruv's laptop. The project is exported to `ignition/`.
 - **Timing:**
   - Praneetha may design it now, as a wireframe and tag structure.
   - Building starts only after the 15:45 milestone passes, time-boxed to 45 min.
