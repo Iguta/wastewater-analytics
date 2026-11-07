@@ -22,6 +22,12 @@ async function get<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// Section 10.1 copy for a dead or failing server; a 4xx with a ToolError body says what the server said.
+export function errorText(e: unknown): string {
+  if (e instanceof ApiError && e.status >= 400 && e.status < 500 && e.toolError?.message) return `${e.toolError.message} (HTTP ${e.status}).`;
+  return `Can't reach the Dragonfly server (HTTP ${e instanceof ApiError && e.status ? e.status : "no response"}).`;
+}
+
 export const api = {
   health: () => get<{ status: string; model_version: string; source_hash: string; code_version: string }>("/api/health"),
   assess: (stationId: string, asOfUtc: string, scenarioId?: string) =>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../api";
+import { api, errorText } from "../api";
 import type { ReplayResult, ScenarioCard, ScenarioFact, ScenarioVariant } from "../types";
 import { ErrorState, Loading } from "./ScreenState";
 
@@ -26,7 +26,7 @@ export function IncidentsTab({ replays, onReplay, loadingCase }: {
     setState({ s: "loading" });
     api.scenarios().then(
       (r) => live && setState({ s: "ok", cards: r.scenarios }),
-      (e: Error & { status?: number }) => live && setState({ s: "error", message: `Can't reach the Dragonfly server (HTTP ${e.status || "no response"}).` }),
+      (e: unknown) => live && setState({ s: "error", message: errorText(e) }),
     );
     return () => { live = false; };
   }, [attempt]);

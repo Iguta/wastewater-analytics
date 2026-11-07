@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "../api";
+import { api, errorText } from "../api";
 import type { QueueItem } from "../derive";
 import type { Evidence, PumpState, WorkOrder } from "../types";
 import { AskPanel } from "./drawer/AskPanel";
@@ -31,7 +31,7 @@ export function Drawer({ item, asOf, scenarioId, returnTo, onClose }: {
     setLoad({ s: "loading" });
     api.evidence(f.alert_id, asOf).then(
       (ev) => live && setLoad({ s: "ok", ev }),
-      (e: Error & { status?: number }) => live && setLoad({ s: "error", message: `Can't load the evidence (HTTP ${e.status || "no response"}).` }),
+      (e: unknown) => live && setLoad({ s: "error", message: errorText(e) }),
     );
     return () => { live = false; };
   }, [f.alert_id, asOf, attempt]);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, ApiError } from "../api";
+import { api, ApiError, errorText } from "../api";
 import type { BenchmarkKey, DevCase, EvaluationReport, Experiment, HeatCell, ProxyRow, Rate, ReplayResult } from "../types";
 import { EmptyState, ErrorState, Loading } from "./ScreenState";
 
@@ -39,7 +39,7 @@ export function LabTab() {
       (r) => live && setLoad({ s: "ok", r }),
       (e: unknown) => live && setLoad(e instanceof ApiError && e.status === 404
         ? { s: "none" }
-        : { s: "error", message: `Can't reach the Dragonfly server (HTTP ${e instanceof ApiError && e.status ? e.status : "no response"}).` }),
+        : { s: "error", message: errorText(e) }),
     );
     return () => { live = false; };
   }, [attempt]);
@@ -216,7 +216,7 @@ function Experiment({ e, dev, loaded }: { e: (typeof EXPERIMENTS)[number]; dev: 
   const run = () => {
     if (!dev) return;
     setSt({ s: "run" });
-    api.replay(dev).then((r) => setSt({ s: "ok", r }), (x: Error & { status?: number }) => setSt({ s: "err", m: `Can't reach the Dragonfly server (HTTP ${x.status || "no response"}).` }));
+    api.replay(dev).then((r) => setSt({ s: "ok", r }), (x: unknown) => setSt({ s: "err", m: errorText(x) }));
   };
   return (
     <div className="experiment" data-experiment={e.id}>

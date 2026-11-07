@@ -8,7 +8,7 @@ One read-only Perspective view in Ignition 8.3 with the station tiles, the safet
 
 ## Read-only rules
 
-- The gateway script only **reads** from `http://127.0.0.1:8000/api/assess` and writes **memory tags** under `[default]Dragonfly/`.
+- The gateway script only **reads** from `http://host.docker.internal:8000/api/assess` and writes **memory tags** under `[default]Dragonfly/`.
 - It never writes to a device, an OPC tag, or any tag that controls equipment. No button in the view writes anything.
 - No acknowledge, reset or override controls (section 1, section 16).
 
@@ -16,7 +16,7 @@ One read-only Perspective view in Ignition 8.3 with the station tiles, the safet
 
 ```text
 Gateway timer script (every 60 s)
-   -> system.net.httpGet("http://127.0.0.1:8000/api/assess?station_id=<id>&as_of_utc=<as_of>")  x 3 stations
+   -> system.net.httpGet("http://host.docker.internal:8000/api/assess?station_id=<id>&as_of_utc=<as_of>")  x 3 stations
    -> parse JSON -> write memory tags [default]Dragonfly/<station>/...
 Perspective view -> bindings on those tags
 ```
@@ -134,7 +134,9 @@ Colours come from `frontend/src/styles/tokens.css`, copied into the Perspective 
 
 Validation is manual only (section 10.8), and it sits outside `make verify`.
 
-## Open questions for the owner of each decision
+## Decisions (Dhruv, board 2026-11-07)
 
-- **Dhruv:** is `GET /api/assess` reachable from the gateway on `127.0.0.1:8000` with no auth, as section 8.2 says? Does the gateway need a CORS or Host allowance? (None expected, because the call is server to server.)
-- **David:** the gateway runs on his laptop (`localhost:8088`, native 8.3.10). Which is the primary and which is the Docker fallback on demo day?
+- `GET /api/assess` needs no auth, header or token, and CORS does not apply (server to server).
+- The API binds to `127.0.0.1`, so the gateway must run on the **same machine** as `make serve`. The demo runs on **Dhruv's laptop** with the Docker image `inductiveautomation/ignition:8.3`, which reaches the API at `http://host.docker.internal:8000`. David's native gateway cannot reach it.
+- Still open for David: confirm he is fine running the demo on Dhruv's laptop.
+- Still to check at build time: that `host.docker.internal` resolves from the container on that laptop, and that the API accepts the `Host: host.docker.internal:8000` header (it should, since only the MCP HTTP server limits Host, section 8.3).

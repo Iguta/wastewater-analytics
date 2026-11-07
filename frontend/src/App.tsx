@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, ApiError } from "./api";
+import { api, ApiError, errorText } from "./api";
 import { Drawer } from "./components/Drawer";
 import { Header } from "./components/Header";
 import { EmptyState, ErrorState, Loading } from "./components/ScreenState";
@@ -44,7 +44,7 @@ export default function App() {
       (data) => live && setBoot({ state: "ok", data }),
       (e: unknown) => live && setBoot({
         state: "error", down: !(e instanceof ApiError) || e.status === 0 || e.status >= 500,
-        message: `Can't reach the Dragonfly server (HTTP ${e instanceof ApiError && e.status ? e.status : "no response"}).`,
+        message: errorText(e),
       }),
     );
     return () => { live = false; };
@@ -73,7 +73,7 @@ export default function App() {
     setLoadingCase(v.scenario_id);
     api.replay(v.scenario_id).then(
       (r) => { setReplays((m) => ({ ...m, [v.scenario_id]: r })); setScenario({ v, title }); setDay(null); setOpen(null); setTab("stations"); },
-      (e: Error & { status?: number }) => setReplayError(`Can't reach the Dragonfly server (HTTP ${e.status || "no response"}).`),
+      (e: unknown) => setReplayError(errorText(e)),
     ).finally(() => setLoadingCase(null));
   };
   const exitScenario = () => { setScenario(null); setDay(null); setOpen(null); };

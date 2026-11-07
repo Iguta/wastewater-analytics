@@ -123,7 +123,7 @@ export function mockApi(): Plugin {
             outage_windows: [["2023-08-17T10:20:00Z", "2023-08-20T12:21:00Z"]] })) });
         if (u.pathname === "/assess") return send(200, assess(q.get("station_id")!, q.get("as_of_utc")!.slice(0, 10), q.get("scenario_id")));
         if (u.pathname === "/timeline") {
-          const out = []; for (let d = q.get("start")!; d <= q.get("end")!; d = dayAdd(d, 1)) {
+          const out = []; for (let d = q.get("start")!.slice(0, 10); d < q.get("end")!.slice(0, 10); d = dayAdd(d, 1)) {
             const a = assess(q.get("station_id")!, d, q.get("scenario_id"));
             out.push({ day: d, station_status: a.status, pumps: a.pumps.map((p) => ({ pump_id: p.pump_id, status: p.status, ci: p.ci_today, base_median: p.ci_baseline, cusum: p.cusum })) });
           } return send(200, out);
