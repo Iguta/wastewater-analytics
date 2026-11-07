@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
-import type { BenchmarkKey, EvaluationReport, Experiment, Rate, ReplayResult } from "../types";
+import type { BenchmarkKey, DevCase, EvaluationReport, Experiment, HeatCell, ProxyRow, Rate, ReplayResult } from "../types";
 import { EmptyState, ErrorState, Loading } from "./ScreenState";
 
 const rate = (r: Rate) => `${r.k} of ${r.n}`;
@@ -20,8 +20,6 @@ const CANNOT_KNOW = [
   "Stations with no telemetry.",
   "Real alarm setpoints.",
 ];
-// Section 5.6: each live experiment uses the first dev seed of one family.
-const FAMILY: Record<Experiment, string> = { storm_test: "F2", break_sensor: "F6", cut_power: "F5", one_bad_day: "F4" };
 const EXPERIMENTS: { id: Experiment; label: string; testid: string; expect: string }[] = [
   { id: "storm_test", label: "Storm test", testid: "exp-storm-test", expect: "The simple rule fires in the storm; Dragonfly stays quiet." },
   { id: "break_sensor", label: "Break the level sensor", testid: "exp-break-sensor", expect: "Sensor fault is flagged and the high-level check reads unknown." },
@@ -76,43 +74,27 @@ function Report({ r }: { r: EvaluationReport }) {
   return (
     <>
       <p className="meta">
-        Model {r.model_version}, code {r.code_version}.
-        {r.test_scored != null && ` Test tier scored ${r.test_scored} ${r.test_scored === 1 ? "time" : "times"}.`} Every count shows its denominator.
+        Model {r.model_version}, code {r.code_version}. Test tier scored {r.test_scored} {r.test_scored === 1 ? "time" : "times"}. Every count shows its denominator.
       </p>
-      {r.benchmarks && <BenchTable id="lab-compare-table" title="Dragonfly against two simpler checks" keys={MAIN} b={r.benchmarks} />}
-      {r.benchmarks && <BenchTable id="lab-ablations" title="What each part of Dragonfly adds" keys={ABLATION} b={r.benchmarks} />}
-      {r.metrics && <Metrics r={r} />}
-      {r.heatmap && <Heatmap h={r.heatmap} />}
-      {(r.proxy || r.weak_labels) && <Proxy r={r} />}
-      {r.caveats && r.caveats.length > 0 && (
-        <section className="panel" data-testid="lab-caveats"><h2 className="section-title">Caveats</h2><ul>{r.caveats.map((c) => <li key={c}>{c}</li>)}</ul></section>
-      )}
+      <BenchTable id="lab-compare-table" title="Dragonfly against two simpler checks" keys={MAIN} b={r.benchmarks} />
+      <BenchTable id="lab-ablations" title="What each part of Dragonfly adds" keys={ABLATION} b={r.benchmarks} />
+      <Heatmap cells={r.heatmap} />
+      <Proxy rows={r.proxy} />
+      <Gates gates={r.gates} />
     </>
   );
 }
 
-// Whatever the report holds under metrics and gates, shown as written (no number is added or rounded here).
-function Metrics({ r }: { r: EvaluationReport }) {
-  const shown = (v: unknown) => (typeof v === "number" ? String(v) : typeof v === "boolean" ? (v ? "yes" : "no") : String(v));
+function Gates({ gates }: { gates: Record<string, boolean> }) {
   return (
-    <section className="panel" data-testid="lab-metrics">
-      <h2 className="section-title">Measured results</h2>
-      <dl className="kv">
-        {Object.entries(r.metrics ?? {}).map(([name, m]) => (
-          <div key={name} style={{ display: "contents" }}>
-            <dt>{name}</dt>
-            <dd>{Object.entries(m).map(([k, v]) => `${k.replace(/_/g, " ")} ${shown(v)}`).join(", ")}</dd>
-          </div>
-        ))}
-        {Object.entries(r.gates ?? {}).map(([g, ok]) => (
-          <div key={g} style={{ display: "contents" }}><dt>Gate {g}</dt><dd>{ok ? "passed" : "not passed"}</dd></div>
-        ))}
-      </dl>
+    <section className="panel" data-testid="lab-gates">
+      <h2 className="section-title">Checks the model must pass</h2>
+      <ul className="plain-list">{Object.entries(gates).map(([g, ok]) => <li key={g}>Gate {g}: {ok ? "passed" : "not passed"}</li>)}</ul>
     </section>
   );
 }
 
-function BenchTable({ id, title, keys, b: all }: { id: string; title: string; keys: BenchmarkKey[]; b: NonNullable<EvaluationReport["benchmarks"]> }) {
+function BenchTable({ id, title, keys, b: all }: { id: string; title: string; keys: BenchmarkKey[]; b: EvaluationReport["benchmarks"] }) {
   return (
     <section className="panel" data-testid={id}>
       <h2 className="section-title">{title}</h2>
@@ -148,9 +130,10 @@ function BenchTable({ id, title, keys, b: all }: { id: string; title: string; ke
 }
 
 // Section 6.2: bins are shown only where n >= 20. Greyscale bar, never color alone.
-function Heatmap({ h }: { h: NonNullable<EvaluationReport["heatmap"]> }) {
+function Heatmap({ cells }: { cells: HeatCell[] }) {
   const [table, setTable] = useState(false);
-  const cell = (l: string, m: string) => h.cells.find((c) => c.loss === l && c.ramp === m);
+  const lossBins = [...new Set(cells.map((c) => c.loss))], rampBins = [...new Set(cells.map((c) => c.ramp))];
+  const cell = (l: string, m: string) => cells.find((c) => c.loss === l && c.ramp === m);
   return (
     <section className="panel">
       <div className="chart-head">
@@ -159,12 +142,12 @@ function Heatmap({ h }: { h: NonNullable<EvaluationReport["heatmap"]> }) {
       </div>
       <div data-testid={table ? "lab-heatmap-table" : "lab-heatmap"}>
         <table className="data-table heat">
-          <thead><tr><th scope="col">Loss \ ramp</th>{h.ramp_bins.map((m) => <th key={m} scope="col">{m}</th>)}</tr></thead>
+          <thead><tr><th scope="col">Loss \ ramp</th>{rampBins.map((m) => <th key={m} scope="col">{m}</th>)}</tr></thead>
           <tbody>
-            {h.loss_bins.map((l) => (
+            {lossBins.map((l) => (
               <tr key={l}>
                 <th scope="row">{l}</th>
-                {h.ramp_bins.map((m) => {
+                {rampBins.map((m) => {
                   const c = cell(l, m);
                   if (!c || c.n < 20) return <td key={m}>{c ? `n/a (only ${c.n} cases)` : "n/a"}</td>;
                   return (
@@ -183,18 +166,16 @@ function Heatmap({ h }: { h: NonNullable<EvaluationReport["heatmap"]> }) {
   );
 }
 
-function Proxy({ r }: { r: EvaluationReport }) {
+const GROUP: Record<ProxyRow["group"], string> = { demo_3: "3 demo stations", untouched_21: "21 untouched stations" };
+function Proxy({ rows }: { rows: ProxyRow[] }) {
   return (
     <section className="panel" data-testid="lab-proxy-events">
       <h2 className="section-title">Real pump outages</h2>
-      {(r.proxy ?? []).map((p) => (
-        <p key={p.tier}>
-          Real pump outages preceded by a warning ({p.tier} tier): {p.episodes < 5 ? `n/a (only ${p.episodes} ${p.episodes === 1 ? "episode" : "episodes"})` : `${p.preceded} of ${p.episodes}`}
+      {rows.map((p) => (
+        <p key={`${p.tier}-${p.group}`}>
+          Real pump outages preceded by a warning ({p.tier} tier, {GROUP[p.group]}): {p.episodes < 5 ? `n/a (only ${p.episodes} ${p.episodes === 1 ? "episode" : "episodes"})` : `${p.preceded} of ${p.episodes}`}
         </p>
       ))}
-      {r.weak_labels && (
-        <p>{r.weak_labels.with_precursor} of {r.weak_labels.episodes} removals gave a warning sign; we caught {r.weak_labels.warned} of them.</p>
-      )}
       <p className="meta">These are pumps taken out of service, not shown to be failures. The dev tier is 2022 data. Descriptive only: no maintenance records exist to measure real precision.</p>
     </section>
   );
@@ -215,7 +196,7 @@ function LearnedBaseline() {
 }
 
 function Experiments() {
-  const [cases, setCases] = useState<string[] | null>(null);
+  const [cases, setCases] = useState<DevCase[] | null>(null);
   const [err, setErr] = useState(false);
   useEffect(() => { api.scenarios().then((r) => setCases(r.dev_cases), () => setErr(true)); }, []);
   return (
@@ -224,7 +205,7 @@ function Experiments() {
       <p className="meta">Each one replays a fixed development case through the same API. Simulated, not real station data.</p>
       {err && <p>Can't load the experiment cases.</p>}
       <div className="experiments">
-        {EXPERIMENTS.map((e) => <Experiment key={e.id} e={e} dev={cases?.find((c) => c.startsWith(`${FAMILY[e.id]}-`)) ?? null} loaded={cases != null} />)}
+        {EXPERIMENTS.map((e) => <Experiment key={e.id} e={e} dev={cases?.find((c) => c.experiment === e.id)?.case_id ?? null} loaded={cases != null} />)}
       </div>
     </section>
   );
@@ -260,9 +241,7 @@ function Result({ id, r }: { id: Experiment; r: ReplayResult }) {
       {id === "storm_test" && <ul>{line("A", "Simple rule")}{line("B", "Physics only")}{line("C", "Dragonfly")}</ul>}
       {id === "break_sensor" && (
         <p>
-          {r.sensor_fault_flagged === undefined
-            ? "The replay response does not say whether a sensor fault was flagged yet."
-            : r.sensor_fault_flagged ? "Sensor fault flagged. High-level check: unknown (level sensor faulty)." : "No sensor fault was flagged in this run."}
+          {r.sensor_fault_flagged ? "Sensor fault flagged. High-level check: unknown (level sensor faulty)." : "No sensor fault was flagged in this run."}
         </p>
       )}
       {id === "cut_power" && (

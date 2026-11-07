@@ -74,7 +74,8 @@ export interface ScenarioCard {
   facts: ScenarioFact[]; outcome_facts: ScenarioFact[]; variants: ScenarioVariant[];
 }
 export type Experiment = "storm_test" | "break_sensor" | "cut_power" | "one_bad_day";
-export interface ScenariosResponse { scenarios: ScenarioCard[]; dev_cases: string[] } // dev_cases: the Lab's fixed dev case ids (section 5.6)
+export interface DevCase { case_id: string; experiment: Experiment | null }
+export interface ScenariosResponse { scenarios: ScenarioCard[]; dev_cases: DevCase[] } // the Lab's fixed dev cases (section 5.6)
 // PROPOSED shape for GET /api/evaluation (not in section 7 yet; asked on the board). Every count carries its denominator.
 export interface Rate { k: number; n: number }
 export type BenchmarkKey = "A" | "B" | "C" | "C-persistence" | "C-inhibition" | "C-quality";
@@ -82,16 +83,13 @@ export interface BenchmarkRow {
   caught: Rate; median_lead_days: number | null;
   false_storm: Rate; false_duty: Rate; false_transient: Rate; real_alerts_per_pump_6mo: number | null;
 }
-// GET /api/evaluation. The required fields match fixtures/ui/evaluation.json; the optional ones are PROPOSED
-// (asked on the board) and each Lab panel renders only when its field is present.
+// GET /api/evaluation, as in ARCHITECTURE section 7 (PR #33). The Lab's proxy panel shows only these rows.
+export interface HeatCell { loss: string; ramp: string; k: number; n: number }
+export interface ProxyRow { tier: "dev" | "test"; group: "demo_3" | "untouched_21"; episodes: number; preceded: number }
 export interface EvaluationReport {
-  model_version: string; code_version: string; manifest_hash?: string;
-  metrics?: Record<string, Record<string, unknown>>; gates?: Record<string, boolean>; caveats?: string[];
-  test_scored?: number;
-  benchmarks?: Partial<Record<BenchmarkKey, BenchmarkRow>>;
-  heatmap?: { loss_bins: string[]; ramp_bins: string[]; cells: { loss: string; ramp: string; k: number; n: number }[] };
-  proxy?: { tier: string; episodes: number; preceded: number }[];
-  weak_labels?: { episodes: number; with_precursor: number; warned: number } | null;
+  model_version: string; code_version: string;
+  benchmarks: Record<BenchmarkKey, BenchmarkRow>; heatmap: HeatCell[]; proxy: ProxyRow[];
+  test_scored: number; gates: Record<string, boolean>;
 }
 export interface Sensitivity { label: string; simulated_gal: number }
 export interface Outcome { no_warning_gal: number; with_dragonfly_gal: number; sensitivity: Sensitivity[]; assumptions: string[] }
@@ -100,8 +98,7 @@ export interface ReplayResult {
   case_id: string; origin: Origin; family: string; title: string; truth: Record<string, unknown>;
   timeline: TimelineDay[]; first_watch_at: string | null; first_investigate_at: string | null;
   failure_at: string | null; lead_time_h: number | null; outcome: Outcome | null; benchmarks: Record<string, BenchmarkRun>;
-  // PROPOSED optional fields for the Lab experiments (not in contracts.py; asked on the board):
-  source_offline_after_min?: number | null; sensor_fault_flagged?: boolean;
+  source_offline_after_min: number | null; sensor_fault_flagged: boolean;
 }
 export interface StationInfo {
   station_id: string; display_name: string; pumps: string[]; origin: Origin;

@@ -96,26 +96,26 @@ export function mockApi(): Plugin {
         if (u.pathname === "/evaluation") {
           const r = (k: number, n: number) => ({ k, n });
           const row = (caught: number, lead: number, fs: number, fd: number, ft: number, alerts: number) => ({ caught: r(caught, 100), median_lead_days: lead, false_storm: r(fs, 30), false_duty: r(fd, 30), false_transient: r(ft, 30), real_alerts_per_pump_6mo: alerts });
-          const bins = { loss_bins: ["20-30%", "30-40%", "40-50%"], ramp_bins: ["7-14 d", "14-30 d"] };
+          const losses = ["20-30%", "30-40%", "40-50%"], ramps = ["7-14 d", "14-30 d"];
           return send(200, { model_version: "dragonfly-ci-v1", code_version: "mock", test_scored: 1,
             benchmarks: { A: row(40, 1.0, 12, 9, 7, 3.1), B: row(70, 2.0, 6, 4, 5, 2.2), C: row(80, 3.0, 0, 0, 0, 0.5), "C-persistence": row(78, 3.0, 2, 1, 4, 1.1), "C-inhibition": row(80, 3.0, 0, 5, 0, 0.6), "C-quality": row(81, 3.0, 1, 0, 0, 0.9) },
-            heatmap: { ...bins, cells: bins.loss_bins.flatMap((l, i) => bins.ramp_bins.map((m, j) => ({ loss: l, ramp: m, k: 15 + i * 3 + j * 2, n: i === 2 && j === 0 ? 12 : 25 }))) },
-            proxy: [{ tier: "dev", episodes: 9, preceded: 5 }, { tier: "test", episodes: 3, preceded: 1 }],
-            weak_labels: { episodes: 117, with_precursor: 16, warned: 7 }, caveats: [] });
+            heatmap: losses.flatMap((l, i) => ramps.map((m, j) => ({ loss: l, ramp: m, k: 15 + i * 3 + j * 2, n: i === 2 && j === 0 ? 12 : 25 }))),
+            proxy: [{ tier: "dev", group: "demo_3", episodes: 9, preceded: 5 }, { tier: "dev", group: "untouched_21", episodes: 40, preceded: 6 }, { tier: "test", group: "demo_3", episodes: 3, preceded: 1 }],
+            gates: { G1: true, G2: true, G5: false } });
         }
-        if (u.pathname === "/scenarios") return send(200, { scenarios: SCENARIOS, dev_cases: ["F2-0", "F6-0", "F5-0", "F4-3"] });
+        if (u.pathname === "/scenarios") return send(200, { scenarios: SCENARIOS, dev_cases: [{ case_id: "F2-0", experiment: "storm_test" }, { case_id: "F6-0", experiment: "break_sensor" }, { case_id: "F5-0", experiment: "cut_power" }, { case_id: "F4-3", experiment: "one_bad_day" }] });
         if (u.pathname === "/replay") {
           const id = q.get("case_id")!; const A = id.endsWith(":A");
           if (id.startsWith("fishers")) return send(200, { case_id: id, origin: "SIMULATED_INCIDENT", family: "incident", title: id, truth: { silence_start: "2009-01-20T10:30:00Z" }, timeline: [],
             first_watch_at: null, first_investigate_at: "2009-01-20T10:40:00Z", failure_at: "2009-01-20T10:30:00Z", lead_time_h: 0,
-            outcome: { no_warning_gal: 25000, with_dragonfly_gal: 9000, sensitivity: [{ label: "discovery 60 min", simulated_gal: 3000 }, { label: "discovery 180 min", simulated_gal: 9000 }, { label: "discovery 360 min", simulated_gal: 17000 }], assumptions: ["Mock numbers, not model output"] }, benchmarks: {} });
+            outcome: { no_warning_gal: 25000, with_dragonfly_gal: 9000, sensitivity: [{ label: "discovery 60 min", simulated_gal: 3000 }, { label: "discovery 180 min", simulated_gal: 9000 }, { label: "discovery 360 min", simulated_gal: 17000 }], assumptions: ["Mock numbers, not model output"] }, benchmarks: {}, source_offline_after_min: null, sensor_fault_flagged: false });
           if (/^F\d/.test(id)) return send(200, { case_id: id, origin: "SYNTHETIC_INJECTION", family: id.split("-")[0], title: id, truth: {}, timeline: Array.from({ length: 12 }, (_, i) => ({ day: dayAdd("2022-06-01", i), station_status: id.startsWith("F5") && i === 5 ? "SOURCE_OFFLINE" : id.startsWith("F4") && i === 5 ? "WATCH" : "NORMAL", pumps: [] })),
             first_watch_at: null, first_investigate_at: null, failure_at: null, lead_time_h: null, outcome: null,
             benchmarks: { A: { first_investigate_at: id.startsWith("F2") ? "2022-06-04T00:00:00Z" : null, lead_time_h: null, incident_opens: id.startsWith("F2") ? 2 : 0 }, B: { first_investigate_at: null, lead_time_h: null, incident_opens: 0 }, C: { first_investigate_at: null, lead_time_h: null, incident_opens: 0 } },
             source_offline_after_min: id.startsWith("F5") ? 10 : null, sensor_fault_flagged: id.startsWith("F6") });
           return send(200, { case_id: id, origin: "SIMULATED_INCIDENT", family: "incident", title: id, truth: { capacity_loss_24h: 0.6, ramp_days: 6, shape: "accelerating" }, timeline: [],
             first_watch_at: A ? "2024-04-07T00:00:00Z" : null, first_investigate_at: A ? "2024-04-09T00:00:00Z" : "2024-04-11T07:05:00Z", failure_at: "2024-04-11T07:00:00Z", lead_time_h: A ? 55 : 0,
-            outcome: { no_warning_gal: 14310, with_dragonfly_gal: A ? 0 : 14310, sensitivity: A ? [{ label: "repair 24 h", simulated_gal: 0 }, { label: "repair 48 h", simulated_gal: 0 }, { label: "repair 96 h", simulated_gal: 14310 }] : [], assumptions: ["Mock numbers, not model output"] }, benchmarks: {} });
+            outcome: { no_warning_gal: 14310, with_dragonfly_gal: A ? 0 : 14310, sensitivity: A ? [{ label: "repair 24 h", simulated_gal: 0 }, { label: "repair 48 h", simulated_gal: 0 }, { label: "repair 96 h", simulated_gal: 14310 }] : [], assumptions: ["Mock numbers, not model output"] }, benchmarks: {}, source_offline_after_min: null, sensor_fault_flagged: false });
         }
         if (u.pathname === "/stations" && q.get("scenario_id")) return send(200, { source_hash: hash, model_version: "dragonfly-ci-v1", stations: [{ ...STATIONS[0], origin: "SIMULATED_INCIDENT", scenario_id: q.get("scenario_id"), as_of_min: "2024-03-12T07:00:00Z", as_of_max: "2024-04-14T07:00:00Z", outage_windows: [] }] });
         if (u.pathname === "/stations") return send(200, { source_hash: hash, model_version: "dragonfly-ci-v1",
