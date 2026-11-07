@@ -6,7 +6,7 @@
   },
   "f1_recall_bins": [
     {
-      "k": 9,
+      "k": 6,
       "loss": [
         0.1,
         0.2
@@ -18,8 +18,8 @@
       ],
       "shown": false,
       "wilson95": [
-        0.595844,
-        0.982124
+        0.31267,
+        0.831822
       ]
     },
     {
@@ -40,7 +40,7 @@
       ]
     },
     {
-      "k": 16,
+      "k": 15,
       "loss": [
         0.1,
         0.2
@@ -52,12 +52,12 @@
       ],
       "shown": false,
       "wilson95": [
-        0.806387,
-        1.0
+        0.716707,
+        0.988881
       ]
     },
     {
-      "k": 13,
+      "k": 10,
       "loss": [
         0.1,
         0.2
@@ -69,12 +69,12 @@
       ],
       "shown": false,
       "wilson95": [
-        0.621175,
-        0.96264
+        0.417131,
+        0.848239
       ]
     },
     {
-      "k": 15,
+      "k": 11,
       "loss": [
         0.2,
         0.3
@@ -86,8 +86,8 @@
       ],
       "shown": false,
       "wilson95": [
-        0.796111,
-        1.0
+        0.480491,
+        0.891027
       ]
     },
     {
@@ -210,7 +210,7 @@
       ]
     },
     {
-      "k": 11,
+      "k": 10,
       "loss": [
         0.4,
         0.5
@@ -222,8 +222,8 @@
       ],
       "shown": false,
       "wilson95": [
-        0.74116,
-        1.0
+        0.622635,
+        0.983768
       ]
     },
     {
@@ -289,11 +289,11 @@
   "f5_minutes_to_offline_max": 9.0,
   "false_escalations": {
     "duty_swap": {
-      "k": 10,
+      "k": 1,
       "n": 30
     },
     "station_shift": {
-      "k": 19,
+      "k": 3,
       "n": 30
     },
     "storm": {
@@ -301,58 +301,61 @@
       "n": 30
     },
     "transient": {
-      "k": 3,
+      "k": 0,
       "n": 30
     }
   },
   "false_escalations_raw": {
     "duty_swap": {
-      "k": 10,
+      "k": 1,
       "n": 30
     },
     "station_shift": {
-      "k": 19,
+      "k": 3,
       "n": 30
     },
     "storm": {
-      "k": 4,
+      "k": 0,
       "n": 30
     },
     "transient": {
-      "k": 3,
+      "k": 0,
       "n": 30
     }
   },
   "gates": {
     "G1": true,
     "G2": true,
+    "G3": true,
+    "G4": true,
     "G5": false,
-    "G6": true
+    "G6": true,
+    "G7": true
   },
   "gates_raw": {
     "G1": true,
     "G5": false
   },
   "lead_days": {
-    "median": 8.416667,
+    "median": 6.291667,
     "misses_as_zero": true,
     "n": 200,
-    "p10": 1.833333
+    "p10": 0.333333
   },
-  "model_version": "dragonfly-ci-v1",
+  "model_version": "dragonfly-ci-v2-tuned",
   "morningside_a_dev_lead_median_d": null,
   "params": {
-    "G": 14,
+    "G": 7,
     "U": 4,
-    "W": 60,
-    "h_i": 6,
-    "h_w": 3,
-    "k": 0.5,
-    "min_effect": -8.0
+    "W": 45,
+    "h_i": 8,
+    "h_w": 4,
+    "k": 1.0,
+    "min_effect": -12.0
   },
-  "real_2022_investigate_opens_per_pump_180d": {
-    "44371": 0.493151,
+  "real_investigate_opens_per_pump_180d": {
+    "44371": 0.246575,
     "45078": 0.0,
-    "45385": 0.986301
+    "45385": 0.493151
   }
 }

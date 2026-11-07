@@ -459,7 +459,7 @@ def summarize(rows: list[dict], P: params.Params, tier: str, runner=None) -> dic
             "attributable": int(f1.false_escalation_attributable.sum()),
             "raw": int(f1.false_escalation.sum()),
         },
-        "real_2022_investigate_opens_per_pump_180d": g6v,
+        "real_investigate_opens_per_pump_180d": g6v,
         "gates": {
             "G1": bool(f5.passed_attributable.all()),
             "G2": bool(f6.passed.all()),
@@ -497,7 +497,7 @@ def evaluation_report(results: dict, P: params.Params) -> dict:
             "false_duty": kn("F3"),
             "false_transient": kn("F4"),
             "real_alerts_per_pump_6mo": round(
-                float(np.mean(list(s["real_2022_investigate_opens_per_pump_180d"].values()))), 6
+                float(np.mean(list(s["real_investigate_opens_per_pump_180d"].values()))), 6
             ),
         }
     c = results["C"][1]
