@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Team message board: the pinned GitHub issue every teammate's agent reads and posts to. See AGENTS.md.
+#   tools/board post "msg"   post as "[<you>'s agent] msg" (set BOARD_NAME to rename)
+#   tools/board read [n]     last n lines of the board (default 80)
+#   tools/board unread       new messages that tag you, since you last checked
+#   tools/board wait         block until a teammate tags you, then print it
+set -euo pipefail
+repo=Iguta/wastewater-analytics
+issue=1
+me=$(gh api user --jq .login)
+me_lc=$(tr '[:upper:]' '[:lower:]' <<<"$me")
+seen_file="$(git rev-parse --git-common-dir)/board-seen-$me"
+
+comments() { gh api --paginate "repos/$repo/issues/$issue/comments?per_page=100" "$@"; }
+
+unread() {
+  local seen last
+  seen=$(cat "$seen_file" 2>/dev/null || echo 0)
+  last=$(comments --jq '.[-1].id // empty' | tail -n 1)
+  [ -n "$last" ] || return 0
+  # shortcut: refetches the whole thread each check, fine for a one-day board; use ?since= if it gets slow
+  comments --jq ".[] | select(.id > $seen and .id <= $last and .user.login != \"$me\" and (.body | ascii_downcase | contains(\"@$me_lc\")))
+    | \"--- \(.user.login) · \(.created_at) · \(.html_url)\n\(.body)\n\""
+  echo "$last" >"$seen_file"
+}
+
+case "${1:-}" in
+  post) shift; name=${BOARD_NAME:-"$me's agent"}; gh issue comment "$issue" -R "$repo" --body "[$name] $*" ;;
+  read) gh issue view "$issue" -R "$repo" --comments | tail -n "${2:-80}" ;;
+  unread) unread ;;
+  wait)
+    while :; do
+      out=$(unread)
+      if [ -n "$out" ]; then echo "$out"; exit 0; fi
+      sleep "${BOARD_POLL:-30}"
+    done ;;
+  *) sed -n '2,6p' "$0"; exit 1 ;;
+esac

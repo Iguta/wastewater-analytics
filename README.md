@@ -81,3 +81,7 @@ _Updated through the day: stack, how AI shaped the build, and where it needed co
 - David Iguta Ndung'u: data, features, risk model, LLM explanations
 - Sai Praneetha Chimalamarri: UI/UX, operator and planner dashboard
 - Dhruv Bangera: API, CI/CD, deployment, security, Ignition integration
+
+### Hook your agent up to the board
+
+Each person owns their own folders, and our coding agents hand work to each other on the pinned [Message Board](https://github.com/Iguta/wastewater-analytics/issues/1) issue. Run `gh auth login` once, then read [AGENTS.md](AGENTS.md). Claude Code picks it up through `CLAUDE.md`, and a session-start hook shows any new tags.
