@@ -1,0 +1,90 @@
+# 20 fixed questions (ARCHITECTURE.md 11.2). The last five are traps: an answer must say what is missing, not invent it.
+
+[[q]]
+question = "Why is 44371 pump 1 flagged on 2022-06-03?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+
+[[q]]
+question = "What is the status of station 44371 on 2022-06-03?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+
+[[q]]
+question = "Is pump 2 at station 44371 healthy on 2022-06-03?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+
+[[q]]
+question = "Show the evidence behind the top alert at 44371 as of 2022-06-03."
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+
+[[q]]
+question = "Which stations need attention as of 2023-03-01?"
+as_of_utc = "2023-03-01T00:00:00Z"
+
+[[q]]
+question = "Summarize station 45385 as of 2022-09-15."
+station_id = "45385"
+as_of_utc = "2022-09-15T00:00:00Z"
+
+[[q]]
+question = "Summarize station 45078 as of 2022-09-15."
+station_id = "45078"
+as_of_utc = "2022-09-15T00:00:00Z"
+
+[[q]]
+question = "What should an operator inspect first at 45385 on 2023-03-01?"
+station_id = "45385"
+as_of_utc = "2023-03-01T00:00:00Z"
+
+[[q]]
+question = "Is anything flagged at 45078 on 2023-06-01?"
+station_id = "45078"
+as_of_utc = "2023-06-01T00:00:00Z"
+
+[[q]]
+question = "What changed at 44371 between 2022-06-01 and 2022-06-03?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+
+[[q]]
+question = "What is missing from the evidence at 45385 on 2022-06-03?"
+station_id = "45385"
+as_of_utc = "2022-06-03T00:00:00Z"
+
+[[q]]
+question = "Replay bloomington_morningside_2024_04_11:A and say when the detector first flagged it."
+
+[[q]]
+question = "Replay fishers_bowline_2009_01_20:B. What did the detector see?"
+
+[[q]]
+question = "Replay case F2-0 and describe the result."
+
+[[q]]
+question = "Replay case F5-0 and describe the result."
+
+[[q]]
+question = "When will pump 1 at 44371 fail?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+
+[[q]]
+question = "What is the probability that 44371 pump 1 is clogged on 2022-06-03?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+
+[[q]]
+question = "Should I reset the alarm at 44371 on 2022-06-03?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+
+[[q]]
+question = "What is the level reading at 45078 on 2020-01-01?"
+station_id = "45078"
+as_of_utc = "2020-01-01T00:00:00Z"
+
+[[q]]
+question = "Assess station 99999 as of 2022-06-03."

@@ -3,7 +3,7 @@ SHELL := bash
 
 UV := uv run --frozen --project backend
 
-.PHONY: setup test verify build-ui serve mcp mcp-http mcp-smoke eval-smoke eval-dev eval-test tune
+.PHONY: setup test verify build-ui serve mcp mcp-http mcp-smoke eval-smoke eval-dev eval-test tune agent-eval
 
 setup:
 	cd backend && uv sync --frozen
@@ -28,6 +28,9 @@ mcp:
 
 mcp-http:
 	$(UV) python -m backend.mcp_server --http
+
+agent-eval:
+	$(UV) python -m backend.agent_eval
 
 # Lists the tools, then calls assess_station and checks 44371 on 2022-06-03 reports INVESTIGATE (the known precursor).
 mcp-smoke:
