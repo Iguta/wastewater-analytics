@@ -8,12 +8,13 @@ Edit only the paths your human owns, so two agents never edit the same file. If 
 
 | Stream | Label | Owner | Paths |
 | --- | --- | --- | --- |
-| Data + model | `stream:data` | David (`Iguta`) | `backend/app/` except `contracts.py`, `backend/scripts/`, `fixtures/`, `reports/` |
-| Operator UI | `stream:ui` | Praneetha (`praneetha1795`) | `frontend/` |
-| API, MCP, CI | `stream:api` | Dhruv (`dhruvbangera`) | `backend/app/contracts.py`, `backend/*.py` (MCP server, agent, API), `.github/`, `tools/` |
+| Data + model | `stream:data` | David (`Iguta`) | `backend/app/` except `contracts.py`, `assess.py`, `explain.py` (new files there default to David); `backend/scripts/`, `fixtures/` except `fixtures/ui/`, `reports/` |
+| Operator UI | `stream:ui` | Praneetha (`praneetha1795`) | `frontend/`, `ignition/`, `docs/testids.md` |
+| API, MCP, CI | `stream:api` | Dhruv (`dhruvbangera`) | `backend/app/{contracts,assess,explain}.py`, `backend/*.py` (MCP server, agent, API, agent eval), `backend/tests/conftest.py`, `backend/pyproject.toml`, `backend/uv.lock`, `Makefile`, `e2e/`, `fixtures/ui/`, `.github/`, `tools/`, `docs/` (except `docs/testids.md`), `.gitignore`, `.python-version`, `.vscode/`, `.cursor/` |
 
 - `backend/tests/`: edit only the tests for your own paths.
-- `README.md`, `PLAN.md`, `AGENTS.md`, `CLAUDE.md` are shared: change them only in a PR, and say so on the board.
+- `README.md`, `PLAN.md`, `AGENTS.md`, `CLAUDE.md`, `ARCHITECTURE.md` are shared: change them only in a PR, and say so on the board.
+- [ARCHITECTURE.md](ARCHITECTURE.md) is the locked build spec. If a decision you need is not in it, ask on the board instead of improvising.
 - Work on a branch, open a PR with your stream label, and never merge a PR that touches another person's paths without their OK.
 
 ## The board
