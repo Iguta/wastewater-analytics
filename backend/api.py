@@ -188,6 +188,8 @@ class AskRequest(BaseModel):
     station_id: str | None = None
     as_of_utc: str | None = None
     scenario_id: str | None = None
+    alert_id: str | None = Field(default=None, pattern=ALERT_ID_PATTERN)
+    session_id: str | None = Field(default=None, max_length=64)
 
 
 @app.post("/api/ask")
@@ -205,7 +207,9 @@ async def ask(req: AskRequest) -> AskResult:
     if req.as_of_utc:
         assess.parse_time(req.as_of_utc)
     try:
-        return await agent.ask(req.question, req.model_dump(exclude={"question"}))
+        return await agent.ask(
+            req.question, req.model_dump(exclude={"question", "session_id"}), req.session_id
+        )
     except (
         Exception
     ) as e:  # anyio wraps task-group failures, so a timeout can arrive inside an ExceptionGroup

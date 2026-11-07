@@ -1,5 +1,22 @@
 {
   "answer_markdown": "P2 at station 44371 has an INVESTIGATE finding (REAL:44371:P2:CAPACITY_DROP:2022-09-02): capacity index 16.2 against a baseline of 30.0, -46%.",
+  "answer": {
+    "summary": "P2 at station 44371 is INVESTIGATE.",
+    "what_changed": [
+      "Capacity index is 16.2 against a baseline of 30.0, -46%."
+    ],
+    "supports": [],
+    "contradicts": [],
+    "missing": [
+      "The cause is not known."
+    ],
+    "inspect": [
+      "Check the impeller and discharge valve."
+    ],
+    "alert_ids": [
+      "REAL:44371:P2:CAPACITY_DROP:2022-09-02"
+    ]
+  },
   "withheld": false,
   "tool_calls": [
     {

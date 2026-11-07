@@ -79,21 +79,23 @@ def test_ask_returns_agent_result_and_504_on_timeout(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
     seen = {}
 
-    async def fake(question, context):
-        seen.update(question=question, context=context)
+    async def fake(question, context, session_id=None):
+        seen.update(question=question, context=context, session_id=session_id)
         return AskResult(
             answer_markdown="ok", withheld=False, tool_calls=[], grounding=Grounding(passed=True, unmatched_numbers=[], forbidden_phrases=[]),
             model="m", fallback_dropped=False,
         )  # fmt: skip
 
     monkeypatch.setattr(api.agent, "ask", fake)
-    r = client.post("/api/ask", json={"question": "why?", "station_id": "44371"})
+    r = client.post("/api/ask", json={"question": "why?", "station_id": "44371", "session_id": "s1"})
     assert (
         AskResult.model_validate(r.json()).answer_markdown == "ok"
         and seen["context"]["station_id"] == "44371"
+        and "session_id" not in seen["context"]
+        and seen["session_id"] == "s1"
     )
 
-    async def slow(question, context):
+    async def slow(question, context, session_id=None):
         raise TimeoutError
 
     monkeypatch.setattr(api.agent, "ask", slow)
@@ -110,10 +112,10 @@ def test_ask_validates_inputs_and_maps_agent_failures(monkeypatch):
         r = client.post("/api/ask", json={"question": "why?", **body})
         assert r.status_code == 422 and r.json()["code"] == code
 
-    async def boom(question, context):
+    async def boom(question, context, session_id=None):
         raise ExceptionGroup("tg", [RuntimeError("x")])
 
-    async def wrapped(question, context):
+    async def wrapped(question, context, session_id=None):
         raise ExceptionGroup("tg", [TimeoutError()])
 
     monkeypatch.setattr(api.agent, "ask", boom)

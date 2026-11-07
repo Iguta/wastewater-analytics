@@ -88,3 +88,29 @@ as_of_utc = "2020-01-01T00:00:00Z"
 
 [[q]]
 question = "Assess station 99999 as of 2022-06-03."
+
+# Follow-ups (sent after the first question on the same alert) and what-ifs: a what-if must be logged, not answered.
+
+[[q]]
+question = "And is the other pump at 44371 also affected?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+follow_up_of = "Why is 44371 pump 1 flagged on 2022-06-03?"
+
+[[q]]
+question = "What would you check first on that pump?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+follow_up_of = "Why is 44371 pump 1 flagged on 2022-06-03?"
+
+[[q]]
+question = "What happens if inflow doubles at 44371?"
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+what_if = true
+
+[[q]]
+question = "Recalculate the capacity change for 44371 pump 1 with a 14-day baseline."
+station_id = "44371"
+as_of_utc = "2022-06-03T00:00:00Z"
+what_if = true

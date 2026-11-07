@@ -347,13 +347,24 @@ class Grounding(Contract):
     forbidden_phrases: list[str]
 
 
+class Answer(Contract):
+    summary: str
+    what_changed: list[str]
+    supports: list[str]
+    contradicts: list[str]
+    missing: list[str]
+    inspect: list[str]
+    alert_ids: list[str]
+
+
 class AskResult(Contract):
     answer_markdown: str | None
+    answer: Answer | None = None
     withheld: bool
     tool_calls: list[ToolCall]
     grounding: Grounding
     model: str
-    fallback_dropped: bool
+    fallback_dropped: bool = False  # kept for the UI types; the Agent SDK has no fallback to drop
 
 
 class Feedback(Contract):

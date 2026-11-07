@@ -11,8 +11,8 @@ dependencies = [
   "uvicorn",
   "httpx",
   "mcp==2.3.0",
-  "anthropic[mcp]==2.6.0",
   "anyio",
+  "claude-agent-sdk>=0.2.179",
 ]
 
 [dependency-groups]
