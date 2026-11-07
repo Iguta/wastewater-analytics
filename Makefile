@@ -3,7 +3,7 @@ SHELL := bash
 
 UV := uv run --frozen --project backend
 
-.PHONY: setup test verify build-ui serve e2e mcp mcp-http mcp-smoke eval-smoke eval-dev eval-test tune agent-eval
+.PHONY: setup test verify build-ui serve e2e mcp mcp-http mcp-smoke eval-smoke eval-dev eval-test tune agent-eval tunnel
 
 setup:
 	cd backend && uv sync --frozen
@@ -53,3 +53,6 @@ eval-test:
 
 tune:
 	$(UV) python -m backend.scripts.tune
+
+tunnel:
+	cloudflared tunnel --url http://127.0.0.1:8001
