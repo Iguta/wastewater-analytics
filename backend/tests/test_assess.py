@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from backend.app import assess, data, explain, scenarios
+from backend.app import assess, data, explain, inject, scenarios
 from backend.app.contracts import Finding, PumpState
 
 AS_OF = datetime(2022, 6, 3, tzinfo=timezone.utc)
@@ -144,6 +144,69 @@ def test_scenario_assessment_and_evidence_use_the_case_stream():
         and a.queue[0].alert_id.startswith(MORNINGSIDE_A)
     )
     assert assess.get_evidence(a.queue[0].alert_id, t).origin == "SIMULATED_INCIDENT"
+
+
+def test_promote_moves_one_place_below_safety_and_tags_every_watch():
+    def mk(kind, pump, status):
+        return Finding(
+            alert_id=f"S:44371:{pump}:{kind}:2024-04-01", type=kind, pump_id=pump, status=status, priority=0,
+            opened_on="2024-04-01", since_utc="2024-04-01T00:00:00Z", days_open=1, observed=None, expected=None,
+            units="per hour", change_pct=None, summary="s", possible_causes=[], inspection=["x"],
+        )  # fmt: skip
+
+    def queue():
+        return [
+            mk("SOURCE_SILENT", None, "SOURCE_OFFLINE"),
+            mk("CAPACITY_DROP", "P1", "WATCH"),
+            mk("CAPACITY_DROP", "P2", "WATCH"),
+        ]
+
+    q = queue()
+    assess._promote(q, datetime(2024, 4, 11).date())
+    assert [f.pump_id for f in q] == [None, "P2", "P1"] and [f.priority for f in q] == [1, 2, 3]
+    assert [f.status for f in q] == ["SOURCE_OFFLINE", "WATCH", "WATCH"]
+    assert [len(f.inspection) for f in q] == [1, 2, 2] and "2024-04-11" in q[1].inspection[-1]
+
+
+def _statuses(a):
+    return (
+        a.status,
+        a.quality,
+        [(p.pump_id, p.status) for p in a.pumps],
+        sorted((f.alert_id, f.status) for f in a.queue),
+    )
+
+
+def test_forecast_never_changes_a_status(monkeypatch):
+    days = [datetime(2024, 4, d, tzinfo=timezone.utc) for d in (6, 8, 9, 10, 11)]
+    with_storm = [assess.assess_station("44371", t, MORNINGSIDE_A) for t in days]
+    assert any(a.storm.storm_ahead for a in with_storm if a.as_of_utc.day in (8, 9, 10))
+    monkeypatch.setattr(assess, "_forecast", lambda _id: None)
+    assess.assess_station.cache_clear()
+    tagged = lambda a: [f for f in a.queue if any("storm ahead" in i for i in f.inspection)]  # noqa: E731
+    assert any(tagged(a) for a in with_storm if a.storm.storm_ahead)
+    for a, t in zip(with_storm, days):
+        off = assess.assess_station("44371", t, MORNINGSIDE_A)
+        assert _statuses(off) == _statuses(a) and not tagged(off)  # no forecast: no promotion, no storm line
+    assess.assess_station.cache_clear()
+
+
+def test_outage_then_recovery_holds_cusum_and_opens_nothing(monkeypatch):
+    sd, _ = inject.apply(data.load("44371"), [{"name": "outage", "start": "2022-09-10", "hours": 72}], 0)
+    monkeypatch.setattr(data, "load", lambda sid, scen=None: sd)
+    assess._bundle.cache_clear()
+    assess.assess_station.cache_clear()
+    d = assess._bundle("44371", datetime(2022, 9, 14, tzinfo=timezone.utc)).daily
+    d = d.assign(day=d["day"].dt.strftime("%Y-%m-%d"))
+    days = ("2022-09-10", "2022-09-11", "2022-09-12")
+    assert set(d[d["day"].isin(days)]["quality"]) == {"SOURCE_OFFLINE"}
+    before = d[d["day"] == "2022-09-09"].set_index("pump_id")["cusum"]
+    for day in days:
+        assert (d[d["day"] == day].set_index("pump_id")["cusum"] == before).all()
+    a = assess.assess_station("44371", datetime(2022, 9, 14, tzinfo=timezone.utc))
+    assert not any(p.status == "INVESTIGATE" for p in a.pumps)
+    assess._bundle.cache_clear()
+    assess.assess_station.cache_clear()
 
 
 def test_scenario_markers_only_count_findings_opened_in_the_scored_window():
