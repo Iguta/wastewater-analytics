@@ -1,7 +1,12 @@
 // DEV ONLY. Enabled with `MOCK=1 npm run dev`; never bundled into `npm run build`.
 // Hand-made payloads shaped like ARCHITECTURE section 7, to build the UI before the backend exists.
 // Numbers here are placeholders, not model output. Replace with fixtures/ui/ samples when they land.
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
+
+// MOCK=ui serves the real sample payloads Dhruv committed in fixtures/ui/ (static: query params are mostly ignored).
+const sample = (name: string) => JSON.parse(readFileSync(fileURLToPath(new URL(`../../fixtures/ui/${name}.json`, import.meta.url)), "utf8"));
 
 const STATIONS = [
   { station_id: "44371", display_name: "Wessex 44371", pumps: ["P1", "P2"] },
@@ -71,6 +76,14 @@ export function mockApi(): Plugin {
         const u = new URL(req.url ?? "", "http://x");
         const q = u.searchParams;
         const send = (code: number, body: unknown) => { res.statusCode = code; res.setHeader("content-type", "application/json"); res.end(JSON.stringify(body)); };
+        if (process.env.MOCK === "ui") {
+          const file: Record<string, string> = { "/assess": "assess", "/evidence": "evidence", "/timeline": "timeline", "/scenarios": "scenarios", "/replay": "replay", "/evaluation": "evaluation" };
+          if (u.pathname === "/health") return send(200, { status: "ok", model_version: "v1.0", source_hash: "sample", code_version: "sample" });
+          if (u.pathname === "/stations") { const s = sample("stations"); const id = q.get("scenario_id"); return send(200, { ...s, stations: s.stations.filter((x: { scenario_id: string | null }) => x.scenario_id === id) }); }
+          if (u.pathname === "/ask") return send(200, sample("ask"));
+          if (file[u.pathname]) return send(200, sample(file[u.pathname]));
+          return send(404, { code: "UNKNOWN_CASE", message: "no sample", allowed: [] });
+        }
         if (u.pathname === "/ask") return send(503, { code: "agent_offline", message: "agent offline", allowed: [] });
         if (u.pathname === "/health") return send(200, { status: "ok", model_version: "dragonfly-ci-v1", source_hash: hash, code_version: "mock" });
         if (u.pathname === "/evaluation") {
@@ -83,9 +96,7 @@ export function mockApi(): Plugin {
             proxy: [{ tier: "dev", episodes: 9, preceded: 5 }, { tier: "test", episodes: 3, preceded: 1 }],
             weak_labels: { episodes: 117, with_precursor: 16, warned: 7 }, caveats: [] });
         }
-        if (u.pathname === "/scenarios") return send(200, { scenarios: SCENARIOS, dev_cases: [
-          { case_id: "F2-0", family: "F2", title: "Storm test", experiment: "storm_test" }, { case_id: "F6-0", family: "F6", title: "Level sensor fault", experiment: "break_sensor" },
-          { case_id: "F5-0", family: "F5", title: "Outage", experiment: "cut_power" }, { case_id: "F4-3", family: "F4", title: "Transient", experiment: "one_bad_day" } ] });
+        if (u.pathname === "/scenarios") return send(200, { scenarios: SCENARIOS, dev_cases: ["F2-0", "F6-0", "F5-0", "F4-3"] });
         if (u.pathname === "/replay") {
           const id = q.get("case_id")!; const A = id.endsWith(":A");
           if (/^F\d/.test(id)) return send(200, { case_id: id, origin: "SYNTHETIC_INJECTION", family: id.split("-")[0], title: id, truth: {}, timeline: Array.from({ length: 12 }, (_, i) => ({ day: dayAdd("2022-06-01", i), station_status: id.startsWith("F5") && i === 5 ? "SOURCE_OFFLINE" : id.startsWith("F4") && i === 5 ? "WATCH" : "NORMAL", pumps: [] })),
@@ -115,7 +126,7 @@ export function mockApi(): Plugin {
           const trace = []; for (let i = 89; i >= 0; i--) {
             const d = dayAdd(day, -i); const s = pumpStatus(station, pump, d);
             const ci = s === "NORMAL" ? 30 + Math.sin(i) : 30 - Math.min(14, (89 - i - 80) * 2.5);
-            trace.push({ day: d, quality: "SUFFICIENT", valid_cycles: 38, excluded: { LONG_RUN: 2 }, rain_mm: i % 7 === 0 ? 8 : 0.4, ci, base_median: 30, base_mad: 0.04, z: 0, common: 0, u: 0, cusum: s === "NORMAL" ? 0.3 : s === "WATCH" ? 3.5 : 7.5, status: s });
+            trace.push({ day: d, quality: "SUFFICIENT", valid_cycles: 38, excluded: { LONG_RUN: 2 }, rain_mm: i % 7 === 0 ? 8 : 0.4, run_median_s: s === "NORMAL" ? 95 : 140, expected_run_s: 95, ci, base_median: 30, base_mad: 0.04, z: 0, common: 0, u: 0, cusum: s === "NORMAL" ? 0.3 : s === "WATCH" ? 3.5 : 7.5, status: s });
           }
           const raw_events = []; for (let h = 0; h < 24; h++) { raw_events.push({ ts: `${finding.opened_on}T${String(h).padStart(2, "0")}:10:00Z`, pump_id: pump, state: "ON", signal_id: "mock-sig" }, { ts: `${finding.opened_on}T${String(h).padStart(2, "0")}:14:00Z`, pump_id: pump, state: "OFF", signal_id: "mock-sig" }); }
           const level = Array.from({ length: 96 }, (_, i) => ({ ts: `${finding.opened_on}T${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}:00Z`, value: 20 + 10 * Math.abs(Math.sin(i / 5)), units: "%" }));

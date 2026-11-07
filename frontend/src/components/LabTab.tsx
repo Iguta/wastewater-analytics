@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
-import type { BenchmarkKey, DevCase, EvaluationReport, Experiment, Rate, ReplayResult } from "../types";
+import type { BenchmarkKey, EvaluationReport, Experiment, Rate, ReplayResult } from "../types";
 import { EmptyState, ErrorState, Loading } from "./ScreenState";
 
 const rate = (r: Rate) => `${r.k} of ${r.n}`;
@@ -20,6 +20,8 @@ const CANNOT_KNOW = [
   "Stations with no telemetry.",
   "Real alarm setpoints.",
 ];
+// Section 5.6: each live experiment uses the first dev seed of one family.
+const FAMILY: Record<Experiment, string> = { storm_test: "F2", break_sensor: "F6", cut_power: "F5", one_bad_day: "F4" };
 const EXPERIMENTS: { id: Experiment; label: string; testid: string; expect: string }[] = [
   { id: "storm_test", label: "Storm test", testid: "exp-storm-test", expect: "The simple rule fires in the storm; Dragonfly stays quiet." },
   { id: "break_sensor", label: "Break the level sensor", testid: "exp-break-sensor", expect: "Sensor fault is flagged and the high-level check reads unknown." },
@@ -72,16 +74,44 @@ export function LabTab() {
 function Report({ r }: { r: EvaluationReport }) {
   return (
     <>
-      <p className="meta">Model {r.model_version}. Test tier scored {r.test_scored} {r.test_scored === 1 ? "time" : "times"}. Every count shows its denominator.</p>
-      <BenchTable id="lab-compare-table" title="Dragonfly against two simpler checks" keys={MAIN} r={r} />
-      <BenchTable id="lab-ablations" title="What each part of Dragonfly adds" keys={ABLATION} r={r} />
-      <Heatmap r={r} />
-      <Proxy r={r} />
+      <p className="meta">
+        Model {r.model_version}, code {r.code_version}.
+        {r.test_scored != null && ` Test tier scored ${r.test_scored} ${r.test_scored === 1 ? "time" : "times"}.`} Every count shows its denominator.
+      </p>
+      {r.benchmarks && <BenchTable id="lab-compare-table" title="Dragonfly against two simpler checks" keys={MAIN} b={r.benchmarks} />}
+      {r.benchmarks && <BenchTable id="lab-ablations" title="What each part of Dragonfly adds" keys={ABLATION} b={r.benchmarks} />}
+      {r.metrics && <Metrics r={r} />}
+      {r.heatmap && <Heatmap h={r.heatmap} />}
+      {(r.proxy || r.weak_labels) && <Proxy r={r} />}
+      {r.caveats && r.caveats.length > 0 && (
+        <section className="panel" data-testid="lab-caveats"><h2 className="section-title">Caveats</h2><ul>{r.caveats.map((c) => <li key={c}>{c}</li>)}</ul></section>
+      )}
     </>
   );
 }
 
-function BenchTable({ id, title, keys, r }: { id: string; title: string; keys: BenchmarkKey[]; r: EvaluationReport }) {
+// Whatever the report holds under metrics and gates, shown as written (no number is added or rounded here).
+function Metrics({ r }: { r: EvaluationReport }) {
+  const shown = (v: unknown) => (typeof v === "number" ? String(v) : typeof v === "boolean" ? (v ? "yes" : "no") : String(v));
+  return (
+    <section className="panel" data-testid="lab-metrics">
+      <h2 className="section-title">Measured results</h2>
+      <dl className="kv">
+        {Object.entries(r.metrics ?? {}).map(([name, m]) => (
+          <div key={name} style={{ display: "contents" }}>
+            <dt>{name}</dt>
+            <dd>{Object.entries(m).map(([k, v]) => `${k.replace(/_/g, " ")} ${shown(v)}`).join(", ")}</dd>
+          </div>
+        ))}
+        {Object.entries(r.gates ?? {}).map(([g, ok]) => (
+          <div key={g} style={{ display: "contents" }}><dt>Gate {g}</dt><dd>{ok ? "passed" : "not passed"}</dd></div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function BenchTable({ id, title, keys, b: all }: { id: string; title: string; keys: BenchmarkKey[]; b: NonNullable<EvaluationReport["benchmarks"]> }) {
   return (
     <section className="panel" data-testid={id}>
       <h2 className="section-title">{title}</h2>
@@ -96,7 +126,7 @@ function BenchTable({ id, title, keys, r }: { id: string; title: string; keys: B
           </thead>
           <tbody>
             {keys.map((k) => {
-              const b = r.benchmarks[k];
+              const b = all[k];
               return b && (
                 <tr key={k}>
                   <th scope="row">{NAMES[k]}</th><td>{rate(b.caught)}</td><td>{num(b.median_lead_days)}</td>
@@ -112,9 +142,8 @@ function BenchTable({ id, title, keys, r }: { id: string; title: string; keys: B
 }
 
 // Section 6.2: bins are shown only where n >= 20. Greyscale bar, never color alone.
-function Heatmap({ r }: { r: EvaluationReport }) {
+function Heatmap({ h }: { h: NonNullable<EvaluationReport["heatmap"]> }) {
   const [table, setTable] = useState(false);
-  const h = r.heatmap;
   const cell = (l: string, m: string) => h.cells.find((c) => c.loss === l && c.ramp === m);
   return (
     <section className="panel">
@@ -152,7 +181,7 @@ function Proxy({ r }: { r: EvaluationReport }) {
   return (
     <section className="panel" data-testid="lab-proxy-events">
       <h2 className="section-title">Real pump outages</h2>
-      {r.proxy.map((p) => (
+      {(r.proxy ?? []).map((p) => (
         <p key={p.tier}>
           Real pump outages preceded by a warning ({p.tier} tier): {p.episodes < 5 ? `n/a (only ${p.episodes} ${p.episodes === 1 ? "episode" : "episodes"})` : `${p.preceded} of ${p.episodes}`}
         </p>
@@ -166,7 +195,7 @@ function Proxy({ r }: { r: EvaluationReport }) {
 }
 
 function Experiments() {
-  const [cases, setCases] = useState<DevCase[] | null>(null);
+  const [cases, setCases] = useState<string[] | null>(null);
   const [err, setErr] = useState(false);
   useEffect(() => { api.scenarios().then((r) => setCases(r.dev_cases), () => setErr(true)); }, []);
   return (
@@ -175,18 +204,18 @@ function Experiments() {
       <p className="meta">Each one replays a fixed development case through the same API. Simulated, not real station data.</p>
       {err && <p>Can't load the experiment cases.</p>}
       <div className="experiments">
-        {EXPERIMENTS.map((e) => <Experiment key={e.id} e={e} dev={cases?.find((c) => c.experiment === e.id) ?? null} loaded={cases != null} />)}
+        {EXPERIMENTS.map((e) => <Experiment key={e.id} e={e} dev={cases?.find((c) => c.startsWith(`${FAMILY[e.id]}-`)) ?? null} loaded={cases != null} />)}
       </div>
     </section>
   );
 }
 
-function Experiment({ e, dev, loaded }: { e: (typeof EXPERIMENTS)[number]; dev: DevCase | null; loaded: boolean }) {
+function Experiment({ e, dev, loaded }: { e: (typeof EXPERIMENTS)[number]; dev: string | null; loaded: boolean }) {
   const [st, setSt] = useState<{ s: "idle" } | { s: "run" } | { s: "err"; m: string } | { s: "ok"; r: ReplayResult }>({ s: "idle" });
   const run = () => {
     if (!dev) return;
     setSt({ s: "run" });
-    api.replay(dev.case_id).then((r) => setSt({ s: "ok", r }), (x: Error & { status?: number }) => setSt({ s: "err", m: `Can't reach the Dragonfly server (HTTP ${x.status || "no response"}).` }));
+    api.replay(dev).then((r) => setSt({ s: "ok", r }), (x: Error & { status?: number }) => setSt({ s: "err", m: `Can't reach the Dragonfly server (HTTP ${x.status || "no response"}).` }));
   };
   return (
     <div className="experiment" data-experiment={e.id}>
@@ -204,15 +233,24 @@ function Result({ id, r }: { id: Experiment; r: ReplayResult }) {
   const b = r.benchmarks;
   const line = (k: string, name: string) => b[k] && <li>{name}: {b[k].incident_opens === 0 ? "stayed quiet" : `raised ${b[k].incident_opens} Investigate ${b[k].incident_opens === 1 ? "alert" : "alerts"}`}</li>;
   const states = [...new Set(r.timeline.map((d) => d.station_status))];
+  const offlineDay = r.timeline.find((d) => d.station_status === "SOURCE_OFFLINE")?.day;
   return (
     <div className="result">
       <p className="meta">Case {r.case_id} (simulated)</p>
       {id === "storm_test" && <ul>{line("A", "Simple rule")}{line("B", "Physics only")}{line("C", "Dragonfly")}</ul>}
       {id === "break_sensor" && (
-        <p>{r.sensor_fault_flagged ? "Sensor fault flagged. High-level check: unknown (level sensor faulty)." : "No sensor fault was flagged in this run."}</p>
+        <p>
+          {r.sensor_fault_flagged === undefined
+            ? "The replay response does not say whether a sensor fault was flagged yet."
+            : r.sensor_fault_flagged ? "Sensor fault flagged. High-level check: unknown (level sensor faulty)." : "No sensor fault was flagged in this run."}
+        </p>
       )}
       {id === "cut_power" && (
-        <p>{r.source_offline_after_min != null ? `Source offline raised ${r.source_offline_after_min} min after the data went silent.` : "Source offline was not raised in this run."}</p>
+        <p>
+          {r.source_offline_after_min != null
+            ? `Source offline raised ${r.source_offline_after_min} min after the data went silent.`
+            : offlineDay ? `Station status reached Source offline on ${offlineDay}. The minutes after silence are not in the replay response yet.` : "Source offline was not raised in this run."}
+        </p>
       )}
       {id === "one_bad_day" && <p>Station status across the window: {states.join(", ").toLowerCase().replace(/_/g, " ")}.</p>}
       <details>

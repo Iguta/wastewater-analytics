@@ -36,6 +36,7 @@ export interface StationAssessment {
 }
 export interface TraceRow {
   day: string; quality: Quality; valid_cycles: number; excluded: Record<string, number>; rain_mm: number | null;
+  run_median_s: number | null; expected_run_s: number | null;
   ci: number | null; base_median: number | null;
   base_mad: number | null; z: number | null; common: number | null; u: number | null; cusum: number; status: Status;
 }
@@ -61,9 +62,9 @@ export interface AskResult {
 }
 // PROPOSED shape for GET /api/scenarios (not in section 7 yet; asked on the board). Mirrors the scenario TOML fields.
 export interface ScenarioFact {
-  label: string; value: string; status: "VERIFIED" | "UNVERIFIED"; confidence: number; source: string | null; source_url: string | null;
+  label: string; value: string; status: "VERIFIED" | "UNVERIFIED"; confidence: number; source: string; source_url: string | null;
 }
-export type Detectability = "PREDICTABLE_DAYS_AHEAD" | "DETECTABLE_AT_ONSET";
+export type Detectability = "PREDICTABLE_DAYS_AHEAD" | "DETECTABLE_AT_ONSET" | "NOT_DETECTABLE";
 export interface ScenarioVariant {
   variant: "A" | "B"; scenario_id: string; name: string; confidence: number; reason: string;
   detectability: Detectability; failure_at: string;
@@ -73,9 +74,7 @@ export interface ScenarioCard {
   facts: ScenarioFact[]; outcome_facts: ScenarioFact[]; variants: ScenarioVariant[];
 }
 export type Experiment = "storm_test" | "break_sensor" | "cut_power" | "one_bad_day";
-// PROPOSED: dev_cases marks the fixed case for each Lab experiment (section 5.6 picks the seeds).
-export interface DevCase { case_id: string; family: string; title: string; experiment: Experiment | null }
-export interface ScenariosResponse { scenarios: ScenarioCard[]; dev_cases: DevCase[] }
+export interface ScenariosResponse { scenarios: ScenarioCard[]; dev_cases: string[] } // dev_cases: the Lab's fixed dev case ids (section 5.6)
 // PROPOSED shape for GET /api/evaluation (not in section 7 yet; asked on the board). Every count carries its denominator.
 export interface Rate { k: number; n: number }
 export type BenchmarkKey = "A" | "B" | "C" | "C-persistence" | "C-inhibition" | "C-quality";
@@ -83,13 +82,16 @@ export interface BenchmarkRow {
   caught: Rate; median_lead_days: number | null;
   false_storm: Rate; false_duty: Rate; false_transient: Rate; real_alerts_per_pump_6mo: number | null;
 }
+// GET /api/evaluation. The required fields match fixtures/ui/evaluation.json; the optional ones are PROPOSED
+// (asked on the board) and each Lab panel renders only when its field is present.
 export interface EvaluationReport {
-  model_version: string; code_version: string; test_scored: number;
-  benchmarks: Record<BenchmarkKey, BenchmarkRow>;
-  heatmap: { loss_bins: string[]; ramp_bins: string[]; cells: { loss: string; ramp: string; k: number; n: number }[] };
-  proxy: { tier: string; episodes: number; preceded: number }[];
-  weak_labels: { episodes: number; with_precursor: number; warned: number } | null;
-  caveats: string[];
+  model_version: string; code_version: string; manifest_hash?: string;
+  metrics?: Record<string, Record<string, unknown>>; gates?: Record<string, boolean>; caveats?: string[];
+  test_scored?: number;
+  benchmarks?: Partial<Record<BenchmarkKey, BenchmarkRow>>;
+  heatmap?: { loss_bins: string[]; ramp_bins: string[]; cells: { loss: string; ramp: string; k: number; n: number }[] };
+  proxy?: { tier: string; episodes: number; preceded: number }[];
+  weak_labels?: { episodes: number; with_precursor: number; warned: number } | null;
 }
 export interface Sensitivity { label: string; simulated_gal: number }
 export interface Outcome { no_warning_gal: number; with_dragonfly_gal: number; sensitivity: Sensitivity[]; assumptions: string[] }
@@ -98,7 +100,7 @@ export interface ReplayResult {
   case_id: string; origin: Origin; family: string; title: string; truth: Record<string, unknown>;
   timeline: TimelineDay[]; first_watch_at: string | null; first_investigate_at: string | null;
   failure_at: string | null; lead_time_h: number | null; outcome: Outcome | null; benchmarks: Record<string, BenchmarkRun>;
-  // PROPOSED optional fields for the Lab experiments (asked on the board):
+  // PROPOSED optional fields for the Lab experiments (not in contracts.py; asked on the board):
   source_offline_after_min?: number | null; sensor_fault_flagged?: boolean;
 }
 export interface StationInfo {

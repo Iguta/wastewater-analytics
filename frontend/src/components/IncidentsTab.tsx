@@ -6,6 +6,7 @@ import { ErrorState, Loading } from "./ScreenState";
 const DETECT_LINE: Record<ScenarioVariant["detectability"], string> = {
   PREDICTABLE_DAYS_AHEAD: "Warning days ahead is possible (variant A only)",
   DETECTABLE_AT_ONSET: "Detects the moment it happens; cannot predict it",
+  NOT_DETECTABLE: "Not detectable from this data",
 };
 const fmtTs = (ts: string | null) => (ts ? ts.replace("T", " ").replace(/:00Z$/, "") + " UTC" : "none");
 const gal = (n: number) => `Simulated: ${n.toLocaleString("en-US")} gal`;
@@ -38,7 +39,7 @@ export function IncidentsTab({ replays, onReplay, loadingCase }: {
 function Chip({ f }: { f: ScenarioFact }) {
   return (
     <li className="fact">
-      <span className="fact-label">{f.label}:</span> <span>{f.value}</span>{" "}
+      <span className="fact-label">{f.label}:</span> <span>{f.value}{/\bgal(lons)?\b/i.test(f.value) && !/\(record\)/i.test(f.value) ? " (record)" : ""}</span>{" "}
       <span className="tag" data-testid="fact-chip" data-verified={f.status === "VERIFIED"}>{f.status}</span>
       {f.source && <span className="meta"> {f.source_url ? <a href={f.source_url}>{f.source}</a> : f.source}</span>}
     </li>

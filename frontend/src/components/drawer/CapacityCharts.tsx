@@ -57,14 +57,25 @@ export function CapacityCharts({ trace, pump, thresholds }: { trace: TraceRow[];
         </ResponsiveContainer>
       </section>
       <ChartBox
-        title="Run time today: observed vs expected"
+        title="Run time per day: observed vs expected"
         id="chart-runtime"
-        columns={["", "Run time (s)"]}
-        rows={[["Observed", fmt(pump?.run_median_s ?? null, 0)], ["Expected at today's inflow", fmt(pump?.expected_run_s ?? null, 0)]]}
-        note="Today only: the trace has no daily run times yet."
+        columns={["Day", "Observed (s)", "Expected at that day's inflow (s)"]}
+        rows={trace.map((r) => [r.day, fmt(r.run_median_s, 0), fmt(r.expected_run_s, 0)])}
+        note="Expected = how long a run should take at that day's inflow if the pump were at its normal capacity."
       >
-        {pump?.run_median_s == null ? (
-          <p>No run-time data today.</p>
+        {trace.some((r) => r.run_median_s != null) ? (
+          <ResponsiveContainer width="100%" height={170}>
+            <ComposedChart data={trace.map((r) => ({ day: r.day.slice(5), observed: r.run_median_s, expected: r.expected_run_s }))} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+              <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="2 4" />
+              <XAxis dataKey="day" tick={{ fontSize: 11 }} minTickGap={24} />
+              <YAxis tick={{ fontSize: 11 }} width={36} />
+              <Tooltip />
+              <Line dataKey="expected" stroke={THRESH} strokeDasharray="5 4" dot={false} isAnimationActive={false} name="Expected" />
+              <Line dataKey="observed" stroke={GREY} strokeWidth={2} dot={false} isAnimationActive={false} name="Observed" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        ) : pump?.run_median_s == null ? (
+          <p>No run-time data.</p>
         ) : (
           <RunTimeBars observed={pump.run_median_s} expected={pump.expected_run_s} />
         )}
