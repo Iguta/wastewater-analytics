@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from backend.app import assess, data, explain, scenarios
+from backend.app import assess, data, explain, inject, scenarios
 from backend.app.contracts import Finding, PumpState
 
 AS_OF = datetime(2022, 6, 3, tzinfo=timezone.utc)
@@ -144,3 +144,41 @@ def test_scenario_assessment_and_evidence_use_the_case_stream():
         and a.queue[0].alert_id.startswith(MORNINGSIDE_A)
     )
     assert assess.get_evidence(a.queue[0].alert_id, t).origin == "SIMULATED_INCIDENT"
+
+
+def _statuses(a):
+    return (
+        a.status,
+        a.quality,
+        [(p.pump_id, p.status) for p in a.pumps],
+        sorted((f.alert_id, f.status) for f in a.queue),
+    )
+
+
+def test_forecast_never_changes_a_status(monkeypatch):
+    days = [datetime(2024, 4, d, tzinfo=timezone.utc) for d in (6, 8, 9, 10, 11)]
+    with_storm = [assess.assess_station("44371", t, MORNINGSIDE_A) for t in days]
+    assert any(a.storm.storm_ahead for a in with_storm if a.as_of_utc.day in (8, 9, 10))
+    monkeypatch.setattr(assess, "_forecast", lambda _id: None)
+    assess.assess_station.cache_clear()
+    for a, t in zip(with_storm, days):
+        assert _statuses(assess.assess_station("44371", t, MORNINGSIDE_A)) == _statuses(a)
+    assess.assess_station.cache_clear()
+
+
+def test_outage_then_recovery_holds_cusum_and_opens_nothing(monkeypatch):
+    sd, _ = inject.apply(data.load("44371"), [{"name": "outage", "start": "2022-09-10", "hours": 72}], 0)
+    monkeypatch.setattr(data, "load", lambda sid, scen=None: sd)
+    assess._bundle.cache_clear()
+    assess.assess_station.cache_clear()
+    d = assess._bundle("44371", datetime(2022, 9, 14, tzinfo=timezone.utc)).daily
+    d = d.assign(day=d["day"].dt.strftime("%Y-%m-%d"))
+    days = ("2022-09-10", "2022-09-11", "2022-09-12")
+    assert set(d[d["day"].isin(days)]["quality"]) == {"SOURCE_OFFLINE"}
+    before = d[d["day"] == "2022-09-09"].set_index("pump_id")["cusum"]
+    for day in days:
+        assert (d[d["day"] == day].set_index("pump_id")["cusum"] == before).all()
+    a = assess.assess_station("44371", datetime(2022, 9, 14, tzinfo=timezone.utc))
+    assert not any(p.status == "INVESTIGATE" for p in a.pumps)
+    assess._bundle.cache_clear()
+    assess.assess_station.cache_clear()

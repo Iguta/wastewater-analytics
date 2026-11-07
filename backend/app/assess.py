@@ -6,6 +6,7 @@ Inputs are cut at as_of BEFORE features are computed; results are cached on the 
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from dataclasses import dataclass, replace
@@ -31,6 +32,7 @@ from .contracts import (
     ReplayResult,
     Sensitivity,
     StationAssessment,
+    StormOutlook,
     Thresholds,
     TimelineDay,
     TimelinePump,
@@ -307,6 +309,54 @@ def _pumps(b: _Bundle) -> list[PumpState]:
     return out
 
 
+@lru_cache(maxsize=2)
+def _forecast(scenario_id: str) -> pd.DataFrame | None:
+    p = scenarios.SCEN / "forecast" / f"{scenario_id.split(':')[0]}.json"
+    if not p.exists():
+        return None
+    return pd.DataFrame(json.loads(p.read_text())["hourly"]).assign(time=lambda f: pd.to_datetime(f["time"]))
+
+
+def _storm(scenario_id: str | None, as_of: datetime) -> tuple[StormOutlook, date] | None:
+    """Section 4.12: forecasts issued before as_of (previous_day1 for the first 24 h, previous_day2 for the next)."""
+    f = _forecast(scenario_id) if scenario_id else None
+    if f is None:
+        return None
+    t0 = features.to_naive_utc(as_of)
+    h = ((f["time"] - t0) / pd.Timedelta(hours=1)).astype(int)
+    w = f[(h >= 0) & (h < 48)]
+    day1 = (h[w.index] < 24).to_numpy()
+    rain = np.where(day1, w["precipitation_previous_day1"], w["precipitation_previous_day2"])
+    gust = np.where(day1, w["wind_gusts_10m_previous_day1"], w["wind_gusts_10m_previous_day2"])
+    wet = w["time"][rain > 0]
+    when = (wet.iloc[0] if len(wet) else t0 + pd.Timedelta(days=1)).date()
+    rain_in, max_gust = float(np.nansum(rain)), float(np.nanmax(gust)) if len(gust) else 0.0
+    out = StormOutlook(
+        issued_on=as_of.date(), forecast_rain_48h_in=round(rain_in, 2), max_gust_48h_mph=max_gust,
+        storm_ahead=rain_in >= 0.5 or max_gust >= 45,
+    )  # fmt: skip
+    return out, when
+
+
+def _promote(queue: list[Finding], when: date) -> None:
+    """Move each WATCH/INVESTIGATE finding up one place within its own status, never above a safety finding."""
+    moved = set()
+    for i in range(1, len(queue)):
+        f = queue[i]
+        above = queue[i - 1]
+        if (
+            f.status in ("WATCH", "INVESTIGATE")
+            and above.status == f.status
+            and above.type not in SAFETY
+            and above.alert_id not in moved
+        ):
+            queue[i - 1], queue[i] = f, queue[i - 1]
+            moved.add(f.alert_id)
+            f.inspection = [*f.inspection, f"Inspect before {when:%Y-%m-%d} (storm ahead)"]
+    for i, f in enumerate(queue, 1):
+        f.priority = i
+
+
 def _rain(b: _Bundle, as_of: datetime) -> RainContext:
     d, rain = b.daily, b.sd.rain
     today = _f(d["rain_mm"].iloc[-1]) if len(d) else None
@@ -325,6 +375,9 @@ def assess_station(station_id: str, as_of_utc: datetime, scenario_id: str | None
     check(station_id, scenario_id, as_of)
     b = _bundle(station_id, as_of, scenario_id)
     queue = _findings(b, station_id, as_of)
+    storm = _storm(scenario_id, as_of)
+    if storm and storm[0].storm_ahead:
+        _promote(queue, storm[1])
     pumps = _pumps(b)
     d = b.daily
     rows = d[d["day"] == d["day"].max()] if len(d) else d
@@ -340,14 +393,17 @@ def assess_station(station_id: str, as_of_utc: datetime, scenario_id: str | None
     ]
     missing += ["no complete day of pump data before as_of"] * (not len(d))
     missing += [f"{p.pump_id}: evidence {p.quality}" for p in pumps if p.quality != "SUFFICIENT"]
-    missing += ["storm outlook: not available for real replay stations"]
+    if not scenario_id:
+        missing += ["storm outlook: not available for real replay stations"]
+    elif not storm:
+        missing += ["storm outlook: no archived forecast before 2016"]
     top = queue[0] if queue else None
     pump = next((p for p in pumps if top and p.pump_id == top.pump_id), None)
     order = explain.work_order(top, station_id) if top else None
     return StationAssessment(
         station_id=station_id, display_name=f"Wessex {station_id}", as_of_utc=as_of, origin=b.meta["origin"],
         scenario_id=scenario_id, status=status, quality=quality, pumps=pumps, queue=queue,
-        safety=[f for f in queue if f.type in SAFETY], rain=_rain(b, as_of), storm=None, missing_evidence=missing,
+        safety=[f for f in queue if f.type in SAFETY], rain=_rain(b, as_of), storm=storm and storm[0], missing_evidence=missing,
         explanation=explain.explanation(station_id, status, top, pump, missing),
         recommended_action=f"{order.title}. First check: {order.checks[0]}." if order else "No action from the detector.",
         provenance=Provenance(
