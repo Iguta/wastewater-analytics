@@ -98,3 +98,27 @@ def test_ask_returns_agent_result_and_504_on_timeout(monkeypatch):
 
     monkeypatch.setattr(api.agent, "ask", slow)
     assert client.post("/api/ask", json={"question": "why?"}).status_code == 504
+
+
+def test_ask_validates_inputs_and_maps_agent_failures(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    for body, code in (
+        ({"station_id": "x"}, "UNKNOWN_STATION"),
+        ({"scenario_id": "x"}, "UNKNOWN_SCENARIO"),
+        ({"as_of_utc": "2022-06-03"}, "BAD_TIMESTAMP"),
+    ):
+        r = client.post("/api/ask", json={"question": "why?", **body})
+        assert r.status_code == 422 and r.json()["code"] == code
+
+    async def boom(question, context):
+        raise ExceptionGroup("tg", [RuntimeError("x")])
+
+    async def wrapped(question, context):
+        raise ExceptionGroup("tg", [TimeoutError()])
+
+    monkeypatch.setattr(api.agent, "ask", boom)
+    r = client.post("/api/ask", json={"question": "why?"})
+    assert r.status_code == 502 and r.json()["code"] == "AGENT_ERROR"
+    monkeypatch.setattr(api.agent, "ask", wrapped)
+    r = client.post("/api/ask", json={"question": "why?"})
+    assert r.status_code == 504 and r.json()["code"] == "AGENT_TIMEOUT"
