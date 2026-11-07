@@ -126,14 +126,21 @@ test.describe('drawer', () => {
 });
 
 test.describe('errors', () => {
-  test('a 500 from /api/assess shows the error state and banner', async ({ page }) => {
-    // UI BUG: App.tsx shows server-banner only when /api/stations fails; a 500 from /api/assess shows state-error but no banner (§10.1).
-    test.fail();
-    await page.route('**/api/assess*', (r) => r.fulfill({ status: 500, body: '{}' }));
+  const fail500 = (page: Page) => page.route('**/api/assess*', (r) => r.fulfill({ status: 500, body: '{}' }));
+
+  test('a 500 from /api/assess shows the error state; axe clean', async ({ page }) => {
+    await fail500(page);
     await page.goto('/');
     await expect(page.getByTestId('state-error')).toBeVisible();
-    await expect(page.getByTestId('server-banner')).toBeVisible();
     await axeClean(page);
+  });
+
+  test('a 500 from /api/assess shows the server banner', async ({ page }) => {
+    // UI BUG: App.tsx shows server-banner only when /api/stations fails; a 500 from /api/assess shows no banner (§10.1).
+    test.fail();
+    await fail500(page);
+    await page.goto('/');
+    await expect(page.getByTestId('server-banner')).toBeVisible();
   });
 });
 

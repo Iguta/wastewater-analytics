@@ -28,3 +28,11 @@ test('axe and copy scan: lab tab', async ({ page }) => {
   await axeClean(page);
   await copyClean(page);
 });
+
+test('Break the level sensor: SENSOR_FAULT and "High-level check: unknown"', async ({ page, request }) => {
+  const { dev_cases } = await (await request.get('/api/scenarios')).json();
+  const id = dev_cases.find((c: any) => c.experiment === 'break_sensor').case_id;
+  expect((await (await request.get(`/api/replay?case_id=${id}`)).json()).sensor_fault_flagged).toBe(true);
+  await page.getByTestId('exp-break-sensor').click();
+  await expect(page.locator('[data-experiment="break_sensor"]')).toContainText('Sensor fault flagged. High-level check: unknown');
+});

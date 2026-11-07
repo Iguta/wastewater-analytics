@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { axeClean, bannedWords, gallons } from './checks';
+import { axeClean, bannedWords, gallons, otherBanned } from './checks';
 
 const MORNINGSIDE = 'bloomington_morningside_2024_04_11';
 
@@ -15,12 +15,17 @@ test('axe: incidents tab', async ({ page }) => {
   await axeClean(page);
 });
 
-test('copy scan: incidents tab', async ({ page }) => {
-  // UI BUG: record facts from fixtures/scenarios say "not confirmed" and "unconfirmed", which the §10.7 banned-word scan rejects.
+test('copy scan: incidents tab, banned words except "confirmed", and gallons labels', async ({ page }) => {
+  await incidents(page);
+  await bannedWords(page, otherBanned);
+  await gallons(page);
+});
+
+test('copy scan: no "confirmed" in the facts', async ({ page }) => {
+  // UI BUG: record facts from fixtures/scenarios say "not confirmed" and "unconfirmed", which the §10.7 scan rejects.
   test.fail();
   await incidents(page);
-  await bannedWords(page);
-  await gallons(page);
+  await bannedWords(page, 'confirmed');
 });
 
 test('Morningside A replay renders the failure marker and a warning or "did not warn"', async ({ page }) => {
@@ -33,7 +38,7 @@ test('Morningside A replay renders the failure marker and a warning or "did not 
   await expect(page.getByTestId('trip-marker')).toBeVisible();
   await expect(page.getByTestId('replay-output')).toContainText(/First Investigate|did not warn before the trip/);
   await axeClean(page);
-  await bannedWords(page);
+  await bannedWords(page, otherBanned);
   await gallons(page);
 });
 
