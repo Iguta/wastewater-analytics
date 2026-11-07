@@ -1,4 +1,4 @@
-"""Agent eval (ARCHITECTURE.md 11.2): 24 fixed questions, a failing one retried once. Gate: at least 19 pass the grounding check."""
+"""Agent eval (ARCHITECTURE.md 11.2): 26 fixed questions, a failing one retried once. Gate: at least 19 pass the grounding check."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 
 from backend import agent
 
-PASS_MIN = 23  # of 24: the same 95% as 19 of 20
-META = {"question", "follow_up_of", "what_if"}
+PASS_MIN = 25  # of 26: the same 95% as 19 of 20
+META = {"question", "follow_up_of", "what_if", "off_topic"}
 
 
 async def passes(q: dict) -> bool:
@@ -22,6 +22,12 @@ async def passes(q: dict) -> bool:
             if session:  # the first turn of the conversation; the question under test is the follow-up
                 await agent.ask(q["follow_up_of"], context, session)
             r = await agent.ask(q["question"], context, session)
+            if q.get(
+                "off_topic"
+            ):  # withheld (no tool call, or a number the tools never returned) or declined
+                if r.withheld or "only explain" in (r.answer_markdown or ""):
+                    return True
+                continue
             if q.get("what_if"):
                 if r.answer_markdown == agent.REFUSAL:
                     return True

@@ -23,3 +23,13 @@ def test_three_tools_and_a_valid_assessment(tmp_path, monkeypatch):
     anyio.run(_exercise)
     log = [json.loads(line) for line in (tmp_path / "tool_calls.jsonl").read_text().splitlines()]
     assert [e["ok"] for e in log] == [True, False] and log[0]["alert_ids"]
+
+
+def test_replay_case_hides_ground_truth(tmp_path, monkeypatch):
+    class Fake:
+        def model_dump(self, mode):
+            return {"case_id": "F1-0", "truth": {"loss_24h": 0.4}}
+
+    monkeypatch.setattr(mcp_server, "LOG", tmp_path / "t.jsonl")
+    monkeypatch.setattr(mcp_server.assess, "replay_case", lambda _: Fake())
+    assert "truth" not in mcp_server.replay_case("F1-0")

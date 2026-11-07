@@ -85,7 +85,9 @@ def get_evidence(alert_id: str, as_of_utc: str) -> dict:
 @mcp.tool()
 def replay_case(case_id: CaseId) -> dict:
     """Replay a locked scenario variant or a synthetic family case."""
-    return _call("replay_case", {"case_id": case_id}, lambda: assess.replay_case(case_id))
+    out = _call("replay_case", {"case_id": case_id}, lambda: assess.replay_case(case_id))
+    out.pop("truth")  # the injected ground truth is for the evaluator and the UI's reveal, never for a model
+    return out
 
 
 if __name__ == "__main__":
