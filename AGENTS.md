@@ -8,13 +8,30 @@ Edit only the paths your human owns, so two agents never edit the same file. If 
 
 | Stream | Label | Owner | Paths |
 | --- | --- | --- | --- |
-| Data + model | `stream:data` | David (`Iguta`) | `backend/app/` except `contracts.py`, `backend/scripts/`, `fixtures/`, `reports/` |
-| Operator UI | `stream:ui` | Praneetha (`praneetha1795`) | `frontend/` |
-| API, MCP, CI | `stream:api` | Dhruv (`dhruvbangera`) | `backend/app/contracts.py`, `backend/*.py` (MCP server, agent, API), `.github/`, `tools/` |
+| Data + model | `stream:data` | David (`Iguta`) | `backend/app/` except `contracts.py`, `assess.py`, `explain.py` (new files there default to David); `backend/scripts/`, `fixtures/` except `fixtures/ui/`, `reports/` |
+| Operator UI | `stream:ui` | Praneetha (`praneetha1795`) | `frontend/`, `ignition/`, `docs/testids.md` |
+| API, MCP, CI | `stream:api` | Dhruv (`dhruvbangera`) | `backend/app/{contracts,assess,explain}.py`, `backend/*.py` (MCP server, agent, API, agent eval), `backend/tests/conftest.py`, `backend/pyproject.toml`, `backend/uv.lock`, `Makefile`, `e2e/`, `fixtures/ui/`, `.github/`, `tools/`, `docs/` (except `docs/testids.md`), `.gitignore`, `.python-version`, `.vscode/`, `.cursor/` |
 
 - `backend/tests/`: edit only the tests for your own paths.
-- `README.md`, `PLAN.md`, `AGENTS.md`, `CLAUDE.md` are shared: change them only in a PR, and say so on the board.
+- `README.md`, `PLAN.md`, `AGENTS.md`, `CLAUDE.md`, `ARCHITECTURE.md` are shared: change them only in a PR, and say so on the board.
+- [ARCHITECTURE.md](ARCHITECTURE.md) is the locked build spec. If a decision you need is not in it, ask on the board instead of improvising.
 - Work on a branch, open a PR with your stream label, and never merge a PR that touches another person's paths without their OK.
+
+## How to write code here
+
+Every agent, every file, model code included. The goal is the smallest change that fully works, readable at a glance.
+
+1. **Before writing:** list every place the change must reach (callers, tests, fixtures, config). That is the scope. Extra features are not.
+2. **Pick the first option that fully works:** delete or skip it; reuse a helper already in the repo; use the standard library or pandas directly; otherwise the minimum code that works. Never add a dependency for a few lines.
+3. **No abstraction nobody asked for:** no wrapper, base class, config option, plugin point or "for later" code. No one-caller helpers. Keep the layering ARCHITECTURE.md §8.1 gives.
+4. **Model code is plain pandas on the daily table.** Medians, MADs and one CUSUM loop. If a step needs scikit-learn, stop and ask on the board.
+5. **Every new branch, loop or parser gets one small test** in `backend/tests/`, written before the code when it is a bug fix. Never weaken a test to pass.
+6. **A known shortcut gets a comment:** `# shortcut: <the limit>, <when to upgrade>`.
+7. **Comment only the why** the code cannot show, in one line.
+8. **Before a PR:** run `make verify`, then `/simplify` (Claude Code) or an equivalent pass that removes anything the diff does not need. Paste the last 10 lines of `make verify` in the PR body.
+9. **Never cut:** validation at the trust boundary (API and MCP inputs), error handling that prevents data loss, the read-only rule, and provenance fields.
+
+Claude Code users: `ponytail` is the house style and runs automatically; `/ponytail-review` before every PR.
 
 ## The board
 

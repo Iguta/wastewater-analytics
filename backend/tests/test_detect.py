@@ -189,3 +189,41 @@ def test_min_effect_blocks_investigate_on_tiny_precise_drop():
     r = detect.run(_daily({"P1": base[0], "P2": base[1]}), P)
     p1 = r[(r.pump_id == "P1") & (r.day >= "2022-05-01")]
     assert (p1.status == "WATCH").any() and not (p1.status == "INVESTIGATE").any()
+
+
+def test_incident_closes_after_3_normal_days_and_reopens_within_7():
+    from backend.app.detect import _pump_states
+
+    u = [-6, -6, -6] + [4] * 6 + [-6, -6, -6]  # alert, recover (S falls 4.5/day to 0), alert again
+    days = pd.date_range("2022-01-01", periods=len(u), freq="D")
+    g = pd.DataFrame(
+        {
+            "station_id": "9",
+            "day": days,
+            "baseline_days": 60,
+            "u": [float(x) for x in u],
+            "capacity_change_pct": [-20.0 if x < 0 else 0.0 for x in u],
+        }
+    )
+    out = _pump_states(g, "P1", P.with_(h_w=3, h_i=6), "REAL")
+    ids = out.incident_id.tolist()
+    first = ids[0]
+    assert first is not None
+    normal_idx = [i for i, st in enumerate(out.status) if st == "NORMAL"]
+    assert ids[normal_idx[0]] == first and ids[normal_idx[1]] == first  # still open after 1-2 NORMAL days
+    assert pd.isna(ids[normal_idx[2]])  # closed on the 3rd
+    assert ids[-1] == first  # recurrence within 7 days reopens the same id
+
+
+def test_baseline_absorption():
+    """§4.4 known limit: a loss lasting longer than W + G days is absorbed into the baseline and clears."""
+    rng = np.random.default_rng(4)
+    n = 260
+    base = 30 * np.exp(rng.normal(0, 0.02, (2, n)))
+    base[0, 120:] *= 0.75
+    r = detect.run(_daily({"P1": base[0], "P2": base[1]}), P)
+    p1 = r[r.pump_id == "P1"].set_index("day")
+    shift = p1.index[120]
+    assert (p1.loc[shift : shift + pd.Timedelta(days=14), "status"] == "INVESTIGATE").any()
+    late = p1.loc[shift + pd.Timedelta(days=P.W + P.G + 30) :, "status"]
+    assert (late == "NORMAL").all()

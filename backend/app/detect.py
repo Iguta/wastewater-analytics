@@ -146,6 +146,7 @@ def _pump_states(g: pd.DataFrame, pump: str, p: Params, scope: str) -> pd.DataFr
     open_id: str | None = None
     closed_on: pd.Timestamp | None = None
     last_id: str | None = None
+    normal_run = 0
     out_s, out_status, out_id, out_reason = [], [], [], []
     for r in g.itertuples(index=False):
         prev = status
@@ -172,17 +173,20 @@ def _pump_states(g: pd.DataFrame, pump: str, p: Params, scope: str) -> pd.DataFr
                 else:
                     new = "NORMAL"
             else:  # ablation: single-day threshold on u
-                new = "INVESTIGATE" if r.u < -5 else "WATCH" if r.u < -3 else "NORMAL"
+                new = (
+                    "INVESTIGATE" if r.u < -p.ablation_u_i else "WATCH" if r.u < -p.ablation_u_w else "NORMAL"
+                )
         if new != prev:
             reason = _reason(prev, new, S, r, p)
-        # incident tracking: one CAPACITY_DROP incident while WATCH/INVESTIGATE
+        # incident tracking (§4.11): opens on WATCH/INVESTIGATE, closes after 3 consecutive NORMAL days
         active = new in ("WATCH", "INVESTIGATE")
+        normal_run = normal_run + 1 if new == "NORMAL" else 0
         if active and open_id is None:
             if last_id and closed_on is not None and (r.day - closed_on).days <= p.reopen_days:
                 open_id = last_id
             else:
                 open_id = f"{scope}:{station}:{pump}:CAPACITY_DROP:{r.day.date().isoformat()}"
-        elif not active and open_id is not None:
+        elif open_id is not None and (normal_run >= p.close_normal_days or new == "INSUFFICIENT_EVIDENCE"):
             last_id, closed_on, open_id = open_id, r.day, None
         status = new
         out_s.append(S)
@@ -233,7 +237,7 @@ def realtime(events: pd.DataFrame, level: pd.DataFrame, as_of, params: Params) -
     T = max(20 * 60, 3 * float(np.percentile(fills, 99))) if len(fills) else 20 * 60
     ev_silent_s = (end - last_ev).total_seconds() if last_ev is not None else float("inf")
 
-    # --- SOURCE_SILENT: level missed 5 samples AND no pump event since the level went silent,
+    # --- SOURCE_SILENT: level missed SILENT_SAMPLES (10) samples AND no pump event since it went silent,
     #     or no pump event for T while level is also silent. Clears when either stream resumes.
     no_event_since_level = last_ev is None or (last_lv is not None and last_ev <= last_lv)
     if level_silent and (no_event_since_level or ev_silent_s >= T):
