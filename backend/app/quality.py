@@ -80,11 +80,15 @@ def cycles(runs: pd.DataFrame, counts: dict) -> pd.DataFrame:
     prev_end = r["end"].shift().cummax()
     r["overlap"] = r["start"] < prev_end
     r["fill_s"] = (r["start"] - prev_end).dt.total_seconds()
-    r["run_oor"] = ~r["run_s"].between(RUN_MIN_S, RUN_MAX_S)
+    r["run_oor"] = r["run_s"] < RUN_MIN_S
+    r["long_run"] = (
+        r["run_s"] > RUN_MAX_S
+    )  # kept as valid, capped (§3.5 LONG_RUN): a severe clog stays visible
     r["fill_oor"] = ~r["fill_s"].between(FILL_MIN_S, FILL_MAX_S)  # NaN (first run) -> out of range
     r["valid"] = ~(r["overlap"] | r["run_oor"] | r["fill_oor"])
-    r["ci"] = (3600 / r["run_s"] + 3600 / r["fill_s"]).where(r["valid"])
+    r["ci"] = (3600 / r["run_s"].clip(upper=RUN_MAX_S) + 3600 / r["fill_s"]).where(r["valid"])
     counts["RUN_OUT_OF_RANGE"] = counts.get("RUN_OUT_OF_RANGE", 0) + int(r["run_oor"].sum())
+    counts["LONG_RUN"] = counts.get("LONG_RUN", 0) + int(r["long_run"].sum())
     counts["FILL_OUT_OF_RANGE"] = counts.get("FILL_OUT_OF_RANGE", 0) + int(r["fill_oor"].sum())
     counts["OVERLAP"] = counts.get("OVERLAP", 0) + int(r["overlap"].sum())
     return r
