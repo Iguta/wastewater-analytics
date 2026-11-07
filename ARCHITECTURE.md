@@ -22,7 +22,7 @@ fixtures/ (real Wessex telemetry, scenario transforms)
 
 The detector and the alert rules decide everything. The MCP server only exposes their results. The agent only explains them. No model is trained or retrained while a request is being served.
 
-**Not building:** a PLC or SCADA write path, a SCADA replacement, a CMMS, failure-probability or failure-date prediction, live utility connectors, notifications or paging, acknowledge/resolve workflow, user accounts, a promo video, a cloud deployment. Ignition is a P1 read-only view only (§10.8).
+**Not building:** a PLC or SCADA write path, a SCADA replacement, a CMMS, failure-probability or failure-date prediction, live utility connectors, notifications or paging, acknowledge/resolve workflow (an operator's "was this right?" verdict is logged locally for review and labels, §8.2 `/api/feedback`, and never changes an assessment), user accounts, a promo video, a cloud deployment. Ignition is a P1 read-only view only (§10.8).
 
 ## 2. The evidence behind these decisions
 
@@ -566,7 +566,7 @@ Origin = Literal["REAL_REPLAY", "SYNTHETIC_INJECTION", "SIMULATED_INCIDENT"]
 FindingType = Literal["CAPACITY_DROP", "STATION_WIDE_CHANGE", "PUMP_NOT_RUNNING",
                       "SOURCE_SILENT", "HIGH_LEVEL", "SENSOR_FAULT"]
 ErrorCode = Literal["UNKNOWN_STATION", "UNKNOWN_SCENARIO", "UNKNOWN_ALERT", "UNKNOWN_CASE",
-                    "BAD_TIMESTAMP", "AS_OF_OUT_OF_RANGE"]
+                    "BAD_TIMESTAMP", "AS_OF_OUT_OF_RANGE", "BAD_FEEDBACK"]
 
 Provenance:      source_hash, scenario_hash | None, model_version, code_version, signal_ids: list[str]
 PumpState:       pump_id, status, quality, ci_today | None, ci_baseline | None, capacity_change_pct | None,
@@ -574,6 +574,7 @@ PumpState:       pump_id, status, quality, ci_today | None, ci_baseline | None, 
 Finding:         alert_id, type, pump_id | None, status, priority: int (1 = highest), opened_on: date, since_utc: datetime (first minute or day the condition held),
                  days_open, observed | None, expected | None, units, change_pct | None, summary,
                  possible_causes: list[str], inspection: list[str]
+                 priority_reason: str | None (one line: why it sits at this rank, from fields above; "largest capacity loss" only for INVESTIGATE rank 1)
 RainContext:     today_mm | None, last_72h_mm | None, source
 StormOutlook:    issued_on, forecast_rain_48h_in, max_gust_48h_mph, storm_ahead: bool
 StationAssessment: station_id, display_name, as_of_utc, origin, scenario_id | None, status, quality,
@@ -616,6 +617,7 @@ EvaluationReport: model_version, code_version, benchmarks: dict[Literal["A","B",
 DevCase:         case_id, experiment: Literal["storm_test", "break_sensor", "cut_power", "one_bad_day"] | None
   (ScenariosResponse.dev_cases is list[DevCase].)
 ReplayResult additions: source_offline_after_min | None, sensor_fault_flagged: bool
+Feedback:        alert_id (alert-id pattern), verdict: Literal["found_issue", "checked_ok", "not_sure"], by (1–80 chars), note (≤500), at_utc
 ToolError:       code: ErrorCode, message, allowed: list[str]
 ```
 
@@ -682,6 +684,7 @@ explain.explanation(...) / explain.work_order(...)   # deterministic templates, 
 | `GET /api/replay?case_id` | `ReplayResult` |
 | `GET /api/evaluation` | `reports/evaluation.json`, or 404 `NO_REPORT` |
 | `POST /api/ask` `{question, station_id?, as_of_utc?, scenario_id?}` | `AskResult`. 422 `BAD_QUESTION` if the question is empty or over 2,000 characters; 503 `agent_offline`; 504 after 60 s. |
+| `POST /api/feedback` `Feedback` / `GET /api/feedback?alert_id` | Appends one line to `logs/feedback.jsonl` (gitignored) / returns that alert's entries. 422 `BAD_FEEDBACK` on bad input. Never read by `assess`; feeds the CMOM log and future labels (§6.8). |
 
 - FastAPI's validation handler is overridden so every 422 body is a `ToolError`.
 - When `frontend/dist` exists, the same server serves it at `/`.

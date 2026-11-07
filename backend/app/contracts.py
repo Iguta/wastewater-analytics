@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, timezone
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict
+from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field
 
 Status = Literal["NORMAL", "WATCH", "INVESTIGATE", "INSUFFICIENT_EVIDENCE", "SOURCE_OFFLINE"]
 Quality = Literal["SUFFICIENT", "PARTIAL", "INSUFFICIENT", "SOURCE_OFFLINE"]
@@ -24,11 +24,14 @@ ErrorCode = Literal[
     "AGENT_TIMEOUT",
     "NO_REPORT",
     "BAD_QUESTION",
+    "BAD_FEEDBACK",
     "NOT_AVAILABLE",  # the piece of the model that would answer is not built yet (not in section 7)
 ]
 
 # One pattern for scenario_id and case_id (section 5.6).
 ID_PATTERN = r"^([a-z0-9_]+:[AB]|F[1-7]-\d{1,4})$"
+# alert_id: scope (REAL or scenario_id), station, pump or STATION, finding type, opened date.
+ALERT_ID_PATTERN = r"^(REAL|[a-z0-9_]+:[AB]):\d+:[A-Za-z0-9]+:[A-Z_]+:\d{4}-\d{2}-\d{2}$"
 
 # Any offset is accepted on input and normalised, so every serialised datetime ends in Z.
 UtcDatetime = Annotated[AwareDatetime, AfterValidator(lambda d: d.astimezone(timezone.utc))]
@@ -76,6 +79,7 @@ class Finding(Contract):
     summary: str
     possible_causes: list[str]
     inspection: list[str]
+    priority_reason: str | None = None
 
 
 class RainContext(Contract):
@@ -349,6 +353,16 @@ class AskResult(Contract):
     grounding: Grounding
     model: str
     fallback_dropped: bool
+
+
+class Feedback(Contract):
+    """One operator verdict on an alert. Logged only; never changes an assessment."""
+
+    alert_id: str = Field(pattern=ALERT_ID_PATTERN)
+    verdict: Literal["found_issue", "checked_ok", "not_sure"]
+    by: str = Field(min_length=1, max_length=80)
+    note: str = Field(max_length=500)
+    at_utc: UtcDatetime
 
 
 class ToolError(Contract):

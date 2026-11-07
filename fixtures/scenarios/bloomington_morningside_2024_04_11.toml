@@ -7,8 +7,8 @@
 # Wessex telemetry is used only for station *hydraulics*; Indiana rain is never mixed into Wessex training.
 
 id = "bloomington_morningside_2024_04_11"
-version = "v5"
-changelog = ["v1 2026-11-07: initial lock", "v2 2026-11-07: add day-ahead forecast pin in [conditions] (Dhruv ask); no other field changed", "v3 2026-11-07: G7 fix (§5.4, inflow assumption only): dry_weather_inflow_gpm 35 -> 49. outcome.no_warning_run v1 at 35 gpm gave 9,951 gal (-30%, miss); at 49 gpm 14,532 gal (+1.6%). Analog Wessex 44371 2023-05-09.", "v4 2026-11-07: forecast re-pinned with all four previous-run fields (rain + gusts, day1 + day2) at fixtures/scenarios/forecast/<id>.json (Dhruv review of #5); no other field changed.", "v5 2026-11-07: variant A gains a numeric loss_24h = 0.6 (the precursor loss held for the last 24 h, previously only in the capacity_lost note), so the simulator reads it from the file (Dhruv review of #13); no other value changed."]
+version = "v6"
+changelog = ["v1 2026-11-07: initial lock", "v2 2026-11-07: add day-ahead forecast pin in [conditions] (Dhruv ask); no other field changed", "v3 2026-11-07: G7 fix (§5.4, inflow assumption only): dry_weather_inflow_gpm 35 -> 49. outcome.no_warning_run v1 at 35 gpm gave 9,951 gal (-30%, miss); at 49 gpm 14,532 gal (+1.6%). Analog Wessex 44371 2023-05-09.", "v4 2026-11-07: forecast re-pinned with all four previous-run fields (rain + gusts, day1 + day2) at fixtures/scenarios/forecast/<id>.json (Dhruv review of #5); no other field changed.", "v5 2026-11-07: variant A gains a numeric loss_24h = 0.6 (the precursor loss held for the last 24 h, previously only in the capacity_lost note), so the simulator reads it from the file (Dhruv review of #13); no other value changed.", "v6 2026-11-07: wording only: a §10.7 banned word replaced with 'not verified'; no value changed."]
 locked = true
 locked_at = "2026-11-07"
 author = "Iguta (David's Claude Code)"
@@ -151,7 +151,7 @@ overflow_volume_tolerance_pct = 20     # simulation must land in [11448, 17172] 
 overflow_duration_min = { value = 132, status = "UNVERIFIED", confidence = 20, note = "mass balance: (14310 + 1500 storage) / 120 gpm mean inflow" }
 outage_duration_min = { value = 145, status = "UNVERIFIED", confidence = 20, note = "~13 min to fill wet well + overflow period, until crew restores pumping" }
 early_warning = "none (baseline: no Dragonfly)"
-discovered_by = { value = "not published", status = "UNVERIFIED", confidence = 0, note = "assume station alarm -> CBU crew; unconfirmed" }
+discovered_by = { value = "not published", status = "UNVERIFIED", confidence = 0, note = "assume station alarm -> CBU crew; not verified" }
 affected = { value = "Lake Monroe-Stephens Creek drainage basin (receiving basin per record)", status = "VERIFIED", confidence = 80, note = "no specific property or waterbody impact published" }
 
 # 7. Expected detector outcome --------------------------------------------------

@@ -25,7 +25,8 @@
     "inspection": [
       "Check P2 amps and discharge pressure",
       "Pull and inspect P2 impeller if the drop persists"
-    ]
+    ],
+    "priority_reason": "Rank 1 of 2: largest capacity loss (−46%), 12 days open, evidence Sufficient"
   },
   "rain": {
     "today_mm": 0.0,
