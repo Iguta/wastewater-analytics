@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -146,8 +146,32 @@ def test_scenario_assessment_and_evidence_use_the_case_stream():
     assert assess.get_evidence(a.queue[0].alert_id, t).origin == "SIMULATED_INCIDENT"
 
 
+def test_scenario_markers_only_count_findings_opened_in_the_scored_window():
+    from backend import api
+
+    r = assess.replay_case(MORNINGSIDE_A)
+    start = r.failure_at - timedelta(days=30)
+    assert api.stations(MORNINGSIDE_A).stations[0].as_of_min == start
+    days = {d.day: d.station_status for d in r.timeline}
+    assert (
+        days[start.date()] == "WATCH" and r.first_watch_at is None
+    )  # held at window start: history, not a warning
+    opened = r.first_investigate_at.date() - timedelta(days=1)
+    assert start < r.first_investigate_at < r.failure_at
+    assert days[opened] == "INVESTIGATE" and days[opened - timedelta(days=1)] != "INVESTIGATE"
+    f = assess.replay_case("fishers_bowline_2009_01_20:A")
+    assert (
+        f.first_investigate_at is None and f.lead_time_h is None
+    )  # its pre-window INVESTIGATE is not lead time
+
+
+def test_onset_variants_report_their_onset_minute():
+    assert assess.replay_case("fishers_bowline_2009_01_20:B").high_level_after_min is not None
+    assert assess.replay_case("fishers_bowline_2009_01_20:A").source_offline_after_min is not None
+
+
 def test_priority_reason_says_largest_only_for_an_investigate_row():
-    f = assess.assess_station("44371", datetime(2022, 6, 3, tzinfo=timezone.utc)).queue[0]
+    f = assess.assess_station("44371", datetime(2022, 6, 5, tzinfo=timezone.utc)).queue[0]
     assert "largest capacity loss" in explain.priority_reason(f, 1, 1, "SUFFICIENT")
     watch = f.model_copy(update={"status": "WATCH", "days_open": 1})
     assert (
