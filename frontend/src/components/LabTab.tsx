@@ -62,6 +62,7 @@ export function LabTab() {
       {load.s === "error" && <ErrorState message={load.message} onRetry={retry} />}
       {load.s === "none" && <EmptyState testId="lab-no-report">Evaluation not run yet.</EmptyState>}
       {load.s === "ok" && <Report r={load.r} />}
+      <LearnedBaseline />
       <Experiments />
       <section className="panel" data-testid="lab-cannot-know">
         <h2 className="section-title">What the model cannot know</h2>
@@ -195,6 +196,20 @@ function Proxy({ r }: { r: EvaluationReport }) {
         <p>{r.weak_labels.with_precursor} of {r.weak_labels.episodes} removals gave a warning sign; we caught {r.weak_labels.warned} of them.</p>
       )}
       <p className="meta">These are pumps taken out of service, not shown to be failures. The dev tier is 2022 data. Descriptive only: no maintenance records exist to measure real precision.</p>
+    </section>
+  );
+}
+
+// shortcut: the numbers are copied from ARCHITECTURE section 4.16 (dev data, 13:10 run); read them from the report once it carries them.
+function LearnedBaseline() {
+  return (
+    <section className="panel" data-testid="lab-learned-baseline">
+      <h2 className="section-title">We tried a trained model; the simpler one held</h2>
+      <p>
+        A model trained on normal days from 21 other stations caught 16 of 40 planted faults. The rolling median we use caught 23 of 40,
+        with a longer median lead (5.5 days against 1.9). The trained model also tracked 45078 much less closely. We kept the rolling median.
+      </p>
+      <p className="meta">Development data only (2022). Planted faults, not real failures.</p>
     </section>
   );
 }
