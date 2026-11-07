@@ -1,62 +1,74 @@
-# Wastewater Analytics: Lift Station Early Warning
+# Dragonfly AI: Lift Station Early Warning
 
-Early warning for wastewater lift station failures. It reads a utility's existing SCADA data **read-only**, spots pumps that are wearing out days before they fail, accounts for rain so storms don't trigger false alarms, and explains each alert in plain language.
+A read-only layer on top of SCADA that measures each sewage pump's real pumping capacity from the on/off timestamps utilities already log, and warns when one pump's capacity falls and stays down, before it fails.
 
-Built at **Indy Init 2026** (Launch Fishers, November 7, 2026). Target category: **Community Impact**.
+Built at **Indy Init 2026** (Launch Fishers, November 7, 2026). Category: **Community Impact**.
+
+**Demo video (2 min):** [final.mp4](https://github.com/Iguta/wastewater-analytics/releases/download/demo-video-draft/final.mp4)
 
 ## The problem
 
 Cities rely on **lift stations**, small pump stations that push sewage toward the treatment plant. When a pump fails and nobody notices in time, sewage overflows into yards, streets and creeks, bringing cleanup costs, state fines and lost public trust.
 
-Most utilities already monitor these stations with SCADA, which logs wet well levels and pump on/off times. But SCADA is reactive: it alarms only once a level is critical or a pump has stopped. The early warning signs (pumps running longer, the well emptying more slowly, one pump doing more than its share) sit unused in data the utility already has.
-
-Rain makes this hard. Storms also make pumps run longer, so simple thresholds either miss real problems or go off every time it rains, and operators learn to ignore them.
-
-> Utilities already collect the data that predicts pump failures; we turn it into early, trustworthy warnings without new sensors or access to their control systems.
+SCADA alarms only once a level is critical or a pump has stopped. The warning signs that come before a failure sit unused in data the utility already has. Rain makes them hard to read: storms also make pumps run longer, so simple thresholds either miss real wear or go off every time it rains.
 
 ## Why it matters for Hoosiers
 
-- **Fishers:** in the sewer system the city now owns (then run by Hamilton Southeastern Utilities), a 2009 power failure took down a lift-station controller whose backup battery was dead, spilling 25,000 gallons toward Geist Reservoir. The same manhole overflowed again in 2012, and IDEM fined the utility $5,250.
-- **Bloomington:** in 30 years of public overflow records (1,101 events), about **83%** were weather-driven and about **7%** came from equipment or power failures, the preventable kind. Overflow risk rises from about 1% on dry days to about 28% on days with 1 to 2 inches of rain.
+- **Bloomington, April 2024:** the Morningside lift station spilled 14,310 gallons during a storm after an equipment failure.
+- **Fishers, 2009:** a power failure took down a lift-station controller whose backup battery was dead. No alarm went out, and 25,000 gallons spilled toward Geist Reservoir. The same manhole overflowed again in 2012, and IDEM fined the utility $5,250.
+- **Bloomington, 30 years of public overflow records (1,101 events):** about 83% were weather-driven and about 7% came from equipment or power failures.
 
 ## What it does
 
-1. **Detects pump degradation** from data most utilities already log: run time per cycle, starts per hour, fill rate and duty share.
-2. **Separates pump problems from storm inflow** by comparing each pump with its own expected behavior given the rain.
-3. **Explains each warning** in plain language and drafts the work order.
+1. **Measures pump capacity from on/off times alone.** The capacity index, `3600/run + 3600/fill`, cancels inflow, so rain barely moves it.
+2. **Compares each pump with its own history,** with the sibling pump as a control group, so a station-wide change isn't blamed on one pump.
+3. **Warns only when capacity falls and stays down:** Watch, then Investigate.
+4. **Shows the evidence:** raw pump events, charts, data quality, and provenance down to the source file hash.
+5. **Explains and drafts:** a plain-language explanation, an inspection checklist, and a draft work order for a person to review and file.
+6. **Keeps safety checks visible:** source offline, high level and sensor faults, never suppressed. When evidence is thin, it says "not enough data".
 
-## Who it's for
+Read-only by design: it never writes to a PLC or SCADA tag.
 
-| User | Needs |
+## Results
+
+| What | Result |
 | --- | --- |
-| Operator / technician | A quick, clear alert in the field: which pump, how urgent, what to check. |
-| Maintenance planner | A station overview to prioritize and schedule work, especially before storms. |
+| Rain test (real Wessex data) | Raw run time shifts 1.09–1.33× between wet and dry days; the capacity index stays within 0.96–1.03× on 8 of 9 pumps |
+| Held-out 2023 test, planted capacity losses (≥20% over ≥7 days) | Investigate before the pump trip in **125 of 125** cases (95% interval 97–100%), median **4.8 days** ahead. Test tier scored once. |
+| False alarms, held-out 2023 | Storm 0/30, duty swap 0/30, one bad day 0/30. **Station-wide shift 10/30: the one gate we still fail, published as is.** |
+| Real pump, Wessex 44371 P1 (2022, development data) | Capacity down 46% on June 1; Investigate on June 3, about a week before the pump was taken out of service |
+| Morningside simulation (assumed gradual clog, confidence 40%) | Investigate about 31 h before the simulated trip. With a 24 h repair, simulated overflow falls from 14,532 to 0 gal. |
+| Fishers simulation (power loss) | Source offline flagged 9 minutes after the station went silent |
 
-## Architecture (planned)
+The Indiana cases are labeled what-if simulations built from public records, not reconstructions. No pre-failure telemetry exists for either station. Full method and limits: [docs/MODEL_CARD.md](docs/MODEL_CARD.md).
 
-Model card and validation ladder: [docs/MODEL_CARD.md](docs/MODEL_CARD.md)
+## Architecture
 
+```text
+Wessex Water telemetry (real, read-only) + scenario transforms
+        ▼
+Quality checks → daily capacity index → detector (baseline, sibling control, CUSUM, persistence)
+        ▼
+assess (one implementation) → typed contracts
+        ├─► REST API ──► React operator UI · Ignition Perspective view (read-only)
+        └─► MCP server ─► any AI agent (Claude Code, Desktop, Cursor, Codex)
+                           └─ grounded explainer: every number must match the tool output
 ```
-Telemetry (simulated SCADA historian + real Wessex Water data)
-        │  read-only ingestion
-        ▼
-Tag mapping layer  ──►  Data quality checks
-        ▼
-Feature engine (run time, starts, fill rate, duty share, rain)
-        ▼
-Risk model (expected run time vs actual, drift over days)
-        ▼
-LLM layer (plain-language explanation, draft work order)
-        ▼
-Dashboard (operator alerts, planner station overview)
-```
+
+The detector and its rules decide everything. The AI only explains, and work orders are deterministic drafts. Spec: [ARCHITECTURE.md](ARCHITECTURE.md). Future scope: [docs/agent-roadmap.md](docs/agent-roadmap.md).
+
+## How it's validated
+
+- `make verify` runs on every change: lint, unit and contract tests, no-lookahead and determinism tests, the eval smoke gates, the UI build, an MCP smoke test, and 24 Playwright plus axe accessibility tests.
+- A per-PR benchmark compares each change against main on the same development cases.
+- Tuning used 2022 only. 2023 was scored once, and the result is in an append-only log.
 
 ## Data
 
-- **Wessex Water**, "Rising mains telemetry, asset and rainfall data": real pump run-stop, wet well level, flow, pressure and hourly rainfall for 24 sewage pumping stations, 2022 to 2023. Licensed **CC BY**; contains data provided by Wessex Water.
-- **City of Bloomington Utilities**, "Sanitary Sewer Overflows" (public domain, PDDL): used for problem evidence, not model training.
-- **Open-Meteo** historical weather archive: daily rainfall for Bloomington.
-- Simulated Fishers-style lift stations, with fictional names and approximate locations.
+- **Wessex Water**, "Rising mains telemetry, asset and rainfall data": real pump run/stop events, wet-well level and hourly rainfall, 2022 to 2023 (CC BY; contains data provided by Wessex Water). Stations used: 44371, 45385, 45078.
+- **City of Bloomington Utilities**, "Sanitary Sewer Overflows" (public domain, PDDL): the Morningside scenario and overflow evidence.
+- **Open-Meteo**: Indiana rainfall and the archived forecasts used for storm readiness.
+- Public news and IDEM records: the Fishers scenario facts.
 
 ## Dataset and exploration notebooks
 
@@ -114,13 +126,23 @@ Example questions:
 
 ## How we built it
 
-_Updated through the day: stack, how AI shaped the build, and where it needed correcting. See [PLAN.md](PLAN.md)._
+Three people, each driving a coding agent, in one day.
+- **Ownership:** each person owns their own folders.
+- **Hand-offs:** the agents pass work to each other on a pinned GitHub issue board.
+- **Review:** every PR is reviewed by a separate agent told to find reasons to reject it, and must pass `make verify` before merging.
+- **Protected files:** the locked spec, gates, parameters and scenarios are protected by CODEOWNERS, so nobody, human or agent, can change them quietly.
+
+Real data forced several corrections to the plan:
+- a sibling-pump rule that subtracts only a shared drop;
+- a 10-minute silence rule, after 5 minutes flickered;
+- a cap on simulated run times;
+- the finding that 86% of real pump removals gave no warning sign in the data.
 
 ## Team
 
-- David Iguta Ndung'u: data, features, risk model, LLM explanations
-- Sai Praneetha Chimalamarri: UI/UX, operator and planner dashboard
-- Dhruv Bangera: API, CI/CD, deployment, security, Ignition integration
+- David Iguta Ndung'u: data, detector, fault injection, simulations, evaluation, Ignition view
+- Sai Praneetha Chimalamarri: operator UI and UX, Ignition design
+- Dhruv Bangera: contracts, API, MCP server, grounded agent, CI and validation, agent board
 
 ### Hook your agent up to the board
 
