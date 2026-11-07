@@ -923,7 +923,7 @@ After replay, the card shows one row per variant: first `WATCH`, first `INVESTIG
 - **Gateway and owner (David, 13:48):** Praneetha owns the Ignition demo on **her own laptop**, running both the gateway and the API there (`make setup`, then `make serve` from the public repo and committed fixtures). Because the API binds 127.0.0.1, the gateway calls `http://127.0.0.1:8000` (native install) or `http://host.docker.internal:8000` (Docker image `inductiveautomation/ignition:8.3`). The main demo, React UI plus MCP, runs on Dhruv's laptop. The project is exported to `ignition/`.
 - **Timing:**
   - Praneetha may design it now, as a wireframe and tag structure.
-  - Building starts only after the 15:45 milestone passes, time-boxed to 45 min.
+  - Building starts now (David, 14:35), in Designer on Praneetha's laptop against the mock memory tags from #46; the live API is needed only when the poll script is wired. If the replay or Lab retest on main finds a blocker, that comes first. Still first on the cut list.
   - If it doesn't show live tags by 16:20, it stays out of the demo. The React UI is always the primary demo.
 - **Validation:** manual only. It is outside `make verify`.
 
