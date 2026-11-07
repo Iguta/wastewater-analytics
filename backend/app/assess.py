@@ -1,6 +1,6 @@
 """The David <-> Dhruv seam (ARCHITECTURE.md 8.1): detector output mapped to the section 7 models.
 
-Real replay only. Scenario and family cases need inject.apply (not built yet) and raise NOT_AVAILABLE.
+Real stations load from data.load; scenario and family ids load scenarios.case_stream(id)[0] (truth is never passed on).
 Inputs are cut at as_of BEFORE features are computed; results are cached on the full instant.
 """
 
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -16,17 +16,20 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import data, detect, explain, features, params
+from . import data, detect, evaluate, explain, features, outcome, params, scenarios
 from .contracts import (
     ID_PATTERN,
+    BenchmarkRun,
     Evidence,
     Finding,
     LevelPoint,
+    Outcome,
     Provenance,
     PumpState,
     RainContext,
     RawEvent,
     ReplayResult,
+    Sensitivity,
     StationAssessment,
     Thresholds,
     TimelineDay,
@@ -67,20 +70,32 @@ def parse_time(s: str | datetime) -> datetime:
     return t.astimezone(timezone.utc)
 
 
+def known_case(case_id: str) -> bool:
+    if not re.match(ID_PATTERN, case_id):
+        return False
+    if ":" in case_id:
+        return case_id in scenario_ids()
+    fam, seed = case_id.split("-")
+    return int(seed) % 1000 < evaluate.FAMILIES[fam] and int(seed) // 1000 < 2
+
+
+@lru_cache(maxsize=4)
+def _case(case_id: str):
+    return scenarios.case_stream(case_id)
+
+
 def check(station_id: str, scenario_id: str | None, as_of: datetime) -> None:
     if station_id not in data.STATIONS:
         raise AssessError("UNKNOWN_STATION", f"unknown station {station_id!r}", list(data.STATIONS))
     if scenario_id is not None:
-        if not re.match(ID_PATTERN, scenario_id) or (
-            not scenario_id.startswith("F") and scenario_id not in scenario_ids()
-        ):
+        if not known_case(scenario_id):
             raise AssessError("UNKNOWN_SCENARIO", f"unknown scenario {scenario_id!r}", scenario_ids())
-        raise AssessError(
-            "NOT_AVAILABLE",
-            "scenario and family cases need inject.apply (fault injection), which is not built yet; "
-            "real replay is available with scenario_id omitted",
-        )
-    if not REAL_MIN <= as_of <= REAL_MAX:
+        case_station = _case(scenario_id)[0].station_id
+        if station_id != case_station:
+            raise AssessError(
+                "UNKNOWN_STATION", f"{scenario_id} runs on station {case_station}", [case_station]
+            )
+    elif not REAL_MIN <= as_of <= REAL_MAX:
         raise AssessError(
             "AS_OF_OUT_OF_RANGE",
             f"as_of_utc must be in [{REAL_MIN:%Y-%m-%dT%H:%M:%SZ}, {REAL_MAX:%Y-%m-%dT%H:%M:%SZ}]",
@@ -111,18 +126,27 @@ class _Bundle:
     daily: pd.DataFrame  # detect.run output
     rt: list[dict]
     p: params.Params
+    meta: dict
+    scope: str  # "REAL" or the case id; prefixes alert ids
 
 
 @lru_cache(maxsize=32)
-def _bundle(station_id: str, as_of: datetime) -> _Bundle:
-    sd = data.load(station_id)
+def _bundle(station_id: str, as_of: datetime, scenario_id: str | None = None) -> _Bundle:
+    if scenario_id:
+        full, _truth, meta = _case(scenario_id)  # truth is dropped here: detection never sees it
+        sd = replace(full)
+    else:
+        sd, meta = data.load(station_id), {"origin": "REAL_REPLAY"}
     end = features.to_naive_utc(as_of)
     sd.events = sd.events[sd.events["ts"] < end]
     sd.level = sd.level[sd.level["ts"] < end]
     sd.rain = sd.rain[sd.rain["ts_hour"] < end]
     p = params.load()
     daily = features.daily_table(sd.events, sd.level, sd.rain, as_of, station_id, sd.quality_counts)
-    return _Bundle(sd, detect.run(daily, p), detect.realtime(sd.events, sd.level, as_of, p), p)
+    scope = scenario_id or "REAL"
+    return _Bundle(
+        sd, detect.run(daily, p, scope), detect.realtime(sd.events, sd.level, as_of, p), p, meta, scope
+    )
 
 
 def _status_quality(rows: pd.DataFrame, rt_types: set[str]) -> tuple[str, str]:
@@ -157,6 +181,7 @@ def _opened(days: pd.Series, flag: pd.Series) -> date:
 
 
 def _findings(b: _Bundle, station_id: str, as_of: datetime) -> list[Finding]:
+    scope = b.scope
     d = b.daily
     out: list[Finding] = []
     if len(d):
@@ -188,7 +213,7 @@ def _findings(b: _Bundle, station_id: str, as_of: datetime) -> list[Finding]:
                 opened = _opened(pump["day"], pump["pump_not_running"])
                 out.append(
                     _finding(
-                        f"REAL:{station_id}:{r.pump_id}:PUMP_NOT_RUNNING:{opened}",
+                        f"{scope}:{station_id}:{r.pump_id}:PUMP_NOT_RUNNING:{opened}",
                         "PUMP_NOT_RUNNING",
                         r.pump_id,
                         "WATCH",
@@ -205,7 +230,7 @@ def _findings(b: _Bundle, station_id: str, as_of: datetime) -> list[Finding]:
             opened = _opened(wide["day"], wide["station_wide_status"] != "NORMAL")
             out.append(
                 _finding(
-                    f"REAL:{station_id}:STATION:STATION_WIDE_CHANGE:{opened}",
+                    f"{scope}:{station_id}:STATION:STATION_WIDE_CHANGE:{opened}",
                     "STATION_WIDE_CHANGE",
                     None,
                     today["station_wide_status"].iloc[0],
@@ -222,7 +247,7 @@ def _findings(b: _Bundle, station_id: str, as_of: datetime) -> list[Finding]:
         if e["type"] == "HIGH_LEVEL" and e["status"] != "INVESTIGATE":
             continue  # UNKNOWN is reported in missing_evidence
         since = pd.Timestamp(e.get("since") or e.get("at") or features.to_naive_utc(as_of)).tz_localize("UTC")
-        sid = f"REAL:{station_id}:STATION:{e['type']}:{since.date()}"
+        sid = f"{scope}:{station_id}:STATION:{e['type']}:{since.date()}"
         text = "; ".join(e.get("reasons") or e.get("flags") or [e.get("note", "")])
         out.append(
             _finding(
@@ -298,7 +323,7 @@ def _rain(b: _Bundle, as_of: datetime) -> RainContext:
 def assess_station(station_id: str, as_of_utc: datetime, scenario_id: str | None = None) -> StationAssessment:
     as_of = parse_time(as_of_utc)
     check(station_id, scenario_id, as_of)
-    b = _bundle(station_id, as_of)
+    b = _bundle(station_id, as_of, scenario_id)
     queue = _findings(b, station_id, as_of)
     pumps = _pumps(b)
     d = b.daily
@@ -320,13 +345,13 @@ def assess_station(station_id: str, as_of_utc: datetime, scenario_id: str | None
     pump = next((p for p in pumps if top and p.pump_id == top.pump_id), None)
     order = explain.work_order(top, station_id) if top else None
     return StationAssessment(
-        station_id=station_id, display_name=f"Wessex {station_id}", as_of_utc=as_of, origin="REAL_REPLAY",
-        scenario_id=None, status=status, quality=quality, pumps=pumps, queue=queue,
+        station_id=station_id, display_name=f"Wessex {station_id}", as_of_utc=as_of, origin=b.meta["origin"],
+        scenario_id=scenario_id, status=status, quality=quality, pumps=pumps, queue=queue,
         safety=[f for f in queue if f.type in SAFETY], rain=_rain(b, as_of), storm=None, missing_evidence=missing,
         explanation=explain.explanation(station_id, status, top, pump, missing),
         recommended_action=f"{order.title}. First check: {order.checks[0]}." if order else "No action from the detector.",
         provenance=Provenance(
-            source_hash=b.sd.source_hash, scenario_hash=None, model_version=b.p.version,
+            source_hash=b.sd.source_hash, scenario_hash=b.meta.get("scenario_hash"), model_version=b.p.version,
             code_version=code_version(), signal_ids=b.sd.signal_ids,
         ),
     )  # fmt: skip
@@ -340,11 +365,8 @@ def get_evidence(alert_id: str, as_of_utc: datetime) -> Evidence:
             "UNKNOWN_ALERT", f"malformed or unknown alert id {alert_id!r}; use one from assess_station.queue"
         )
     scope, station_id, pump, _type, opened = parts
-    if scope != "REAL":
-        raise AssessError(
-            "NOT_AVAILABLE", "evidence for scenario and family alerts needs inject.apply, not built yet"
-        )
-    a = assess_station(station_id, as_of)
+    scenario_id = None if scope == "REAL" else scope
+    a = assess_station(station_id, as_of, scenario_id)
     finding = next((f for f in a.queue if f.alert_id == alert_id), None)
     if finding is None:
         raise AssessError(
@@ -352,7 +374,7 @@ def get_evidence(alert_id: str, as_of_utc: datetime) -> Evidence:
             f"alert {alert_id!r} is not open at {as_of:%Y-%m-%dT%H:%M:%SZ}",
             [f.alert_id for f in a.queue],
         )
-    b = _bundle(station_id, as_of)
+    b = _bundle(station_id, as_of, scenario_id)
     d = b.daily
     rows = d[(d["pump_id"] == pump) & (d["day"] >= d["day"].max() - pd.Timedelta(days=89))] if len(d) else d
     trace = [
@@ -378,7 +400,7 @@ def get_evidence(alert_id: str, as_of_utc: datetime) -> Evidence:
     flags = sorted({f for fl in ([] if today is None else [today.level_flags]) for f in fl})
     supporting = [finding.summary] + [t.reason for t in transitions[-1:]]
     return Evidence(
-        alert_id=alert_id, station_id=station_id, pump_id=finding.pump_id, origin="REAL_REPLAY", as_of_utc=as_of,
+        alert_id=alert_id, station_id=station_id, pump_id=finding.pump_id, origin=a.origin, as_of_utc=as_of,
         finding=finding, rain=a.rain, quality_flags=flags, supporting=supporting,
         contradictory=[f"{p.pump_id}: evidence {p.quality}" for p in a.pumps if p.pump_id == pump and p.quality != "SUFFICIENT"],
         unavailable=["expected run time at today's inflow", "excluded cycle counts per day", "motor current, alarms and setpoints (not in this dataset)"],
@@ -398,7 +420,7 @@ def timeline(station_id: str, scenario_id: str | None, start: datetime, end: dat
     if end < start or (end - start).days > 400:
         raise AssessError("BAD_TIMESTAMP", "end must be on or after start and at most 400 days after it")
     # Only days complete before `end` (the as_of of the last frame): no data after `end` is read.
-    d = _bundle(station_id, end).daily
+    d = _bundle(station_id, end, scenario_id).daily
     d = d[
         (d["day"] >= features.to_naive_utc(start).floor("D"))
         & (d["day"] < features.to_naive_utc(end).floor("D"))
@@ -415,7 +437,122 @@ def timeline(station_id: str, scenario_id: str | None, start: datetime, end: dat
     ]  # fmt: skip
 
 
+def _utc(t) -> datetime | None:
+    return None if t is None else pd.Timestamp(t).tz_localize("UTC").to_pydatetime()
+
+
+def _first_day(days, hit) -> datetime | None:
+    """§4.6 timing: the first qualifying day D counts as raised at 00:00Z on D + 1."""
+    d = next((d.day for d in days if hit(d)), None)
+    return None if d is None else datetime.combine(d + timedelta(days=1), time.min, tzinfo=timezone.utc)
+
+
+def _minute_scan(st: data.StationData, t0, p: params.Params) -> tuple[int | None, int | None, bool]:
+    """Realtime findings after t0 (naive UTC): first minute of SOURCE_OFFLINE, first of HIGH_LEVEL, any SENSOR_FAULT.
+    shortcut: every minute for 2 h, then +3/6/12 h (sensor flags use 24 h windows); upgrade if a case needs finer."""
+    offline = high = None
+    fault = False
+    for m in [*range(1, 121), 180, 360, 720]:
+        for e in detect.realtime(st.events, st.level, _utc(t0 + pd.Timedelta(minutes=m)), p):
+            offline = m if offline is None and e["type"] == "SOURCE_SILENT" else offline
+            high = m if high is None and e["type"] == "HIGH_LEVEL" and e["status"] == "INVESTIGATE" else high
+            fault = fault or e["type"] == "SENSOR_FAULT"
+    return offline, high, fault
+
+
+def _outcome(case_id: str, meta: dict, first_inv, failure, notify_min) -> Outcome:
+    """§5.5 counterfactual on the case's own scenario file; only the time until someone is told changes."""
+    sid, var = case_id.split(":")
+    s, _ = scenarios.load(sid)
+    spec, no_warning = s["variants"][var], meta["outcome"]["no_system_gal"]
+    rows = []
+    if scenarios.v(spec["precursor_type"]) != "none":
+        for r in (24, 48, 96):
+            fixed = first_inv is not None and first_inv + timedelta(hours=r) < _utc(failure)
+            rows.append(Sensitivity(label=f"repair {r} h", simulated_gal=0.0 if fixed else no_warning))
+        note = "repair finishes R h after the first INVESTIGATE; a WATCH alone dispatches nobody; every other step as in the scenario"
+    else:
+        out_min = float(scenarios.v(s["outcome"]["outage_duration_min"]))
+        storage = float(scenarios.v(s["station_standin"]["wet_well_usable_storage_gal"]))
+        cap = float(scenarios.v(s["station_standin"]["pump_capacity_gpm_each"]))
+        alarm_worked = not scenarios.v(spec["backup_failed"])
+        if not alarm_worked and notify_min is not None:
+            inflow = scenarios.scaled_inflow_gpm(s, scenarios.Analog(**meta["analog"]), data.load(None, sid))[
+                0
+            ]
+        for d in (60, 180, 360):
+            gal = no_warning
+            if not alarm_worked and notify_min is not None:
+                restore = failure + pd.Timedelta(minutes=notify_min + out_min - d)
+                on = np.where((inflow.index >= failure) & (inflow.index < restore), 0.0, cap)
+                caps = pd.DataFrame({"duty": on, "standby": on}, index=inflow.index)
+                gal = outcome.simulate(inflow, caps, {"storage_gal": storage}).overflow_gal
+            rows.append(Sensitivity(label=f"if staff would otherwise find out at {d} min", simulated_gal=gal))
+        note = (
+            "station alarm assumed to have worked: Dragonfly gains nothing"
+            if alarm_worked
+            else "notified at the first minute SOURCE_OFFLINE or HIGH_LEVEL holds; pumping restored at notification + (outage - discovery delay). The no-warning case is the scenario's own discovery delay; the total outage is fixed, so a longer assumed discovery leaves less repair time after Dragonfly's notice"
+        )
+    return Outcome(no_warning_gal=no_warning, with_dragonfly_gal=rows[1].simulated_gal, sensitivity=rows,
+                   assumptions=[*meta["assumptions"], note, "with_dragonfly_gal is the middle sensitivity row; none is preferred"])  # fmt: skip
+
+
+@lru_cache(maxsize=8)
 def replay_case(case_id: str) -> ReplayResult:
-    if not re.match(ID_PATTERN, case_id) or (not case_id.startswith("F") and case_id not in scenario_ids()):
+    if not known_case(case_id):
         raise AssessError("UNKNOWN_CASE", f"unknown case {case_id!r}", scenario_ids())
-    raise AssessError("NOT_AVAILABLE", "replays need inject.apply (fault injection), which is not built yet")
+    st, truth, meta = _case(case_id)
+    p = params.load()
+    end = _utc(max(st.events["ts"].max(), st.level["ts"].max()).floor("D"))
+    tl = timeline(
+        st.station_id, case_id, _utc(min(st.events["ts"].min(), st.level["ts"].min()).ceil("D")), end
+    )
+    daily = _bundle(st.station_id, end, case_id).daily
+    watch = _first_day(tl, lambda d: d.station_status in ("WATCH", "INVESTIGATE"))
+    inv = _first_day(tl, lambda d: d.station_status == "INVESTIGATE")
+    onset = (
+        ":" in case_id
+        and scenarios.v(scenarios.load(case_id.split(":")[0])[0]["variants"][case_id[-1]]["precursor_type"])
+        == "none"
+    )
+    spec = meta["case"].spec if "case" in meta else {}
+    t0 = meta.get("failure_at", spec.get("failure", spec.get("start")))
+    failure = _utc(t0)
+    offline, high, fault = _minute_scan(st, t0, p) if t0 is not None else (None, None, False)
+    lead = (
+        None
+        if onset or inv is None or failure is None or inv > failure
+        else (failure - inv).total_seconds() / 3600
+    )
+    out = None
+    if ":" in case_id:
+        out = _outcome(
+            case_id, meta, inv, t0, min((m for m in (offline, high) if m is not None), default=None)
+        )
+        if (
+            watch is not None
+            and watch <= failure
+            and (onset or inv is None or watch < inv - pd.Timedelta(days=30))
+        ):
+            out.assumptions.append(
+                f"stand-in history: the {st.station_id} stand-in carries real findings before the simulated failure "
+                f"(first WATCH {watch:%Y-%m-%d}), unrelated to this scenario; lead time is not computed"
+            )
+    bench = {}
+    for k, r in {"A": evaluate.bench_a(daily, p), "B": evaluate.bench_b(daily, p), "C": daily}.items():
+        hit = r[r["status"] == "INVESTIGATE"]
+        first = None if hit.empty else _utc(hit["day"].min() + pd.Timedelta(days=1))
+        lag = (
+            None
+            if onset or first is None or failure is None or first > failure
+            else (failure - first).total_seconds() / 3600
+        )
+        bench[k] = BenchmarkRun(
+            first_investigate_at=first, lead_time_h=lag, incident_opens=int(hit["incident_id"].nunique())
+        )
+    return ReplayResult(
+        case_id=case_id, origin=meta["origin"], family=case_id.split(":")[0] if ":" in case_id else case_id.split("-")[0],
+        title=f"{case_id} on station {st.station_id}", truth={"transforms": truth}, timeline=tl, first_watch_at=watch,
+        first_investigate_at=inv, failure_at=failure, lead_time_h=lead, outcome=out, benchmarks=bench,
+        source_offline_after_min=offline, sensor_fault_flagged=fault,
+    )  # fmt: skip

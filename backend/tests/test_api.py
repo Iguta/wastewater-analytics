@@ -21,6 +21,7 @@ def test_stations_and_scenarios():
     assert len(StationsResponse.model_validate(client.get("/api/stations").json()).stations) == 3
     s = ScenariosResponse.model_validate(client.get("/api/scenarios").json())
     assert {c.id for c in s.scenarios} == {"bloomington_morningside_2024_04_11", "fishers_bowline_2009_01_20"}
+    assert [d.experiment for d in s.dev_cases] == ["storm_test", "cut_power", "break_sensor", "one_bad_day"]
 
 
 def test_assess_then_evidence_then_timeline():
@@ -41,7 +42,7 @@ def test_assess_then_evidence_then_timeline():
         ("/api/assess", {"station_id": "1", "as_of_utc": AS_OF}, 422, "UNKNOWN_STATION"),
         ("/api/assess", {"station_id": "44371"}, 422, "BAD_TIMESTAMP"),
         ("/api/assess", {"station_id": "44371", "as_of_utc": "2022-06-03"}, 422, "BAD_TIMESTAMP"),
-        ("/api/replay", {"case_id": "F1-1003"}, 422, "NOT_AVAILABLE"),
+        ("/api/replay", {"case_id": "F1-500"}, 422, "UNKNOWN_CASE"),
         ("/api/replay", {"case_id": "bad"}, 422, "UNKNOWN_CASE"),
     ],
 )
