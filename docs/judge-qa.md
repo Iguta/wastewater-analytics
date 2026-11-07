@@ -17,6 +17,7 @@ Short, honest answers for the five minutes at the table. Every number has a sour
 
 ## Questions judges are likely to ask
 
+- **"Why not a simple threshold rule?"** Same cases, untuned dev data (David's harness, `reports/evaluation.json`): Dragonfly caught 112 of 114 vs 111 of 114 for the simple rule, warned a median 8.4 days ahead vs 5.3, false-alarmed on 3 of 30 single bad days vs 30 of 30, and raised 0.49 real alerts per pump per 6 months vs 4.58. Same recall, three more days, about 10× fewer false alerts. Caveat: untuned dev numbers; final ones come from the frozen test run.
 - **"Why not just give the data to ChatGPT?"** It could build a forecast. What an operator trusts the next morning is a pipeline that measures pump capacity directly, ignores rain by physics, checks its own data, says when it doesn't know, and is benchmarked on every change.
 - **"Did you train a model?"** Each pump learns its own normal every day from its own history, and about 7 settings are tuned on 2022 data. We deliberately did not train a black box on failures: there are no failure labels, and a model trained on faults we planted would learn our planting method. We tested two learned alternatives; the simpler model held up.
 - **"Would this have prevented the Morningside spill?"** We can't say that. No telemetry from that station exists. In our rebuild on a UK stand-in, if it was a gradual clog, Dragonfly warned about 2–3 days before the trip. If it was a sudden trip, we catch it at onset, the same as a working alarm.
